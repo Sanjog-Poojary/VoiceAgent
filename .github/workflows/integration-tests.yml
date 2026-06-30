@@ -1,0 +1,69 @@
+name: Integration Tests (LLM)
+
+# Run manually via GitHub UI, or automatically every night at midnight IST (18:30 UTC)
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: "Single scenario to run (e.g. test_scenario_a_happy_path). Leave blank to run all 11."
+        required: false
+        default: ""
+  schedule:
+    - cron: "30 18 * * *"   # 00:00 IST = 18:30 UTC
+
+jobs:
+  llm-integration-tests:
+    name: LLM Integration Tests (Groq)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25   # full suite takes ~10 min; allow headroom for retries
+
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Verify GROQ_API_KEY is set
+        run: |
+          if [ -z "$GROQ_API_KEY" ]; then
+            echo "❌ GROQ_API_KEY secret is not set. Add it at:"
+            echo "   Settings → Secrets and variables → Actions → New repository secret"
+            exit 1
+          fi
+          echo "✅ GROQ_API_KEY is configured."
+
+      - name: Start mock server in background
+        run: |
+          nohup python -m uvicorn mock_server:app --host 127.0.0.1 --port 8001 &
+          echo "Waiting for mock server to be ready..."
+          sleep 5
+          curl --fail http://127.0.0.1:8001/api/users/1 || (echo "❌ Mock server did not start"; exit 1)
+          echo "✅ Mock server is up."
+
+      - name: Run all 11 scenarios
+        if: ${{ github.event.inputs.scenario == '' }}
+        run: python -m unittest test_orchestrator -v
+
+      - name: Run single scenario
+        if: ${{ github.event.inputs.scenario != '' }}
+        run: |
+          python -m unittest \
+            test_orchestrator.TestVoiceAgentOrchestrator.${{ github.event.inputs.scenario }} -v
+
+      - name: Upload test log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: "*.log"
+          if-no-files-found: ignore
