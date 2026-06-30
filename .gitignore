@@ -18,8 +18,9 @@ ENV/
 # ADK cache / workspace
 .adk/
 
-# VS Code
-.vscode/
+# VS Code — track shared settings (Copilot model), ignore personal/workspace files
+.vscode/*
+!.vscode/settings.json
 
 # Test artifacts
 *.log

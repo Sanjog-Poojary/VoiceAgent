@@ -1,0 +1,8 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/.venv/Lib/site-packages"
+  ],
+  "github.copilot.chat.localeOverride": "en",
+  "github.copilot.selectedModel": "gpt-4o"
+}
