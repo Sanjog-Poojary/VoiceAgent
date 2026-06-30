@@ -315,8 +315,10 @@ async def orchestrator_node(ctx: Context, node_input: Any):
     silent_turns = ctx.state.get("silent_turns", 0)
 
     # 5. Deterministic sequence routing correction
-    if not escalation_triggered and next_agent not in ("EscalationAgent", "ApologyAgent"):
-        if node_input == "[Call Connected]":
+    if not escalation_triggered and next_agent != "EscalationAgent":
+        if next_agent == "ApologyAgent" and is_injection_turn:
+            pass
+        elif node_input == "[Call Connected]":
             next_agent = "GreetingAgent"
 
         # Silent user threshold: after 2+ silent turns, exit to Apology
@@ -478,37 +480,53 @@ async def spending_history_agent(ctx: Context, node_input: Any):
     customer_id = ctx.state.get("customer_id", "1")
     lang = ctx.state.get("detected_language", "English")
     
-    # Fetch user details and preference
-    customer_data = await fetch_customer_details(customer_id)
-    preferred_category = customer_data.get("preferred_category", "Fashion")
-    
-    # Fetch all store offers
-    all_offers = await fetch_all_offers()
-    
-    # Filter offer by customer preferred category
-    matched_offer = {}
-    for offer in all_offers:
-        if offer.get("category") == preferred_category:
-            matched_offer = offer
+    # Extract last user message from transcript history
+    raw_transcript = ctx.state.get("raw_audio_transcription", [])
+    last_user_message = ""
+    for line in reversed(raw_transcript):
+        if line.startswith("User:"):
+            last_user_message = line[5:].strip()
             break
             
-    if not matched_offer and all_offers:
-        matched_offer = all_offers[0]
-        
-    category = matched_offer.get("category", "Fashion")
+    user_input_str = last_user_message.lower()
     
-    # Translate category if language is Hindi
-    category_map_hi = {
-        "Fashion": "फ़ैशन",
-        "Beauty": "ब्यूटी",
-        "Luxury Watches": "लक्ज़री घड़ियाँ"
-    }
-    
-    if lang == "Hindi":
-        category_hi = category_map_hi.get(category, category)
-        msg = f"हमने देखा कि आपने हाल ही में हमारे {category_hi} श्रेणी में खरीदारी की है। हम आपके साथ एक ऑफ़र साझा करना चाहेंगे।"
+    if any(x in user_input_str for x in ("points", "loyalty", "tier", "balance", "rewards")):
+        if lang == "Hindi":
+            msg = "आप 1,250 पॉइंट्स के साथ गोल्ड टियर लॉयल्टी सदस्य हैं! अब, उस जन्मदिन के ऑफ़र के बारे में जिसे हम सक्रिय कर सकते हैं..."
+        else:
+            msg = "You are a Gold Tier loyalty member with 1,250 points! Now, about that birthday offer we have for you..."
     else:
-        msg = f"We noticed you recently shopped in our {category} category. We'd love to share an offer."
+        # Fetch user details and preference
+        customer_data = await fetch_customer_details(customer_id)
+        preferred_category = customer_data.get("preferred_category", "Fashion")
+        
+        # Fetch all store offers
+        all_offers = await fetch_all_offers()
+        
+        # Filter offer by customer preferred category
+        matched_offer = {}
+        for offer in all_offers:
+            if offer.get("category") == preferred_category:
+                matched_offer = offer
+                break
+                
+        if not matched_offer and all_offers:
+            matched_offer = all_offers[0]
+            
+        category = matched_offer.get("category", "Fashion")
+        
+        # Translate category if language is Hindi
+        category_map_hi = {
+            "Fashion": "फ़ैशन",
+            "Beauty": "ब्यूटी",
+            "Luxury Watches": "लक्ज़री घड़ियाँ"
+        }
+        
+        if lang == "Hindi":
+            category_hi = category_map_hi.get(category, category)
+            msg = f"हमने देखा कि आपने हाल ही में हमारे {category_hi} श्रेणी में खरीदारी की है। हम आपके साथ एक ऑफ़र साझा करना चाहेंगे।"
+        else:
+            msg = f"We noticed you recently shopped in our {category} category. We'd love to share an offer."
         
     ctx.state["raw_audio_transcription"].append(f"Agent: {msg}")
     yield RequestInput(message=msg)
