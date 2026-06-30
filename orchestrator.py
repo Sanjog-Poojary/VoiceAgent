@@ -107,7 +107,7 @@ class OrchestratorDecision(BaseModel):
     )
     offer_accepted: bool = Field(
         default=False,
-        description="Set to true if the customer explicitly accepted the retail offer/coupon, otherwise false."
+        description="Set to true if the customer explicitly accepted the retail offer/coupon, otherwise false. MUST be a strict boolean (true or false). Do NOT use strings like 'N/A'."
     )
     escalation_triggered: bool = Field(
         default=False,
@@ -271,7 +271,11 @@ async def orchestrator_node(ctx: Context, node_input: Any):
     # 2. Prompt Injection Defense
     injection_markers = ("system override", "ignore all previous", "ignore previous instructions",
                          "you are now", "write a script", "write code", "scrape", "sql", "select *")
-    is_injection_turn = any(x in user_input_str for x in injection_markers)
+    is_injection_turn = (
+        any(x in user_input_str for x in injection_markers)
+        or "ignore safety" in user_input_str
+        or ("write" in user_input_str and "code" in user_input_str)
+    )
     if is_injection_turn:
         ctx.state["injection_attempts"] = ctx.state.get("injection_attempts", 0) + 1
         attempts = ctx.state["injection_attempts"]
@@ -311,7 +315,7 @@ async def orchestrator_node(ctx: Context, node_input: Any):
     silent_turns = ctx.state.get("silent_turns", 0)
 
     # 5. Deterministic sequence routing correction
-    if not escalation_triggered and next_agent != "EscalationAgent":
+    if not escalation_triggered and next_agent not in ("EscalationAgent", "ApologyAgent"):
         if node_input == "[Call Connected]":
             next_agent = "GreetingAgent"
 
