@@ -2,7 +2,7 @@ import os
 import dotenv
 import httpx
 from typing import List, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from google.adk.agents import LlmAgent, Context
 from google.adk.workflow import node, Workflow, START
 from google.adk.events.request_input import RequestInput
@@ -117,6 +117,37 @@ class OrchestratorDecision(BaseModel):
         default="",
         description="Brief reasoning for this state transition decision."
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def clean_fields(cls, values):
+        if not isinstance(values, dict):
+            return values
+        # Clean offer_accepted
+        val = values.get("offer_accepted")
+        if val is None or val in ("N/A", "n/a", "null", "None"):
+            values["offer_accepted"] = False
+        elif isinstance(val, str):
+            values["offer_accepted"] = val.lower() in ("true", "yes", "1")
+            
+        # Clean escalation_triggered
+        val = values.get("escalation_triggered")
+        if val is None or val in ("N/A", "n/a", "null", "None"):
+            values["escalation_triggered"] = False
+        elif isinstance(val, str):
+            values["escalation_triggered"] = val.lower() in ("true", "yes", "1")
+            
+        # Clean call_sentiment
+        val = values.get("call_sentiment")
+        if not val or val not in ("Positive", "Neutral", "Agitated"):
+            values["call_sentiment"] = "Neutral"
+            
+        # Clean detected_language
+        val = values.get("detected_language")
+        if not val:
+            values["detected_language"] = "English"
+            
+        return values
 
 # Define the LLM Orchestrator Agent
 orchestrator_agent = LlmAgent(
