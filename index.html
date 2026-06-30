@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shoppers Stop AI Voice Agent Tester</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: rgba(17, 24, 39, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.35);
+            --accent-green: #10b981;
+            --accent-green-glow: rgba(16, 185, 129, 0.2);
+            --accent-red: #ef4444;
+            --accent-red-glow: rgba(239, 68, 68, 0.25);
+            --accent-yellow: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.04) 0%, transparent 40%);
+        }
+
+        /* Top Bar */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 2.5rem;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(11, 15, 25, 0.8);
+            backdrop-filter: blur(12px);
+            z-index: 10;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            background: linear-gradient(135deg, #a78bfa, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo i {
+            -webkit-text-fill-color: #818cf8;
+            font-size: 1.6rem;
+        }
+
+        .badge-live {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.5rem 0.85rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border: 1px solid var(--border-color);
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--text-muted);
+            border-radius: 50%;
+            transition: background-color 0.3s;
+        }
+
+        .pulse-dot.active {
+            background-color: var(--accent-green);
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse 1.6s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+            }
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        /* Main Workspace Container */
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            padding: 1.5rem;
+            gap: 1.5rem;
+        }
+
+        /* Left Panel: Chat Console */
+        .chat-panel {
+            flex: 1.3;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            backdrop-filter: blur(16px);
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .panel-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .profile-picker {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        select {
+            background: rgba(0, 0, 0, 0.3);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 0.6rem 1.2rem;
+            border-radius: 10px;
+            outline: none;
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .btn-call {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: white;
+            border: none;
+            padding: 0.65rem 1.3rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 15px var(--primary-glow);
+            transition: all 0.25s ease;
+        }
+
+        .btn-call:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        }
+
+        .btn-call.active {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            box-shadow: 0 4px 15px var(--accent-red-glow);
+        }
+
+        /* Message Log */
+        .chat-history {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            scroll-behavior: smooth;
+        }
+
+        /* Chat Bubbles styling */
+        .msg-bubble {
+            max-width: 75%;
+            padding: 0.95rem 1.2rem;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            position: relative;
+            animation: fadeIn 0.35s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .msg-bubble.agent {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            align-self: flex-start;
+            border-top-left-radius: 4px;
+        }
+
+        .msg-bubble.user {
+            background: linear-gradient(135deg, #4f46e5, #3b82f6);
+            align-self: flex-end;
+            border-top-right-radius: 4px;
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+
+        .chat-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+            gap: 1rem;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .chat-empty i {
+            font-size: 3rem;
+            color: rgba(99, 102, 241, 0.2);
+        }
+
+        /* Input Controls */
+        .chat-input-area {
+            padding: 1.25rem 1.5rem;
+            border-top: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.15);
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid var(--border-color);
+            padding: 0.85rem 1.25rem;
+            border-radius: 12px;
+            color: var(--text-main);
+            outline: none;
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+        }
+
+        .chat-input-area input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .chat-input-area button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            width: 50px;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 4px 10px var(--primary-glow);
+        }
+
+        .chat-input-area button:hover {
+            transform: scale(1.03);
+            background: #4f46e5;
+        }
+
+        .chat-input-area button:disabled {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Right Panel: State Dashboard */
+        .state-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* State Cards Layout */
+        .dashboard-card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 1.5rem;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .grid-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 1.15rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Sentiment Glow Pills */
+        .badge-sentiment {
+            padding: 0.25rem 0.65rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .badge-sentiment.Neutral {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+        }
+
+        .badge-sentiment.Positive {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+
+        .badge-sentiment.Agitated {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            animation: flashRed 1.2s infinite;
+        }
+
+        @keyframes flashRed {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        /* Check boxes styling */
+        .offer-check {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .offer-check i {
+            font-size: 1.1rem;
+        }
+
+        .offer-check.yes i {
+            color: var(--accent-green);
+        }
+
+        .offer-check.no i {
+            color: var(--text-muted);
+            opacity: 0.3;
+        }
+
+        /* Escalation Alert Card */
+        .alert-escalation {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.05));
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 14px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            animation: shake 0.6s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-4px); }
+            40%, 80% { transform: translateX(4px); }
+        }
+
+        .alert-escalation i {
+            color: var(--accent-red);
+            font-size: 1.5rem;
+            animation: flashRed 0.8s infinite;
+        }
+
+        .alert-text h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--accent-red);
+        }
+
+        .alert-text p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Console API Logs Card */
+        .console-card {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0; /* Important for flex child scroll */
+        }
+
+        .console-output {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: #34d399;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .log-entry {
+            border-left: 2px solid var(--primary);
+            padding-left: 0.75rem;
+            animation: fadeIn 0.25s ease;
+        }
+
+        .log-time {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .log-title {
+            font-weight: 600;
+            color: #818cf8;
+            margin-bottom: 0.25rem;
+        }
+
+        .log-json {
+            color: #f3f4f6;
+            white-space: pre-wrap;
+            font-size: 0.8rem;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 0.5rem;
+            border-radius: 6px;
+            margin-top: 0.25rem;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        /* Typing Loader */
+        .typing-loader {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.8rem 1.2rem;
+            border-radius: 16px;
+            width: fit-content;
+            align-self: flex-start;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header bar -->
+    <header>
+        <div class="logo">
+            <i class="fa-solid fa-microphone-lines"></i>
+            <span>Shoppers Stop AI Voice Agent</span>
+        </div>
+        <div class="badge-live">
+            <div id="statusDot" class="pulse-dot"></div>
+            <span id="statusText">Disconnected</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Left: Chat Panel -->
+        <div class="chat-panel">
+            <div class="panel-header">
+                <div class="profile-picker">
+                    <label for="profileSelect" style="font-size: 0.9rem; font-weight: 500; color: var(--text-muted);">Select Profile:</label>
+                    <select id="profileSelect">
+                        <option value="1">Customer 1: Sanjog (English, Birthday)</option>
+                        <option value="2">Customer 2: Aarav (Hindi, Credit Expiry)</option>
+                        <option value="3">Customer 3: Ananya (English, Birthday)</option>
+                    </select>
+                </div>
+                <button id="callBtn" class="btn-call">
+                    <i class="fa-solid fa-phone"></i>
+                    <span id="callBtnText">Start Outbound Call</span>
+                </button>
+            </div>
+
+            <!-- Conversation window -->
+            <div id="chatHistory" class="chat-history">
+                <div class="chat-empty" id="chatEmpty">
+                    <i class="fa-solid fa-headset"></i>
+                    <h3>Initiate Outbound Call Simulation</h3>
+                    <p>Select a customer profile and click the "Start Outbound Call" button above to launch the simulation.</p>
+                </div>
+            </div>
+
+            <!-- Text Input Area -->
+            <div class="chat-input-area">
+                <input type="text" id="chatInput" placeholder="Type user speech response here..." disabled autocomplete="off">
+                <button id="sendBtn" disabled>
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Right: Dashboard Panel -->
+        <div class="state-panel">
+            <!-- Session State Card -->
+            <div class="dashboard-card">
+                <div class="card-title">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>Real-time Call State Inspector</span>
+                </div>
+                
+                <div class="grid-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Active Sub-Agent</span>
+                        <span id="stateAgent" class="stat-value"><i class="fa-solid fa-robot" style="color:#818cf8;"></i> --</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Detected Language</span>
+                        <span id="stateLang" class="stat-value"><i class="fa-solid fa-language" style="color:#a78bfa;"></i> --</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Customer Sentiment</span>
+                        <div style="display:flex; align-items:center; height:100%;">
+                            <span id="stateSentiment" class="badge-sentiment Neutral">--</span>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Offer Pitched</span>
+                        <span id="statePitched" class="stat-value offer-check no"><i class="fa-solid fa-circle-check"></i> No</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Offer Accepted</span>
+                        <span id="stateAccepted" class="stat-value offer-check no"><i class="fa-solid fa-circle-check"></i> No</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Verification Attempts</span>
+                        <span id="stateAttempts" class="stat-value"><i class="fa-solid fa-shield" style="color:var(--text-muted);"></i> 0</span>
+                    </div>
+                </div>
+
+                <!-- Escalation Banner -->
+                <div id="escalationAlert" class="alert-escalation" style="display: none;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <div class="alert-text">
+                        <h4>Supervisor Escalation Active</h4>
+                        <p>Customer connection flagged and queued for human agent transfer.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Logger Console -->
+            <div class="dashboard-card console-card">
+                <div class="card-title">
+                    <i class="fa-solid fa-terminal"></i>
+                    <span>API Logs (Webhook & CRM Alerts)</span>
+                </div>
+                <div id="consoleOutput" class="console-output">
+                    <div style="color: var(--text-muted); font-size: 0.8rem; font-style: italic;">Awaiting API activations...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const profileSelect = document.getElementById('profileSelect');
+        const callBtn = document.getElementById('callBtn');
+        const callBtnText = document.getElementById('callBtnText');
+        const chatHistory = document.getElementById('chatHistory');
+        const chatEmpty = document.getElementById('chatEmpty');
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        
+        const stateAgent = document.getElementById('stateAgent');
+        const stateLang = document.getElementById('stateLang');
+        const stateSentiment = document.getElementById('stateSentiment');
+        const statePitched = document.getElementById('statePitched');
+        const stateAccepted = document.getElementById('stateAccepted');
+        const stateAttempts = document.getElementById('stateAttempts');
+        const escalationAlert = document.getElementById('escalationAlert');
+        const consoleOutput = document.getElementById('consoleOutput');
+
+        // State Tracking variables
+        let isCallActive = false;
+        let sessionId = null;
+        let interruptId = null;
+        let invocationId = null;
+
+        // Start/End Call Event
+        callBtn.addEventListener('click', async () => {
+            if (isCallActive) {
+                endCall();
+            } else {
+                await startCall();
+            }
+        });
+
+        // Send Speech Response Event
+        sendBtn.addEventListener('click', sendSpeech);
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendSpeech();
+        });
+
+        // Function to start the call simulation
+        async function startCall() {
+            try {
+                // Clear UI
+                chatHistory.innerHTML = '';
+                chatEmpty.style.display = 'none';
+                consoleOutput.innerHTML = '';
+                escalationAlert.style.display = 'none';
+                
+                // Set Loading Status
+                callBtn.disabled = true;
+                callBtnText.innerText = 'Connecting...';
+                
+                const customerId = profileSelect.value;
+                const response = await fetch('/api/chat/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customer_id: customerId })
+                });
+
+                if (!response.ok) throw new Error('Failed to launch simulation');
+                const data = await response.json();
+
+                // Save identifiers
+                sessionId = data.session_id;
+                interruptId = data.interrupt_id;
+                invocationId = data.invocation_id;
+                isCallActive = true;
+
+                // Update Outbound Call Button state
+                callBtn.disabled = false;
+                callBtn.classList.add('active');
+                callBtnText.innerText = 'Disconnect Call';
+                callBtn.querySelector('i').className = 'fa-solid fa-phone-slash';
+                
+                // Update header status
+                statusDot.classList.add('active');
+                statusText.innerText = 'Call Live - ' + sessionId;
+
+                // Enable Input
+                chatInput.disabled = false;
+                sendBtn.disabled = false;
+                chatInput.focus();
+
+                // Append initial greeting message
+                appendMessage('agent', data.message);
+                updateStateDashboard(data.state);
+                
+                // Poll/check mock server logs by inspecting actions inside sub-agents
+                checkMockWebhookLogs(data.state);
+
+            } catch (err) {
+                alert('Connection Error: ' + err.message);
+                endCall();
+            }
+        }
+
+        // Function to disconnect call
+        function endCall() {
+            isCallActive = false;
+            sessionId = null;
+            interruptId = null;
+            invocationId = null;
+
+            callBtn.classList.remove('active');
+            callBtnText.innerText = 'Start Outbound Call';
+            callBtn.querySelector('i').className = 'fa-solid fa-phone';
+
+            statusDot.classList.remove('active');
+            statusText.innerText = 'Disconnected';
+
+            chatInput.disabled = true;
+            sendBtn.disabled = true;
+            chatInput.value = '';
+
+            // Clean stats
+            stateAgent.innerHTML = '<i class="fa-solid fa-robot" style="color:#818cf8;"></i> --';
+            stateLang.innerHTML = '<i class="fa-solid fa-language" style="color:#a78bfa;"></i> --';
+            stateSentiment.className = 'badge-sentiment Neutral';
+            stateSentiment.innerText = '--';
+            
+            statePitched.className = 'stat-value offer-check no';
+            statePitched.innerHTML = '<i class="fa-solid fa-circle-check"></i> No';
+            stateAccepted.className = 'stat-value offer-check no';
+            stateAccepted.innerHTML = '<i class="fa-solid fa-circle-check"></i> No';
+            stateAttempts.innerHTML = '<i class="fa-solid fa-shield" style="color:var(--text-muted);"></i> 0';
+            escalationAlert.style.display = 'none';
+
+            chatHistory.innerHTML = `
+                <div class="chat-empty">
+                    <i class="fa-solid fa-phone-slash" style="color: rgba(239,68,68,0.15)"></i>
+                    <h3>Call Simulating Session Terminated</h3>
+                    <p>Select another profile or launch a new call to run tests again.</p>
+                </div>
+            `;
+        }
+
+        // Function to send user speech to backend API
+        async function sendSpeech() {
+            const text = chatInput.value.trim();
+            if (!text || !isCallActive) return;
+
+            // Clear Input
+            chatInput.value = '';
+            chatInput.disabled = true;
+            sendBtn.disabled = true;
+
+            // Display user message in UI bubble
+            appendMessage('user', text);
+            
+            // Add typing animation placeholder
+            const loader = appendTypingIndicator();
+
+            try {
+                const response = await fetch('/api/chat/message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        message: text,
+                        interrupt_id: interruptId,
+                        invocation_id: invocationId
+                    })
+                });
+
+                // Remove loader animation
+                loader.remove();
+
+                if (!response.ok) throw new Error('API request failed');
+                const data = await response.json();
+
+                interruptId = data.interrupt_id;
+
+                // Append response message
+                if (data.message) {
+                    appendMessage('agent', data.message);
+                }
+
+                updateStateDashboard(data.state);
+                checkMockWebhookLogs(data.state);
+
+                // Check if workflow has finished / reached Terminate state
+                if (data.state.current_agent === 'Terminate') {
+                    // Show a notification and hang up after 3 seconds
+                    setTimeout(() => {
+                        appendMessage('agent', '[Call Disconnected by Remote Host]');
+                        setTimeout(endCall, 1500);
+                    }, 1000);
+                } else {
+                    chatInput.disabled = false;
+                    sendBtn.disabled = false;
+                    chatInput.focus();
+                }
+
+            } catch (err) {
+                loader.remove();
+                appendMessage('agent', '[Error: Failed to process conversation response. Terminating call.]');
+                setTimeout(endCall, 2000);
+            }
+        }
+
+        // Helper to append chat bubble
+        function appendMessage(role, text) {
+            const bubble = document.createElement('div');
+            bubble.classList.add('msg-bubble', role);
+            bubble.innerText = text;
+            chatHistory.appendChild(bubble);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        // Helper to append typing animation
+        function appendTypingIndicator() {
+            const container = document.createElement('div');
+            container.classList.add('typing-loader');
+            container.innerHTML = `
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            `;
+            chatHistory.appendChild(container);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+            return container;
+        }
+
+        // Update real-time state inspector dashboard values
+        function updateStateDashboard(state) {
+            if (!state) return;
+
+            // Agent node
+            stateAgent.innerHTML = `<i class="fa-solid fa-robot" style="color:#818cf8;"></i> ${state.current_agent || '--'}`;
+            
+            // Language Flag Mapping
+            const lang = state.detected_language || 'English';
+            const flag = lang === 'Hindi' ? '🇮🇳' : '🇺🇸';
+            stateLang.innerHTML = `<i class="fa-solid fa-language" style="color:#a78bfa;"></i> ${lang} ${flag}`;
+
+            // Sentiment Color Pill
+            const sentiment = state.call_sentiment || 'Neutral';
+            stateSentiment.className = `badge-sentiment ${sentiment}`;
+            
+            let sentimentEmoji = '😐';
+            if (sentiment === 'Positive') sentimentEmoji = '😊';
+            if (sentiment === 'Agitated') sentimentEmoji = '😡';
+            stateSentiment.innerText = `${sentimentEmoji} ${sentiment}`;
+
+            // Offer pitched
+            if (state.offer_pitched) {
+                statePitched.className = 'stat-value offer-check yes';
+                statePitched.innerHTML = '<i class="fa-solid fa-circle-check"></i> Yes';
+            } else {
+                statePitched.className = 'stat-value offer-check no';
+                statePitched.innerHTML = '<i class="fa-solid fa-circle-check"></i> No';
+            }
+
+            // Offer accepted
+            if (state.offer_accepted) {
+                stateAccepted.className = 'stat-value offer-check yes';
+                stateAccepted.innerHTML = '<i class="fa-solid fa-circle-check"></i> Yes';
+            } else {
+                stateAccepted.className = 'stat-value offer-check no';
+                stateAccepted.innerHTML = '<i class="fa-solid fa-circle-check"></i> No';
+            }
+
+            // Verification Attempts
+            stateAttempts.innerHTML = `<i class="fa-solid fa-shield" style="color:#818cf8;"></i> ${state.verification_attempts || 0}`;
+
+            // Escalation Alert Banner
+            if (state.escalation_triggered) {
+                escalationAlert.style.display = 'flex';
+            } else {
+                escalationAlert.style.display = 'none';
+            }
+        }
+
+        // Check state conditions to simulate side-effect API outputs in the Web Console
+        function checkMockWebhookLogs(state) {
+            if (!state) return;
+            
+            // Clear placeholder text on first log
+            if (consoleOutput.innerHTML.includes('Awaiting API activations')) {
+                consoleOutput.innerHTML = '';
+            }
+
+            const timeStr = new Date().toLocaleTimeString();
+            
+            // If Escalation Triggered & CRM Ticket logged
+            if (state.escalation_triggered && !document.getElementById('crm_logged_' + sessionId)) {
+                const log = document.createElement('div');
+                log.id = 'crm_logged_' + sessionId;
+                log.classList.add('log-entry');
+                
+                const crmJSON = {
+                    customer_id: state.customer_id,
+                    issue_description: "Customer became agitated during outbound sales call. Escalated to supervisor.",
+                    priority: "high",
+                    timestamp: new Date().toISOString()
+                };
+
+                log.innerHTML = `
+                    <div class="log-time">[${timeStr}] POST /api/tickets/crm</div>
+                    <div class="log-title"><i class="fa-solid fa-headset"></i> CRM Ticket Created (ticket_${state.customer_id}_999)</div>
+                    <pre class="log-json">${JSON.stringify(crmJSON, null, 2)}</pre>
+                `;
+                consoleOutput.appendChild(log);
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            }
+
+            // If Offer Accepted & WhatsApp logged
+            if (state.offer_accepted && !document.getElementById('wa_logged_' + sessionId)) {
+                const log = document.createElement('div');
+                log.id = 'wa_logged_' + sessionId;
+                log.classList.add('log-entry');
+                
+                // Get customer specific info to simulate JSON alert payload
+                const customerMap = {
+                    "1": { name: "Sanjog", phone: "+1234567890", code: "BIRTHDAY20", discount: 20 },
+                    "2": { name: "Aarav", phone: "+919876543210", code: "CREDIT15", discount: 15 },
+                    "3": { name: "Ananya", phone: "+918888888888", code: "LUX25", discount: 25 }
+                };
+                
+                const cust = customerMap[state.customer_id] || { name: "Customer", phone: "+00000", code: "PROMO", discount: 10 };
+                
+                const waJSON = {
+                    customer_id: state.customer_id,
+                    phone: cust.phone,
+                    message: state.detected_language === 'Hindi' 
+                        ? `नमस्ते ${cust.name}, आपका ${cust.discount}% छूट कूपन कोड '${cust.code}' सक्रिय कर दिया गया है। धन्यवाद!` 
+                        : `Hello ${cust.name}, your ${cust.discount}% off coupon code '${cust.code}' has been activated. Thank you!`,
+                    status: "success"
+                };
+
+                log.innerHTML = `
+                    <div class="log-time">[${timeStr}] POST /api/notify/whatsapp</div>
+                    <div class="log-title"><i class="fa-brands fa-whatsapp" style="color:var(--accent-green);"></i> WhatsApp Confirmation Triggered</div>
+                    <pre class="log-json">${JSON.stringify(waJSON, null, 2)}</pre>
+                `;
+                consoleOutput.appendChild(log);
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            }
+        }
+    </script>
+</body>
+</html>
