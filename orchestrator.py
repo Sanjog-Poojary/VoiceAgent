@@ -152,7 +152,7 @@ class OrchestratorDecision(BaseModel):
 # Define the LLM Orchestrator Agent
 orchestrator_agent = LlmAgent(
     name="orchestrator_llm",
-    model="groq/llama-3.1-8b-instant",
+    model="groq/llama-3.3-70b-versatile",
     instruction="""You are the Supervisor Orchestrator for a Shoppers Stop outbound voice agent.
 Your role is to analyze the conversation transcript and update the session state and routing.
 You DO NOT speak to the customer directly.

@@ -125,6 +125,13 @@ class TestVoiceAgentOrchestrator(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self):
         self.server_process.terminate()
         self.server_process.wait()
+        
+        # Explicitly close the communication pipes to prevent ResourceWarnings
+        if self.server_process.stdout:
+            self.server_process.stdout.close()
+        if self.server_process.stderr:
+            self.server_process.stderr.close()
+            
         await asyncio.sleep(3.0)
 
     async def get_session_state(self, session_id):
