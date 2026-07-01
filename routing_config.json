@@ -1,0 +1,349 @@
+[
+  {
+    "name": "Hard Escalation Keywords",
+    "conditions": [
+      {"field": "has_escalation_keywords", "value": true}
+    ],
+    "next_agent": "EscalationAgent",
+    "state_updates": {
+      "offer_accepted": false,
+      "escalation_triggered": true,
+      "call_sentiment": "Agitated"
+    }
+  },
+  {
+    "name": "Agitated Sentiment (Sarcasm Handled)",
+    "conditions": [
+      {"field": "call_sentiment", "value": "Agitated"}
+    ],
+    "next_agent": "EscalationAgent",
+    "state_updates": {
+      "offer_accepted": false,
+      "escalation_triggered": true,
+      "call_sentiment": "Agitated"
+    }
+  },
+  {
+    "name": "Global Soft Prompt Injection",
+    "conditions": [
+      {"field": "is_injection_attempt", "value": true}
+    ],
+    "next_agent": "ApologyAgent",
+    "state_updates": {
+      "call_sentiment": "Neutral",
+      "offer_accepted": false,
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "Global Competitor Mention",
+    "conditions": [
+      {"field": "is_competitor_mention", "value": true}
+    ],
+    "next_agent": "ApologyAgent",
+    "state_updates": {
+      "offer_accepted": false,
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "Global Consecutive Silence Exit",
+    "conditions": [
+      {"field": "is_silent_turn", "value": true},
+      {"field": "silent_turns", "op": ">=", "value": 2}
+    ],
+    "next_agent": "ApologyAgent",
+    "state_updates": {
+      "offer_accepted": false,
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "Global First Silence Re-Prompt",
+    "conditions": [
+      {"field": "is_silent_turn", "value": true},
+      {"field": "silent_turns", "value": 1}
+    ],
+    "next_agent": "{current_agent}",
+    "state_updates": {
+      "offer_accepted": false,
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "Greeting — Third Party Caller",
+    "conditions": [
+      {"field": "current_agent", "value": "GreetingAgent"},
+      {"field": "is_third_party", "value": true}
+    ],
+    "next_agent": "EscalationAgent",
+    "state_updates": {
+      "offer_accepted": false,
+      "escalation_triggered": true
+    }
+  },
+  {
+    "name": "Greeting — Decline Offer",
+    "conditions": [
+      {"field": "current_agent", "value": "GreetingAgent"},
+      {"field": "is_decline", "value": true}
+    ],
+    "next_agent": "ApologyAgent",
+    "state_updates": {
+      "offer_accepted": false,
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "Confidence Fallback — Greeting Identity Verification",
+    "conditions": [
+      {"field": "current_agent", "value": "GreetingAgent"},
+      {"field": "is_valid_answer", "value": true},
+      {"field": "confidence_score", "op": "<", "value": 0.75}
+    ],
+    "next_agent": "ClarifyingAgent",
+    "state_updates": {
+      "previous_agent": "{current_agent}"
+    }
+  },
+  {
+    "name": "Greeting — Identity Confirmed",
+    "conditions": [
+      {"field": "current_agent", "value": "GreetingAgent"},
+      {"field": "is_valid_answer", "value": true}
+    ],
+    "next_agent": "EventAgent",
+    "state_updates": {
+      "offer_accepted": false,
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "Greeting — Fallback to Explicit Verification",
+    "conditions": [
+      {"field": "current_agent", "value": "GreetingAgent"}
+    ],
+    "next_agent": "VerificationAgent",
+    "state_updates": {
+      "offer_accepted": false,
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "Verification — Decline Offer",
+    "conditions": [
+      {"field": "current_agent", "value": "VerificationAgent"},
+      {"field": "is_decline", "value": true}
+    ],
+    "next_agent": "ApologyAgent",
+    "state_updates": {
+      "offer_accepted": false,
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "Verification — Verification attempts limit exceeded",
+    "conditions": [
+      {"field": "current_agent", "value": "VerificationAgent"},
+      {"field": "verification_attempts", "op": ">=", "value": 3}
+    ],
+    "next_agent": "ApologyAgent",
+    "state_updates": {
+      "offer_accepted": false,
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "Confidence Fallback — Explicit Verification",
+    "conditions": [
+      {"field": "current_agent", "value": "VerificationAgent"},
+      {"field": "is_valid_answer", "value": true},
+      {"field": "confidence_score", "op": "<", "value": 0.75}
+    ],
+    "next_agent": "ClarifyingAgent",
+    "state_updates": {
+      "previous_agent": "{current_agent}"
+    }
+  },
+  {
+    "name": "Verification — Identity Confirmed",
+    "conditions": [
+      {"field": "current_agent", "value": "VerificationAgent"},
+      {"field": "is_valid_answer", "value": true}
+    ],
+    "next_agent": "EventAgent",
+    "state_updates": {
+      "offer_accepted": false,
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "Verification — Retry Verification",
+    "conditions": [
+      {"field": "current_agent", "value": "VerificationAgent"}
+    ],
+    "next_agent": "VerificationAgent",
+    "state_updates": {
+      "offer_accepted": false,
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "Event — Advance to Spending History",
+    "conditions": [
+      {"field": "current_agent", "value": "EventAgent"}
+    ],
+    "next_agent": "SpendingHistoryAgent",
+    "state_updates": {
+      "offer_accepted": false,
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "SpendingHistory — High Priority accepted offer",
+    "conditions": [
+      {"field": "current_agent", "value": "SpendingHistoryAgent"},
+      {"field": "offer_pitched", "value": true},
+      {"field": "is_acceptance", "value": true},
+      {"field": "confidence_score", "op": ">=", "value": 0.75}
+    ],
+    "next_agent": "PostCallAgent",
+    "state_updates": {
+      "offer_accepted": true,
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "Confidence Fallback — SpendingHistory Pitch Acceptance",
+    "conditions": [
+      {"field": "current_agent", "value": "SpendingHistoryAgent"},
+      {"field": "offer_pitched", "value": true},
+      {"field": "confidence_score", "op": "<", "value": 0.75}
+    ],
+    "next_agent": "ClarifyingAgent",
+    "state_updates": {
+      "previous_agent": "{current_agent}"
+    }
+  },
+  {
+    "name": "SpendingHistory — Offer Accepted",
+    "conditions": [
+      {"field": "current_agent", "value": "SpendingHistoryAgent"},
+      {"field": "offer_pitched", "value": true},
+      {"field": "is_acceptance", "value": true}
+    ],
+    "next_agent": "PostCallAgent",
+    "state_updates": {
+      "offer_accepted": true,
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "SpendingHistory — Default Pitch Offer",
+    "conditions": [
+      {"field": "current_agent", "value": "SpendingHistoryAgent"}
+    ],
+    "next_agent": "OfferAgent",
+    "state_updates": {
+      "offer_accepted": false,
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "Offer — Loyalty Points Tangent",
+    "conditions": [
+      {"field": "current_agent", "value": "OfferAgent"},
+      {"field": "is_loyalty_question", "value": true}
+    ],
+    "next_agent": "SpendingHistoryAgent",
+    "state_updates": {
+      "offer_accepted": false,
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "Offer — Acceptance",
+    "conditions": [
+      {"field": "current_agent", "value": "OfferAgent"},
+      {"field": "is_acceptance", "value": true},
+      {"field": "confidence_score", "op": ">=", "value": 0.75}
+    ],
+    "next_agent": "PostCallAgent",
+    "state_updates": {
+      "offer_accepted": true,
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "Offer — Decline",
+    "conditions": [
+      {"field": "current_agent", "value": "OfferAgent"},
+      {"field": "is_decline", "value": true},
+      {"field": "confidence_score", "op": ">=", "value": 0.75}
+    ],
+    "next_agent": "ApologyAgent",
+    "state_updates": {
+      "offer_accepted": false,
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "Confidence Fallback — Offer Decision",
+    "conditions": [
+      {"field": "current_agent", "value": "OfferAgent"},
+      {"field": "confidence_score", "op": "<", "value": 0.75}
+    ],
+    "next_agent": "ClarifyingAgent",
+    "state_updates": {
+      "previous_agent": "{current_agent}"
+    }
+  },
+  {
+    "name": "Offer — Default Decline",
+    "conditions": [
+      {"field": "current_agent", "value": "OfferAgent"}
+    ],
+    "next_agent": "ApologyAgent",
+    "state_updates": {
+      "offer_accepted": false,
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "Apology — Resume Previous Agent",
+    "conditions": [
+      {"field": "current_agent", "value": "ApologyAgent"},
+      {"field": "injection_attempts", "value": 1},
+      {"field": "previous_agent", "op": "!=", "value": ""},
+      {"field": "previous_agent", "op": "in", "value": ["GreetingAgent", "VerificationAgent", "EventAgent", "SpendingHistoryAgent", "OfferAgent", "ApologyAgent", "EscalationAgent", "PostCallAgent", "Terminate"]}
+    ],
+    "next_agent": "{previous_agent}",
+    "state_updates": {
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "Apology — Default Terminate",
+    "conditions": [
+      {"field": "current_agent", "value": "ApologyAgent"}
+    ],
+    "next_agent": "Terminate",
+    "state_updates": {
+      "escalation_triggered": false
+    }
+  },
+  {
+    "name": "Escalation/PostCall — Terminate",
+    "conditions": [
+      {"field": "current_agent", "op": "in", "value": ["EscalationAgent", "PostCallAgent"]}
+    ],
+    "next_agent": "Terminate"
+  },
+  {
+    "name": "Clarifying — Loopback / Resolve",
+    "conditions": [
+      {"field": "current_agent", "value": "ClarifyingAgent"}
+    ],
+    "next_agent": "{previous_agent}"
+  }
+]

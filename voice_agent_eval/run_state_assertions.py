@@ -116,8 +116,8 @@ async def test_golden_case_final_state(case: dict[str, Any]):
     # Run first turn using initial state delta
     user_texts = _user_texts(case["conversation"])
     
-    # Check if first message is a call connected trigger
-    first_text = user_texts[0]
+    # Sleep to avoid Groq rate limit between test cases
+    await asyncio.sleep(8.0)
     
     # We always need to trigger initial turn
     agent_message, interrupt_id, invocation_id = await run_turn(
@@ -126,7 +126,7 @@ async def test_golden_case_final_state(case: dict[str, Any]):
     )
 
     for user_text in user_texts:
-        await asyncio.sleep(2.0) # rate limiting
+        await asyncio.sleep(8.0) # rate limiting
         agent_message, interrupt_id, invocation_id = await run_turn(
             runner=runner,
             user_id=user_id,

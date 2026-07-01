@@ -1,0 +1,64 @@
+[
+  {
+    "user_input": "nice",
+    "state": {
+      "current_agent": "GreetingAgent"
+    },
+    "expected": {
+      "confidence_score_lt": 0.75
+    }
+  },
+  {
+    "user_input": "nice",
+    "state": {
+      "current_agent": "OfferAgent",
+      "offer_pitched": true
+    },
+    "expected": {
+      "confidence_score_lt": 0.75
+    }
+  },
+  {
+    "user_input": "haa mai hu",
+    "state": {
+      "current_agent": "GreetingAgent"
+    },
+    "expected": {
+      "detected_language": "Hindi",
+      "is_valid_answer": true,
+      "confidence_score_gte": 0.75
+    }
+  },
+  {
+    "user_input": "Oh sure, expiring credits is AMAZING news, I'm SO happy about that!",
+    "state": {
+      "current_agent": "EventAgent"
+    },
+    "expected": {
+      "call_sentiment": "Agitated"
+    }
+  },
+  {
+    "user_input": "Zara has better deals but okay I'll take it",
+    "state": {
+      "current_agent": "OfferAgent",
+      "offer_pitched": true
+    },
+    "expected": {
+      "is_competitor_mention": true,
+      "is_acceptance": true,
+      "confidence_score_gte": 0.75
+    }
+  },
+  {
+    "user_input": "No thanks",
+    "state": {
+      "current_agent": "OfferAgent",
+      "offer_pitched": true
+    },
+    "expected": {
+      "is_decline": true,
+      "confidence_score_gte": 0.75
+    }
+  }
+]

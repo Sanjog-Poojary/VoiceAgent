@@ -32,3 +32,5 @@ class SessionState(BaseModel):
     injection_attempts: int = Field(default=0, description="The number of prompt injection / adversarial override attempts.")
     escalation_reason: str = Field(default="agitated", description="The reason for escalation: 'agitated' or 'malicious'.")
     previous_agent: str = Field(default="", description="The previous agent active before an injection warning deflection occurred.")
+    clarification_attempts: int = Field(default=0, description="The number of clarification attempts during ambiguous turns.")
+
