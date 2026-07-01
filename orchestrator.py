@@ -115,6 +115,11 @@ def init_state_defaults(ctx: Context):
         "escalation_reason": "agitated",
         "previous_agent": "",
         "clarification_attempts": 0,
+        "current_goal": "",
+        "goal_history": [],
+        "last_agent": "",
+        "last_outcome": "",
+        "agent_memory": {},
     }
     for key, val in state_defaults.items():
         ctx.state.setdefault(key, val)
@@ -611,8 +616,159 @@ def apply_deterministic_rules(
 
 
 # ---------------------------------------------------------------------------
-# orchestrator_node — 4-Step Pipeline
-# (route_decision() removed — classifier does semantic work; enforcer routes)
+# Sub-Agent Hooks (Post-Process & Transition)
+# Defined adjacent to agent logic. Registered in maps below.
+# ---------------------------------------------------------------------------
+
+async def clarifying_agent_post_process(classification, memory, state):
+    if classification.is_acceptance:
+        last_outcome = "accepted"
+    elif classification.is_decline:
+        last_outcome = "declined"
+    elif classification.is_valid_answer:
+        last_outcome = "success"
+    else:
+        last_outcome = "failed"
+    return (last_outcome, memory)
+
+async def clarifying_agent_transition(memory, state):
+    memory["clarification_count"] = memory.get("clarification_count", 0) + 1
+    return ("clarify_ambiguous_intent", memory)
+
+
+async def greeting_agent_post_process(classification, memory, state):
+    if classification.is_valid_answer:
+        last_outcome = "success"
+    elif classification.is_decline:
+        last_outcome = "declined"
+    else:
+        last_outcome = "failed"
+    memory["welcomed"] = True
+    return (last_outcome, memory)
+
+async def greeting_agent_transition(memory, state):
+    return ("verify_identity_greeting", memory)
+
+
+async def verification_agent_post_process(classification, memory, state):
+    if classification.is_valid_answer:
+        last_outcome = "success"
+        memory["verified"] = True
+    elif classification.is_decline:
+        last_outcome = "declined"
+    else:
+        last_outcome = "failed"
+    return (last_outcome, memory)
+
+async def verification_agent_transition(memory, state):
+    return ("verify_identity_explicit", memory)
+
+
+async def event_agent_post_process(classification, memory, state):
+    return ("success", memory)
+
+async def event_agent_transition(memory, state):
+    return ("introduce_birthday_event", memory)
+
+
+async def spending_history_agent_post_process(classification, memory, state):
+    if classification.is_acceptance and memory.get("offer_pitched", False):
+        last_outcome = "accepted"
+    else:
+        last_outcome = "success"
+    return (last_outcome, memory)
+
+async def spending_history_agent_transition(memory, state):
+    customer_id = state.get("customer_id", "1")
+    customer_data = await fetch_customer_details(customer_id)
+    preferred_category = customer_data.get("preferred_category", "Fashion")
+    if preferred_category in ("Fashion", "Beauty", "Luxury Watches"):
+        memory["pitch_category"] = preferred_category
+    else:
+        memory["pitch_category"] = "Fashion"
+    return ("retrieve_spending_history_and_pitch_interest", memory)
+
+
+async def offer_agent_post_process(classification, memory, state):
+    if classification.is_acceptance:
+        last_outcome = "accepted"
+    elif classification.is_decline:
+        last_outcome = "declined"
+    elif classification.is_loyalty_question:
+        last_outcome = "tangent"
+    else:
+        last_outcome = "declined"
+    return (last_outcome, memory)
+
+async def offer_agent_transition(memory, state):
+    memory["offer_pitched"] = True
+    return ("pitch_personalized_offer", memory)
+
+
+async def apology_agent_post_process(classification, memory, state):
+    return ("success", memory)
+
+async def apology_agent_transition(memory, state):
+    return ("apologize_and_warn_or_exit", memory)
+
+
+async def escalation_agent_post_process(classification, memory, state):
+    return ("success", memory)
+
+async def escalation_agent_transition(memory, state):
+    return ("escalate_to_supervisor", memory)
+
+
+async def post_call_agent_post_process(classification, memory, state):
+    return ("success", memory)
+
+async def post_call_agent_transition(memory, state):
+    memory["whatsapp_sent"] = True
+    return ("send_whatsapp_and_confirm", memory)
+
+
+async def terminate_node_transition(memory, state):
+    return ("end_call_and_terminate", memory)
+
+
+_POST_PROCESS_HOOKS = {
+    "GreetingAgent": greeting_agent_post_process,
+    "VerificationAgent": verification_agent_post_process,
+    "EventAgent": event_agent_post_process,
+    "SpendingHistoryAgent": spending_history_agent_post_process,
+    "OfferAgent": offer_agent_post_process,
+    "ApologyAgent": apology_agent_post_process,
+    "EscalationAgent": escalation_agent_post_process,
+    "PostCallAgent": post_call_agent_post_process,
+    "ClarifyingAgent": clarifying_agent_post_process,
+}
+
+_TRANSITION_HOOKS = {
+    "GreetingAgent": greeting_agent_transition,
+    "VerificationAgent": verification_agent_transition,
+    "EventAgent": event_agent_transition,
+    "SpendingHistoryAgent": spending_history_agent_transition,
+    "OfferAgent": offer_agent_transition,
+    "ApologyAgent": apology_agent_transition,
+    "EscalationAgent": escalation_agent_transition,
+    "PostCallAgent": post_call_agent_transition,
+    "ClarifyingAgent": clarifying_agent_transition,
+    "Terminate": terminate_node_transition,
+}
+
+def _get_agent_memory(ctx: Context) -> dict:
+    from session_state import AgentMemory
+    mem = ctx.state.get("agent_memory", {})
+    if isinstance(mem, dict):
+        return AgentMemory(**mem).model_dump()
+    return mem.model_dump()
+
+def _set_agent_memory(ctx: Context, memory_dict: dict):
+    from session_state import AgentMemory
+    ctx.state["agent_memory"] = AgentMemory(**memory_dict)
+
+# ---------------------------------------------------------------------------
+# orchestrator_node — coordinator pattern
 # ---------------------------------------------------------------------------
 
 @node(name="orchestrator", rerun_on_resume=True)
@@ -627,47 +783,62 @@ async def orchestrator_node(ctx: Context, node_input: Any):
         ctx.state["raw_audio_transcription"] = trans
     user_input_str = user_input_raw.lower()
 
-    # Handle initial [Call Connected] trigger
-    if user_input_raw == "[Call Connected]":
-        ctx.state["current_agent"] = "GreetingAgent"
-        ctx.route = "GreetingAgent"
-        return "GreetingAgent"
-
     current_agent = ctx.state.get("current_agent", "GreetingAgent")
 
-    # --- Step 1: Hard injection pre-filter (no LLM) ---
-    # Uses only the highest-confidence, unambiguous surface markers.
-    # Nuanced injection attempts are handled by classify_turn()'s is_injection_attempt.
+    # --- Step 1: Hard injection pre-filter (no LLM) — short-circuiting precedence ---
     if _is_hard_injection(user_input_str):
         injection_attempts = ctx.state.get("injection_attempts", 0) + 1
         ctx.state["injection_attempts"] = injection_attempts
         if injection_attempts >= 2:
-            # 2nd+ attempt: malicious — escalate
             ctx.state["escalation_triggered"] = True
             ctx.state["call_sentiment"] = "Agitated"
             ctx.state["escalation_reason"] = "malicious"
             next_agent = "EscalationAgent"
         else:
-            # 1st attempt: warn and deflect — save where to resume
             ctx.state["previous_agent"] = current_agent
             next_agent = "ApologyAgent"
+
+        ctx.state["last_agent"] = current_agent
+        if next_agent in _TRANSITION_HOOKS:
+            memory_dict = _get_agent_memory(ctx)
+            new_goal, updated_memory = await _TRANSITION_HOOKS[next_agent](memory_dict, ctx.state.to_dict())
+            if new_goal != ctx.state.get("current_goal", ""):
+                history = list(ctx.state.get("goal_history", []))
+                if ctx.state.get("current_goal"):
+                    history.append(ctx.state["current_goal"])
+                ctx.state["goal_history"] = history[-5:]
+                ctx.state["current_goal"] = new_goal
+            _set_agent_memory(ctx, updated_memory)
+
         ctx.state["current_agent"] = next_agent
         _print_decision(next_agent, ctx.state, "[Hard Injection Pre-Filter]")
         ctx.route = next_agent
         return next_agent
 
-    # --- Step 2: Deterministic verification_attempts guard (no LLM) ---
+    # --- Step 2: Deterministic verification_attempts guard (no LLM) — short-circuiting precedence ---
     if ctx.state.get("verification_attempts", 0) >= 3:
-        ctx.state["current_agent"] = "ApologyAgent"
+        next_agent = "ApologyAgent"
+        ctx.state["last_agent"] = current_agent
+        if next_agent in _TRANSITION_HOOKS:
+            memory_dict = _get_agent_memory(ctx)
+            new_goal, updated_memory = await _TRANSITION_HOOKS[next_agent](memory_dict, ctx.state.to_dict())
+            if new_goal != ctx.state.get("current_goal", ""):
+                history = list(ctx.state.get("goal_history", []))
+                if ctx.state.get("current_goal"):
+                    history.append(ctx.state["current_goal"])
+                ctx.state["goal_history"] = history[-5:]
+                ctx.state["current_goal"] = new_goal
+            _set_agent_memory(ctx, updated_memory)
+
+        ctx.state["current_agent"] = next_agent
         _print_decision("ApologyAgent", ctx.state, "[Verification Limit Guard — 3+ attempts]")
         ctx.route = "ApologyAgent"
         return "ApologyAgent"
 
     # --- Step 3: classify_turn() — single LLM call (8B instant) ---
-    # Returns TurnClassification with ALL semantic signals needed for routing.
     classification = await classify_turn(user_input_str, ctx.state.to_dict())
 
-    # Hindi keyword deterministic override (surface-level, safe)
+    # Hindi override
     if any(x in user_input_str for x in _HINDI_KEYWORDS):
         classification = TurnClassification(
             detected_language="Hindi",
@@ -686,26 +857,34 @@ async def orchestrator_node(ctx: Context, node_input: Any):
     ctx.state["detected_language"] = classification.detected_language
     ctx.state["call_sentiment"] = classification.call_sentiment
 
-    # Update silent_turns counter
+    # Update silence
     if classification.is_silent_turn:
         ctx.state["silent_turns"] = ctx.state.get("silent_turns", 0) + 1
     else:
         ctx.state["silent_turns"] = 0
 
-    # Increment/reset verification_attempts from classifier — driven by code, not LLM
+    # Call active agent post-process hook (skipped for silence)
+    if classification.is_silent_turn:
+        ctx.state["last_outcome"] = "silence"
+    elif current_agent in _POST_PROCESS_HOOKS:
+        memory_dict = _get_agent_memory(ctx)
+        outcome, updated_memory = await _POST_PROCESS_HOOKS[current_agent](classification, memory_dict, ctx.state.to_dict())
+        ctx.state["last_outcome"] = outcome
+        _set_agent_memory(ctx, updated_memory)
+
+    # Increment/reset verification_attempts
     if current_agent in ("GreetingAgent", "VerificationAgent"):
         if classification.is_valid_answer:
             ctx.state["verification_attempts"] = 0
         else:
             ctx.state["verification_attempts"] = ctx.state.get("verification_attempts", 0) + 1
 
-    # --- Step 4: apply_deterministic_rules() — pure function, no LLM call ---
-    # Operates entirely on structured TurnClassification fields + session state.
+    # --- Step 4: apply_deterministic_rules() ---
     next_agent, resolved_updates = apply_deterministic_rules(
         classification, ctx.state.to_dict(), user_input_str
     )
 
-    # Loop-guard logic for ClarifyingAgent
+    # Loop guard for ClarifyingAgent
     if next_agent == "ClarifyingAgent":
         attempts = ctx.state.get("clarification_attempts", 0)
         if attempts >= 2:
@@ -715,8 +894,26 @@ async def orchestrator_node(ctx: Context, node_input: Any):
         else:
             ctx.state["clarification_attempts"] = attempts + 1
     else:
-        # Successful transition resets the attempts
         ctx.state["clarification_attempts"] = 0
+
+    # Update last_agent
+    ctx.state["last_agent"] = current_agent
+
+    # Run transition hook if agent changed
+    if next_agent != current_agent:
+        if next_agent in _TRANSITION_HOOKS:
+            memory_dict = _get_agent_memory(ctx)
+            new_goal, updated_memory = await _TRANSITION_HOOKS[next_agent](memory_dict, ctx.state.to_dict())
+            if new_goal != ctx.state.get("current_goal", ""):
+                history = list(ctx.state.get("goal_history", []))
+                if ctx.state.get("current_goal"):
+                    history.append(ctx.state["current_goal"])
+                ctx.state["goal_history"] = history[-5:]
+                ctx.state["current_goal"] = new_goal
+            _set_agent_memory(ctx, updated_memory)
+
+    # Synchronize structured memory flags to legacy flat state for config/test compatibility
+    ctx.state["offer_pitched"] = _get_agent_memory(ctx)["offer_pitched"]
 
     # --- Commit to state ---
     ctx.state["current_agent"] = next_agent
@@ -729,7 +926,6 @@ async def orchestrator_node(ctx: Context, node_input: Any):
 
     ctx.route = next_agent
     return next_agent
-
 
 
 def _print_decision(next_agent: str, state: dict, rationale: str):
@@ -777,7 +973,6 @@ async def clarifying_agent(ctx: Context, node_input: Any):
     yield RequestInput(message=msg)
 
 @node(name="GreetingAgent")
-
 async def greeting_agent(ctx: Context, node_input: Any):
     init_state_defaults(ctx)
     customer_id = ctx.state.get("customer_id", "1")
@@ -895,9 +1090,8 @@ async def offer_agent(ctx: Context, node_input: Any):
         matched_offer = all_offers[0]
     matched_offer = matched_offer or {}
 
-    discount = matched_offer.get("discount_percentage", 20)
-    code = matched_offer.get("coupon_code", "BIRTHDAY20")
-    ctx.state["offer_pitched"] = True
+    code = matched_offer.get("coupon_code", "")
+    discount = matched_offer.get("discount_percentage", "")
 
     if lang == "Hindi":
         msg = f"हम आपको आपकी अगली खरीदारी पर एक विशेष {discount}% छूट कूपन कोड '{code}' दे रहे हैं। क्या आप इसे सक्रिय करना चाहेंगे?"
@@ -998,22 +1192,8 @@ async def terminate_node(ctx: Context, node_input: Any):
     ctx.state["raw_audio_transcription"] = trans
     return msg
 
-# ---------------------------------------------------------------------------
-# Fallback node — DEFAULT_ROUTE target
-#
-# ADK forbids duplicate (from_node, to_node) pairs regardless of route key,
-# so DEFAULT_ROUTE cannot point directly at apology_agent (it already appears
-# as the "ApologyAgent" route target). This thin passthrough node acts as
-# the exclusive DEFAULT_ROUTE target and mirrors ApologyAgent behaviour.
-# apply_deterministic_rules() already ensures P13 prevents this from ever
-# firing in normal operation; this node is a belt-and-suspenders graph-level
-# catch for any future hallucinated agent label.
-# ---------------------------------------------------------------------------
-
 @node(name="FallbackNode")
 async def fallback_node(ctx: Context, node_input: Any):
-    """Graph-level fallback: mirrors ApologyAgent. Only reached if orchestrator
-    emits a route label that matches no known conditional edge."""
     init_state_defaults(ctx)
     lang = ctx.state.get("detected_language", "English")
     print("[FallbackNode] Reached via DEFAULT_ROUTE — routing as ApologyAgent.")
@@ -1035,8 +1215,6 @@ class VoiceAgentWorkflow(Workflow):
 
     edges: list[Any] = [
         (START, greeting_agent),
-
-        # All sub-agents loop back to the orchestrator
         (greeting_agent, orchestrator_node),
         (verification_agent, orchestrator_node),
         (event_agent, orchestrator_node),
@@ -1049,18 +1227,16 @@ class VoiceAgentWorkflow(Workflow):
 
         # Conditional routes from orchestrator to sub-agents
         (orchestrator_node, {
-            "GreetingAgent":        greeting_agent,
-            "VerificationAgent":    verification_agent,
-            "EventAgent":           event_agent,
-            "SpendingHistoryAgent": spending_history_agent,
-            "OfferAgent":           offer_agent,
-            "ApologyAgent":         apology_agent,
-            "EscalationAgent":      escalation_agent,
-            "PostCallAgent":        post_call_agent,
-            "ClarifyingAgent":      clarifying_agent,
-            "Terminate":            terminate_node,
-            # DEFAULT_ROUTE: catches any hallucinated/unknown agent label
-            # Must point to a unique node not already in the routing map above.
+            "GreetingAgent":         greeting_agent,
+            "VerificationAgent":     verification_agent,
+            "EventAgent":            event_agent,
+            "SpendingHistoryAgent":  spending_history_agent,
+            "OfferAgent":            offer_agent,
+            "ApologyAgent":          apology_agent,
+            "EscalationAgent":       escalation_agent,
+            "PostCallAgent":         post_call_agent,
+            "ClarifyingAgent":       clarifying_agent,
+            "Terminate":             terminate_node,
             DEFAULT_ROUTE:          fallback_node,
         }),
     ]

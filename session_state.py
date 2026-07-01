@@ -1,5 +1,14 @@
-from typing import List
+from typing import List, Literal, Dict
 from pydantic import BaseModel, Field
+
+class AgentMemory(BaseModel):
+    """Pydantic model representing structured sub-agent memory keys."""
+    welcomed: bool = Field(default=False, description="Greeting welcomer status.")
+    verified: bool = Field(default=False, description="Verification success status.")
+    pitch_category: Literal["Fashion", "Beauty", "Luxury Watches", ""] = Field(default="", description="The retail category pitched.")
+    offer_pitched: bool = Field(default=False, description="Personalized offer pitch status.")
+    whatsapp_sent: bool = Field(default=False, description="WhatsApp notification status.")
+    clarification_count: int = Field(default=0, description="Ambiguity clarification tracker.")
 
 class SessionState(BaseModel):
     """Pydantic schema representing the Shoppers Stop AI Voice Agent session state.
@@ -33,4 +42,11 @@ class SessionState(BaseModel):
     escalation_reason: str = Field(default="agitated", description="The reason for escalation: 'agitated' or 'malicious'.")
     previous_agent: str = Field(default="", description="The previous agent active before an injection warning deflection occurred.")
     clarification_attempts: int = Field(default=0, description="The number of clarification attempts during ambiguous turns.")
+
+    # Coordinator / Persistent Memory Layer
+    current_goal: str = Field(default="", description="The current conversational goal or target agent's objective.")
+    goal_history: List[str] = Field(default_factory=list, description="A historical log of conversational goals (max 5).")
+    last_agent: str = Field(default="", description="The name of the last active sub-agent.")
+    last_outcome: Literal["success", "failed", "accepted", "declined", "tangent", "silence", "pending", ""] = Field(default="", description="The outcome of the last agent's turn.")
+    agent_memory: AgentMemory = Field(default_factory=AgentMemory, description="Schema-enforced persistent agent memory.")
 

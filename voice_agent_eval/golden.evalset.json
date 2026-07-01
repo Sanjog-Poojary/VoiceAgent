@@ -444,7 +444,9 @@
       "finalSessionState": {
         "current_agent": "PostCallAgent",
         "offer_accepted": true,
-        "escalation_triggered": false
+        "escalation_triggered": false,
+        "last_outcome": "accepted",
+        "current_goal": "send_whatsapp_and_confirm"
       }
     }
   ],

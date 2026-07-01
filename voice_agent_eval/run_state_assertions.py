@@ -61,7 +61,7 @@ def mock_server():
     )
     # Wait for the mock server to start
     import time
-    time.sleep(3.0)
+    time.sleep(5.0)
     yield
     server_process.terminate()
     server_process.wait()
