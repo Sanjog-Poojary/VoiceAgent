@@ -420,9 +420,16 @@ Key rules:
   (expiring credits, rejection) = call_sentiment="Agitated", NOT "Positive".
  
  
+CRITICAL NEGATIVE CONSTRAINTS:
+- NEVER set is_third_party to true for evasive, vague, or defensive questions like "depends who's asking", "who is this", "why do you need to know", "maybe, maybe not". Evasive answers are NOT third-party calls; you MUST set is_third_party to false for these.
+ 
+ 
 CONFIDENCE SCORING RULES:
 You must output "ambiguity_reason" first to think through the turn. Then output "confidence_score" (float 0.0 to 1.0).
-- Highly ambiguous, hesitant, or vague single-word inputs (e.g. "nice", "maybe", "why", "who is this", "sure" without context) on critical fields (identity confirmation or offer acceptance) MUST yield a confidence_score < 0.75 (e.g. 0.50 to 0.70). Do NOT treat standard direct confirmations like "yes" or "Yes" as vague.
+- Highly ambiguous, hesitant, or vague single-word inputs (e.g. "nice", "maybe", "sure" without context) on critical fields (identity confirmation or offer acceptance) MUST yield a confidence_score < 0.75 (e.g. 0.50 to 0.70). Do NOT treat standard direct confirmations like "yes" or "Yes" as vague.
+- Evasive or defensive questions/statements (e.g., "who is this", "why do you need to know", "depends who's asking", "maybe, maybe not") are clear, high-confidence non-confirmations. These MUST yield is_valid_answer=false and a high confidence_score >= 0.85 (e.g. 0.90 to 1.00).
+- Slang confirmations (e.g., "yeah no cap it's me fr fr skibidi") are NOT valid standard confirmations, but are clear and high-confidence, so they MUST yield is_valid_answer=false and a high confidence_score >= 0.85 (e.g. 0.90 to 1.00).
+- Multi-word responses requesting details or showing clear interest (e.g., "nice, what is it", "tell me", "what is the offer", "what coupon") are NOT ambiguous and MUST yield is_acceptance=true and confidence_score >= 0.85.
 - Direct, clear answers, even if short (e.g. "Yes", "yes", "Yes, speaking", "I am Aarav", "Yes I want the offer", "Activate the coupon", "No thanks", "Nahi chahiye", "Not interested", "goodbye", "haa mai hu") are NOT ambiguous and MUST yield a confidence_score >= 0.85 (e.g. 0.90 to 1.00).
 
 OUTPUT FORMAT: Return a single valid JSON object. All boolean fields MUST use JSON literal
@@ -690,7 +697,7 @@ class GreetingAgentContract(IdentityConfirmationContract):
         elif classification.is_decline:
             last_outcome = "declined"
         else:
-            last_outcome = "pending"
+            last_outcome = "failed"
         memory["welcomed"] = True
         return last_outcome, memory
 
@@ -717,7 +724,7 @@ class VerificationAgentContract(IdentityConfirmationContract):
         elif classification.is_decline:
             last_outcome = "declined"
         else:
-            last_outcome = "pending"
+            last_outcome = "failed"
         return last_outcome, memory
 
     async def transition(self, memory, state):
@@ -1304,7 +1311,12 @@ async def clarifying_agent(ctx: Context, node_input: Any):
             msg = f"माफ़ कीजियेगा, क्या आप कृपया स्पष्ट रूप से पुष्टि कर सकते हैं कि क्या आप वाकई {name} हैं?"
         else:
             msg = f"Sorry, could you please clearly confirm if you are indeed {name}?"
-    else: # SpendingHistoryAgent, OfferAgent, etc.
+    elif prev_agent == "SpendingHistoryAgent":
+        if lang == "Hindi":
+            msg = "माफ़ कीजियेगा, मैं समझ नहीं पाया कि आप ऑफ़र सुनना चाहते हैं या नहीं। क्या आप हाँ या ना कह सकते हैं?"
+        else:
+            msg = "I'm sorry, I didn't catch that. Would you like to hear the birthday offer we have for you?"
+    else: # OfferAgent, etc.
         if lang == "Hindi":
             msg = "माफ़ कीजियेगा, मैं समझ नहीं पाया कि आप इस ऑफ़र को स्वीकार करना चाहते हैं या नहीं। क्या आप हाँ या ना कह सकते हैं?"
         else:
