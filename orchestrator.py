@@ -615,146 +615,405 @@ def apply_deterministic_rules(
     return (next_agent, resolved_updates)
 
 
+
 # ---------------------------------------------------------------------------
-# Sub-Agent Hooks (Post-Process & Transition)
-# Defined adjacent to agent logic. Registered in maps below.
+# Agent Contracts (Decentralized Strategy, Goal, and Route Decoupling)
 # ---------------------------------------------------------------------------
 
-async def clarifying_agent_post_process(classification, memory, state):
-    if classification.is_acceptance:
-        last_outcome = "accepted"
-    elif classification.is_decline:
-        last_outcome = "declined"
-    elif classification.is_valid_answer:
-        last_outcome = "success"
-    else:
-        last_outcome = "failed"
-    return (last_outcome, memory)
+class AgentContract:
+    def __init__(
+        self,
+        name: str,
+        goal: str,
+        expected_input: str,
+        success_criteria: str,
+        possible_next_actions: list[str],
+    ):
+        self.name = name
+        self.goal = goal
+        self.expected_input = expected_input
+        self.success_criteria = success_criteria
+        self.possible_next_actions = possible_next_actions
 
-async def clarifying_agent_transition(memory, state):
-    memory["clarification_count"] = memory.get("clarification_count", 0) + 1
-    return ("clarify_ambiguous_intent", memory)
+    async def post_process(self, classification: TurnClassification, memory: dict, state: dict) -> tuple[str, dict]:
+        return "success", memory
 
+    async def transition(self, memory: dict, state: dict) -> tuple[str, dict]:
+        return self.goal, memory
 
-async def greeting_agent_post_process(classification, memory, state):
-    if classification.is_valid_answer:
-        last_outcome = "success"
-    elif classification.is_decline:
-        last_outcome = "declined"
-    else:
-        last_outcome = "failed"
-    memory["welcomed"] = True
-    return (last_outcome, memory)
-
-async def greeting_agent_transition(memory, state):
-    return ("verify_identity_greeting", memory)
+    def determine_next_agent(self, classification: TurnClassification, state: dict, user_input_str: str) -> tuple[str, dict]:
+        raise NotImplementedError
 
 
-async def verification_agent_post_process(classification, memory, state):
-    if classification.is_valid_answer:
-        last_outcome = "success"
-        memory["verified"] = True
-    elif classification.is_decline:
-        last_outcome = "declined"
-    else:
-        last_outcome = "failed"
-    return (last_outcome, memory)
+class GreetingAgentContract(AgentContract):
+    def __init__(self):
+        super().__init__(
+            name="GreetingAgent",
+            goal="verify_identity_greeting",
+            expected_input="Customer identity confirmation (yes/no or greeting)",
+            success_criteria="Customer confirms they are the target customer",
+            possible_next_actions=["EventAgent", "VerificationAgent", "ApologyAgent", "ClarifyingAgent"]
+        )
 
-async def verification_agent_transition(memory, state):
-    return ("verify_identity_explicit", memory)
+    async def post_process(self, classification, memory, state):
+        if classification.is_valid_answer:
+            last_outcome = "success"
+        elif classification.is_decline:
+            last_outcome = "declined"
+        else:
+            last_outcome = "failed"
+        memory["welcomed"] = True
+        return last_outcome, memory
 
+    async def transition(self, memory, state):
+        return "verify_identity_greeting", memory
 
-async def event_agent_post_process(classification, memory, state):
-    return ("success", memory)
-
-async def event_agent_transition(memory, state):
-    return ("introduce_birthday_event", memory)
-
-
-async def spending_history_agent_post_process(classification, memory, state):
-    if classification.is_acceptance and memory.get("offer_pitched", False):
-        last_outcome = "accepted"
-    else:
-        last_outcome = "success"
-    return (last_outcome, memory)
-
-async def spending_history_agent_transition(memory, state):
-    customer_id = state.get("customer_id", "1")
-    customer_data = await fetch_customer_details(customer_id)
-    preferred_category = customer_data.get("preferred_category", "Fashion")
-    if preferred_category in ("Fashion", "Beauty", "Luxury Watches"):
-        memory["pitch_category"] = preferred_category
-    else:
-        memory["pitch_category"] = "Fashion"
-    return ("retrieve_spending_history_and_pitch_interest", memory)
+    def determine_next_agent(self, classification, state, user_input_str):
+        if classification.is_decline:
+            return "ApologyAgent", {}
+        if classification.is_valid_answer:
+            if classification.confidence_score < 0.75:
+                return "ClarifyingAgent", {"previous_agent": self.name}
+            return "EventAgent", {}
+        return "VerificationAgent", {}
 
 
-async def offer_agent_post_process(classification, memory, state):
-    if classification.is_acceptance:
-        last_outcome = "accepted"
-    elif classification.is_decline:
-        last_outcome = "declined"
-    elif classification.is_loyalty_question:
-        last_outcome = "tangent"
-    else:
-        last_outcome = "declined"
-    return (last_outcome, memory)
+class VerificationAgentContract(AgentContract):
+    def __init__(self):
+        super().__init__(
+            name="VerificationAgent",
+            goal="verify_identity_explicit",
+            expected_input="Explicit verification details (name, yes/no)",
+            success_criteria="Verification attempts < 3 and identity successfully verified",
+            possible_next_actions=["EventAgent", "VerificationAgent", "ApologyAgent", "ClarifyingAgent"]
+        )
 
-async def offer_agent_transition(memory, state):
-    memory["offer_pitched"] = True
-    return ("pitch_personalized_offer", memory)
+    async def post_process(self, classification, memory, state):
+        if classification.is_valid_answer:
+            last_outcome = "success"
+            memory["verified"] = True
+        elif classification.is_decline:
+            last_outcome = "declined"
+        else:
+            last_outcome = "failed"
+        return last_outcome, memory
 
+    async def transition(self, memory, state):
+        return "verify_identity_explicit", memory
 
-async def apology_agent_post_process(classification, memory, state):
-    return ("success", memory)
-
-async def apology_agent_transition(memory, state):
-    return ("apologize_and_warn_or_exit", memory)
-
-
-async def escalation_agent_post_process(classification, memory, state):
-    return ("success", memory)
-
-async def escalation_agent_transition(memory, state):
-    return ("escalate_to_supervisor", memory)
-
-
-async def post_call_agent_post_process(classification, memory, state):
-    return ("success", memory)
-
-async def post_call_agent_transition(memory, state):
-    memory["whatsapp_sent"] = True
-    return ("send_whatsapp_and_confirm", memory)
+    def determine_next_agent(self, classification, state, user_input_str):
+        if classification.is_decline:
+            return "ApologyAgent", {}
+        if classification.is_valid_answer:
+            if classification.confidence_score < 0.75:
+                return "ClarifyingAgent", {"previous_agent": self.name}
+            return "EventAgent", {}
+        return "VerificationAgent", {}
 
 
-async def terminate_node_transition(memory, state):
-    return ("end_call_and_terminate", memory)
+class EventAgentContract(AgentContract):
+    def __init__(self):
+        super().__init__(
+            name="EventAgent",
+            goal="introduce_birthday_event",
+            expected_input="Any reaction to event or offer intro",
+            success_criteria="Event is successfully pitched",
+            possible_next_actions=["SpendingHistoryAgent"]
+        )
+
+    async def post_process(self, classification, memory, state):
+        return "success", memory
+
+    async def transition(self, memory, state):
+        return "introduce_birthday_event", memory
+
+    def determine_next_agent(self, classification, state, user_input_str):
+        return "SpendingHistoryAgent", {}
 
 
-_POST_PROCESS_HOOKS = {
-    "GreetingAgent": greeting_agent_post_process,
-    "VerificationAgent": verification_agent_post_process,
-    "EventAgent": event_agent_post_process,
-    "SpendingHistoryAgent": spending_history_agent_post_process,
-    "OfferAgent": offer_agent_post_process,
-    "ApologyAgent": apology_agent_post_process,
-    "EscalationAgent": escalation_agent_post_process,
-    "PostCallAgent": post_call_agent_post_process,
-    "ClarifyingAgent": clarifying_agent_post_process,
+class SpendingHistoryAgentContract(AgentContract):
+    def __init__(self):
+        super().__init__(
+            name="SpendingHistoryAgent",
+            goal="retrieve_spending_history_and_pitch_interest",
+            expected_input="Customer response showing interest in offer or requesting details",
+            success_criteria="Spending history context shared and interest gauged",
+            possible_next_actions=["PostCallAgent", "OfferAgent", "ClarifyingAgent"]
+        )
+
+    async def post_process(self, classification, memory, state):
+        if classification.is_acceptance and memory.get("offer_pitched", False):
+            last_outcome = "accepted"
+        else:
+            last_outcome = "success"
+        return last_outcome, memory
+
+    async def transition(self, memory, state):
+        customer_id = state.get("customer_id", "1")
+        customer_data = await fetch_customer_details(customer_id)
+        preferred_category = customer_data.get("preferred_category", "Fashion")
+        if preferred_category in ("Fashion", "Beauty", "Luxury Watches"):
+            memory["pitch_category"] = preferred_category
+        else:
+            memory["pitch_category"] = "Fashion"
+        return "retrieve_spending_history_and_pitch_interest", memory
+
+    def determine_next_agent(self, classification, state, user_input_str):
+        if state.get("offer_pitched", False) and classification.is_acceptance:
+            if classification.confidence_score < 0.75:
+                return "ClarifyingAgent", {"previous_agent": self.name}
+            return "PostCallAgent", {"offer_accepted": True}
+        return "OfferAgent", {}
+
+
+class OfferAgentContract(AgentContract):
+    def __init__(self):
+        super().__init__(
+            name="OfferAgent",
+            goal="pitch_personalized_offer",
+            expected_input="Direct offer acceptance or decline response",
+            success_criteria="Offer is verbally accepted or declined",
+            possible_next_actions=["PostCallAgent", "ApologyAgent", "SpendingHistoryAgent", "ClarifyingAgent"]
+        )
+
+    async def post_process(self, classification, memory, state):
+        if classification.is_acceptance:
+            last_outcome = "accepted"
+        elif classification.is_decline:
+            last_outcome = "declined"
+        elif classification.is_loyalty_question:
+            last_outcome = "tangent"
+        else:
+            last_outcome = "declined"
+        return last_outcome, memory
+
+    async def transition(self, memory, state):
+        memory["offer_pitched"] = True
+        return "pitch_personalized_offer", memory
+
+    def determine_next_agent(self, classification, state, user_input_str):
+        if classification.is_loyalty_question:
+            return "SpendingHistoryAgent", {}
+        if classification.is_acceptance:
+            if classification.confidence_score < 0.75:
+                return "ClarifyingAgent", {"previous_agent": self.name}
+            return "PostCallAgent", {"offer_accepted": True}
+        if classification.is_decline:
+            if classification.confidence_score < 0.75:
+                return "ClarifyingAgent", {"previous_agent": self.name}
+            return "ApologyAgent", {}
+        return "ApologyAgent", {}
+
+
+class ApologyAgentContract(AgentContract):
+    def __init__(self):
+        super().__init__(
+            name="ApologyAgent",
+            goal="apologize_and_warn_or_exit",
+            expected_input="None (terminal response or redirect)",
+            success_criteria="Customer is apologized to and call gracefully closed or returned",
+            possible_next_actions=["GreetingAgent", "VerificationAgent", "EventAgent", "SpendingHistoryAgent", "OfferAgent", "Terminate"]
+        )
+
+    async def post_process(self, classification, memory, state):
+        return "success", memory
+
+    async def transition(self, memory, state):
+        return "apologize_and_warn_or_exit", memory
+
+    def determine_next_agent(self, classification, state, user_input_str):
+        injection_attempts = state.get("injection_attempts", 0)
+        previous_agent = state.get("previous_agent", "")
+        if injection_attempts == 1 and previous_agent:
+            return previous_agent, {}
+        return "Terminate", {}
+
+
+class EscalationAgentContract(AgentContract):
+    def __init__(self):
+        super().__init__(
+            name="EscalationAgent",
+            goal="escalate_to_supervisor",
+            expected_input="None (terminal response)",
+            success_criteria="Ticket is successfully created in CRM and call routed to supervisor",
+            possible_next_actions=["Terminate"]
+        )
+
+    async def post_process(self, classification, memory, state):
+        return "success", memory
+
+    async def transition(self, memory, state):
+        return "escalate_to_supervisor", memory
+
+    def determine_next_agent(self, classification, state, user_input_str):
+        return "Terminate", {}
+
+
+class PostCallAgentContract(AgentContract):
+    def __init__(self):
+        super().__init__(
+            name="PostCallAgent",
+            goal="send_whatsapp_and_confirm",
+            expected_input="None (terminal response)",
+            success_criteria="WhatsApp notification is sent to customer",
+            possible_next_actions=["Terminate"]
+        )
+
+    async def post_process(self, classification, memory, state):
+        return "success", memory
+
+    async def transition(self, memory, state):
+        memory["whatsapp_sent"] = True
+        return "send_whatsapp_and_confirm", memory
+
+    def determine_next_agent(self, classification, state, user_input_str):
+        return "Terminate", {}
+
+
+class ClarifyingAgentContract(AgentContract):
+    def __init__(self):
+        super().__init__(
+            name="ClarifyingAgent",
+            goal="clarify_ambiguous_intent",
+            expected_input="Clarified yes/no or details matching the previous context",
+            success_criteria="Ambiguity is resolved and control returned to previous agent",
+            possible_next_actions=["GreetingAgent", "VerificationAgent", "SpendingHistoryAgent", "OfferAgent", "ApologyAgent"]
+        )
+
+    async def post_process(self, classification, memory, state):
+        if classification.is_acceptance:
+            last_outcome = "accepted"
+        elif classification.is_decline:
+            last_outcome = "declined"
+        elif classification.is_valid_answer:
+            last_outcome = "success"
+        else:
+            last_outcome = "failed"
+        return last_outcome, memory
+
+    async def transition(self, memory, state):
+        memory["clarification_count"] = memory.get("clarification_count", 0) + 1
+        return "clarify_ambiguous_intent", memory
+
+    def determine_next_agent(self, classification, state, user_input_str):
+        previous_agent = state.get("previous_agent", "GreetingAgent")
+        return previous_agent, {}
+
+
+class TerminateContract(AgentContract):
+    def __init__(self):
+        super().__init__(
+            name="Terminate",
+            goal="end_call_and_terminate",
+            expected_input="None",
+            success_criteria="Call is ended",
+            possible_next_actions=[]
+        )
+
+    async def transition(self, memory, state):
+        return "end_call_and_terminate", memory
+
+    def determine_next_agent(self, classification, state, user_input_str):
+        return "Terminate", {}
+
+
+class FallbackNodeContract(AgentContract):
+    def __init__(self):
+        super().__init__(
+            name="FallbackNode",
+            goal="apologize_and_warn_or_exit",
+            expected_input="None",
+            success_criteria="Fallback apologized",
+            possible_next_actions=["Terminate"]
+        )
+
+    def determine_next_agent(self, classification, state, user_input_str):
+        return "Terminate", {}
+
+
+_AGENTS = {
+    "GreetingAgent": GreetingAgentContract(),
+    "VerificationAgent": VerificationAgentContract(),
+    "EventAgent": EventAgentContract(),
+    "SpendingHistoryAgent": SpendingHistoryAgentContract(),
+    "OfferAgent": OfferAgentContract(),
+    "ApologyAgent": ApologyAgentContract(),
+    "EscalationAgent": EscalationAgentContract(),
+    "PostCallAgent": PostCallAgentContract(),
+    "ClarifyingAgent": ClarifyingAgentContract(),
+    "Terminate": TerminateContract(),
+    "FallbackNode": FallbackNodeContract(),
 }
 
-_TRANSITION_HOOKS = {
-    "GreetingAgent": greeting_agent_transition,
-    "VerificationAgent": verification_agent_transition,
-    "EventAgent": event_agent_transition,
-    "SpendingHistoryAgent": spending_history_agent_transition,
-    "OfferAgent": offer_agent_transition,
-    "ApologyAgent": apology_agent_transition,
-    "EscalationAgent": escalation_agent_transition,
-    "PostCallAgent": post_call_agent_transition,
-    "ClarifyingAgent": clarifying_agent_transition,
-    "Terminate": terminate_node_transition,
-}
+# ---------------------------------------------------------------------------
+# Central Coordinator Helpers
+# ---------------------------------------------------------------------------
+
+def check_safety_guardrails(
+    classification: TurnClassification,
+    state: dict,
+    user_input_str: str,
+) -> tuple[str, dict] | None:
+    """
+    Evaluates global safety and security guardrails centrally.
+    Returns (next_agent, state_updates) if a guardrail is tripped, else None.
+    """
+    current_agent = state.get("current_agent", "GreetingAgent")
+    
+    # 1. Hard Escalation Keywords / Agitated Sentiment
+    has_esc_keywords = any(x in user_input_str for x in _ESCALATION_KEYWORDS)
+    if has_esc_keywords or classification.call_sentiment == "Agitated":
+        return "EscalationAgent", {
+            "offer_accepted": False,
+            "escalation_triggered": True,
+            "call_sentiment": "Agitated"
+        }
+
+    # 2. Soft Prompt Injection
+    if classification.is_injection_attempt:
+        return "ApologyAgent", {
+            "call_sentiment": "Neutral",
+            "offer_accepted": False,
+            "escalation_triggered": False
+        }
+
+    # 3. Competitor Mention
+    if classification.is_competitor_mention:
+        return "ApologyAgent", {
+            "offer_accepted": False,
+            "escalation_triggered": False
+        }
+
+    # 4. Consecutive Silence
+    if classification.is_silent_turn:
+        silent_turns = state.get("silent_turns", 0) + 1
+        if silent_turns >= 2:
+            return "ApologyAgent", {
+                "offer_accepted": False,
+                "escalation_triggered": False
+            }
+        elif silent_turns == 1:
+            return current_agent, {
+                "offer_accepted": False,
+                "escalation_triggered": False
+            }
+
+    # 5. Third Party Gatekeeper
+    if classification.is_third_party and current_agent in ("GreetingAgent", "VerificationAgent"):
+        return "EscalationAgent", {
+            "offer_accepted": False,
+            "escalation_triggered": True
+        }
+
+    # 6. Verification Limit Exceeded
+    if state.get("verification_attempts", 0) >= 3 and current_agent in ("GreetingAgent", "VerificationAgent"):
+        return "ApologyAgent", {
+            "offer_accepted": False,
+            "escalation_triggered": False
+        }
+
+    return None
+
 
 def _get_agent_memory(ctx: Context) -> dict:
     from session_state import AgentMemory
@@ -768,7 +1027,7 @@ def _set_agent_memory(ctx: Context, memory_dict: dict):
     ctx.state["agent_memory"] = AgentMemory(**memory_dict)
 
 # ---------------------------------------------------------------------------
-# orchestrator_node — coordinator pattern
+# orchestrator_node — Coordinator flow
 # ---------------------------------------------------------------------------
 
 @node(name="orchestrator", rerun_on_resume=True)
@@ -784,6 +1043,7 @@ async def orchestrator_node(ctx: Context, node_input: Any):
     user_input_str = user_input_raw.lower()
 
     current_agent = ctx.state.get("current_agent", "GreetingAgent")
+    previous_agent = ctx.state.get("previous_agent", "")
 
     # --- Step 1: Hard injection pre-filter (no LLM) — short-circuiting precedence ---
     if _is_hard_injection(user_input_str):
@@ -799,9 +1059,9 @@ async def orchestrator_node(ctx: Context, node_input: Any):
             next_agent = "ApologyAgent"
 
         ctx.state["last_agent"] = current_agent
-        if next_agent in _TRANSITION_HOOKS:
+        if next_agent in _AGENTS:
             memory_dict = _get_agent_memory(ctx)
-            new_goal, updated_memory = await _TRANSITION_HOOKS[next_agent](memory_dict, ctx.state.to_dict())
+            new_goal, updated_memory = await _AGENTS[next_agent].transition(memory_dict, ctx.state.to_dict())
             if new_goal != ctx.state.get("current_goal", ""):
                 history = list(ctx.state.get("goal_history", []))
                 if ctx.state.get("current_goal"):
@@ -819,9 +1079,9 @@ async def orchestrator_node(ctx: Context, node_input: Any):
     if ctx.state.get("verification_attempts", 0) >= 3:
         next_agent = "ApologyAgent"
         ctx.state["last_agent"] = current_agent
-        if next_agent in _TRANSITION_HOOKS:
+        if next_agent in _AGENTS:
             memory_dict = _get_agent_memory(ctx)
-            new_goal, updated_memory = await _TRANSITION_HOOKS[next_agent](memory_dict, ctx.state.to_dict())
+            new_goal, updated_memory = await _AGENTS[next_agent].transition(memory_dict, ctx.state.to_dict())
             if new_goal != ctx.state.get("current_goal", ""):
                 history = list(ctx.state.get("goal_history", []))
                 if ctx.state.get("current_goal"):
@@ -863,12 +1123,12 @@ async def orchestrator_node(ctx: Context, node_input: Any):
     else:
         ctx.state["silent_turns"] = 0
 
-    # Call active agent post-process hook (skipped for silence)
+    # Call active agent post-process contract method (skipped for silence)
     if classification.is_silent_turn:
         ctx.state["last_outcome"] = "silence"
-    elif current_agent in _POST_PROCESS_HOOKS:
+    elif current_agent in _AGENTS:
         memory_dict = _get_agent_memory(ctx)
-        outcome, updated_memory = await _POST_PROCESS_HOOKS[current_agent](classification, memory_dict, ctx.state.to_dict())
+        outcome, updated_memory = await _AGENTS[current_agent].post_process(classification, memory_dict, ctx.state.to_dict())
         ctx.state["last_outcome"] = outcome
         _set_agent_memory(ctx, updated_memory)
 
@@ -879,10 +1139,33 @@ async def orchestrator_node(ctx: Context, node_input: Any):
         else:
             ctx.state["verification_attempts"] = ctx.state.get("verification_attempts", 0) + 1
 
-    # --- Step 4: apply_deterministic_rules() ---
-    next_agent, resolved_updates = apply_deterministic_rules(
-        classification, ctx.state.to_dict(), user_input_str
-    )
+    # --- Step 4: Safety Guardrails Check ---
+    safety_result = check_safety_guardrails(classification, ctx.state.to_dict(), user_input_str)
+    
+    if safety_result is not None:
+        next_agent, resolved_updates = safety_result
+        print(f"DEBUG: Safety guardrail matched routing to: {next_agent}")
+    else:
+        # --- Step 5: Sub-Agent Strategy Routing ---
+        active_contract = _AGENTS.get(current_agent)
+        if not active_contract:
+            raise RuntimeError(f"Unknown active agent: {current_agent}")
+            
+        strategy_agent = current_agent
+        if current_agent == "ClarifyingAgent" and previous_agent:
+            strategy_agent = previous_agent
+            
+        contract_for_strategy = _AGENTS.get(strategy_agent, active_contract)
+        next_agent, resolved_updates = contract_for_strategy.determine_next_agent(
+            classification, ctx.state.to_dict(), user_input_str
+        )
+        
+        # --- Step 6: Route Validation ---
+        valid_destinations = set(contract_for_strategy.possible_next_actions) | {"ApologyAgent", "EscalationAgent", "Terminate", "FallbackNode"}
+        if next_agent not in valid_destinations:
+            print(f"[Route Validation Warning] {strategy_agent} attempted to route to invalid destination: {next_agent}. Defaulting to ApologyAgent.")
+            next_agent = "ApologyAgent"
+            resolved_updates = {"offer_accepted": False, "escalation_triggered": False}
 
     # Loop guard for ClarifyingAgent
     if next_agent == "ClarifyingAgent":
@@ -901,9 +1184,9 @@ async def orchestrator_node(ctx: Context, node_input: Any):
 
     # Run transition hook if agent changed
     if next_agent != current_agent:
-        if next_agent in _TRANSITION_HOOKS:
+        if next_agent in _AGENTS:
             memory_dict = _get_agent_memory(ctx)
-            new_goal, updated_memory = await _TRANSITION_HOOKS[next_agent](memory_dict, ctx.state.to_dict())
+            new_goal, updated_memory = await _AGENTS[next_agent].transition(memory_dict, ctx.state.to_dict())
             if new_goal != ctx.state.get("current_goal", ""):
                 history = list(ctx.state.get("goal_history", []))
                 if ctx.state.get("current_goal"):
@@ -1240,4 +1523,3 @@ class VoiceAgentWorkflow(Workflow):
             DEFAULT_ROUTE:          fallback_node,
         }),
     ]
-
