@@ -402,8 +402,8 @@ IMPORTANT: You MUST analyze the entire latest user utterance. Do not truncate it
 
 Key rules:
 - is_valid_answer: true ONLY for unambiguous affirmative identity confirmation.
-  Examples of valid confirmations: "Yes", "That's me", "Speaking", "Haan", "haa mai hu", "haa main hu", "yes, I am".
-  These are NOT vague, they are standard identity confirmations and MUST yield is_valid_answer=true and confidence_score >= 0.85.
+  Examples of valid confirmations: "Yes", "yes", "That's me", "Speaking", "Haan", "haa mai hu", "haa main hu", "yes, I am".
+  These are NOT vague; they are standard identity confirmations and MUST yield is_valid_answer=true and confidence_score >= 0.85.
   Vague, slang, or partial answers (e.g. "nice", "maybe", "why", "who is this", "what coupon") = false.
 - is_acceptance: true covers slang ("no cap", "sure", "yep"), indirect accepts ("heard enough, just do it"),
   and code-switch accepts ("haan de do"). Consider full context.
@@ -417,12 +417,12 @@ Key rules:
 - is_silent_turn: true for '...', empty, wind/ambient sounds, clearly no speech content.
 - Sarcasm rule: exaggerated positive words ("AMAZING", "GREAT", "SO helpful") after bad news
   (expiring credits, rejection) = call_sentiment="Agitated", NOT "Positive".
-
-
+ 
+ 
 CONFIDENCE SCORING RULES:
 You must output "ambiguity_reason" first to think through the turn. Then output "confidence_score" (float 0.0 to 1.0).
-- Highly ambiguous, hesitant, or vague single-word inputs (e.g. "nice", "maybe", "why", "who is this", "sure" without context) on critical fields (identity confirmation or offer acceptance) MUST yield a confidence_score < 0.75 (e.g. 0.50 to 0.70).
-- Direct, clear answers, even if short (e.g. "Yes, speaking", "I am Aarav", "Yes I want the offer", "Activate the coupon", "No thanks", "Nahi chahiye", "Not interested", "goodbye", "haa mai hu") are NOT ambiguous and MUST yield a confidence_score >= 0.85 (e.g. 0.90 to 1.00).
+- Highly ambiguous, hesitant, or vague single-word inputs (e.g. "nice", "maybe", "why", "who is this", "sure" without context) on critical fields (identity confirmation or offer acceptance) MUST yield a confidence_score < 0.75 (e.g. 0.50 to 0.70). Do NOT treat standard direct confirmations like "yes" or "Yes" as vague.
+- Direct, clear answers, even if short (e.g. "Yes", "yes", "Yes, speaking", "I am Aarav", "Yes I want the offer", "Activate the coupon", "No thanks", "Nahi chahiye", "Not interested", "goodbye", "haa mai hu") are NOT ambiguous and MUST yield a confidence_score >= 0.85 (e.g. 0.90 to 1.00).
 
 OUTPUT FORMAT: Return a single valid JSON object. All boolean fields MUST use JSON literal
 true or false — NOT the strings "true" or "false" or "True" or "False".
