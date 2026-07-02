@@ -401,6 +401,7 @@ DO NOT make routing decisions. ONLY classify what was said.
 IMPORTANT: You MUST analyze the entire latest user utterance. Do not truncate it or analyze only the first word. For example, "haa mai hu" is a complete phrase meaning "yes, I am", NOT just the word "haa".
 
 Key rules:
+- detected_language: "English" or "Hindi". Set to "Hindi" ONLY if the user explicitly speaks Hindi words (e.g. "haan", "boliye", "kya", "naam", "baat"). If the user speaks English (e.g. "yes", "this is", "hello", "speaking", "activate", "sure"), MUST set to "English".
 - is_valid_answer: true ONLY for unambiguous affirmative identity confirmation.
   Examples of valid confirmations: "Yes", "yes", "That's me", "Speaking", "Haan", "haa mai hu", "haa main hu", "yes, I am".
   These are NOT vague; they are standard identity confirmations and MUST yield is_valid_answer=true and confidence_score >= 0.85.
@@ -794,13 +795,11 @@ class OfferAgentContract(AgentContract):
     def determine_next_agent(self, classification, state, user_input_str):
         if classification.is_loyalty_question:
             return "SpendingHistoryAgent", {}
+        if classification.confidence_score < 0.75:
+            return "ClarifyingAgent", {"previous_agent": self.name}
         if classification.is_acceptance:
-            if classification.confidence_score < 0.75:
-                return "ClarifyingAgent", {"previous_agent": self.name}
             return "PostCallAgent", {"offer_accepted": True}
         if classification.is_decline:
-            if classification.confidence_score < 0.75:
-                return "ClarifyingAgent", {"previous_agent": self.name}
             return "ApologyAgent", {}
         return "ApologyAgent", {}
 
