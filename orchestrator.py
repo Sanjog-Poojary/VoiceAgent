@@ -518,7 +518,7 @@ async def classify_turn(user_input: str, state: dict) -> TurnClassification:
 
     try:
         response = await acompletion(
-            model="groq/llama-3.3-70b-versatile",
+            model="groq/llama-3.1-8b-instant",
             messages=[
                 {"role": "system", "content": _CLASSIFY_SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
