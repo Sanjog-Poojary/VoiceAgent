@@ -196,8 +196,13 @@ def make_resume_message(interrupt_id: str, text: str) -> types.Content:
 def get_agent_message_text(event) -> str:
     if event.author in ("orchestrator_llm", "orchestrator"):
         return ""
-    if event.output and isinstance(event.output, str):
-        return event.output
+    if event.output:
+        if isinstance(event.output, str):
+            return event.output
+        if isinstance(event.output, dict):
+            trans = event.output.get("raw_audio_transcription", [])
+            if trans and isinstance(trans[-1], str) and trans[-1].startswith("Agent: "):
+                return trans[-1][7:]
     if not event.content or not event.content.parts:
         return ""
     for part in event.content.parts:

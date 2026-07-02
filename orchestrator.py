@@ -1185,6 +1185,8 @@ class PersonalShopperAgentContract(AgentContract):
     async def post_process(self, classification, memory, state):
         if state.get("preferred_appointment_slot"):
             return "success", memory
+        if classification.confidence_score < 0.75:
+            return "pending", memory
         if classification.is_appointment_accept:
             return "accepted", memory
         if classification.is_appointment_decline:
@@ -1202,6 +1204,8 @@ class PersonalShopperAgentContract(AgentContract):
         return "Terminate", {}
     
     def _route_on_goal_incomplete(self, classification, state, user_input_str):
+        if state.get("last_outcome") in ("pending", "incomplete"):
+            return "ClarifyingAgent", {"previous_agent": self.name}
         return "PersonalShopperAgent", {}
 
 
@@ -1585,12 +1589,16 @@ async def orchestrator_node(ctx: Context, node_input: Any):
     else:
         ctx.state["silent_turns"] = 0
 
+    strategy_agent = current_agent
+    if current_agent == "ClarifyingAgent" and previous_agent:
+        strategy_agent = previous_agent
+
     # Call active agent post-process contract method (skipped for silence)
     if classification.is_silent_turn:
         ctx.state["last_outcome"] = "silence"
-    elif current_agent in _AGENTS:
+    elif strategy_agent in _AGENTS:
         memory_dict = _get_agent_memory(ctx)
-        outcome, updated_memory = await _AGENTS[current_agent].post_process(classification, memory_dict, ctx.state.to_dict())
+        outcome, updated_memory = await _AGENTS[strategy_agent].post_process(classification, memory_dict, ctx.state.to_dict())
         ctx.state["last_outcome"] = outcome
         _set_agent_memory(ctx, updated_memory)
 
@@ -1633,9 +1641,9 @@ async def orchestrator_node(ctx: Context, node_input: Any):
             next_agent, resolved_updates, user_input_str
         )
         if final_agent != next_agent:
-            print(f"[Critic] Route revised: {next_agent} \u2192 {final_agent} (reason: {new_rev_reason})")
+            print(f"[Critic] Route revised: {next_agent} -> {final_agent} (reason: {new_rev_reason})")
         elif refl_status == "cap_reached":
-            print(f"[Critic] Cap reached \u2014 accepted {next_agent} as-is.")
+            print(f"[Critic] Cap reached - accepted {next_agent} as-is.")
         next_agent = final_agent
         resolved_updates = final_updates
         ctx.state["revision_count"] = new_rev_count
@@ -1663,8 +1671,10 @@ async def orchestrator_node(ctx: Context, node_input: Any):
     else:
         ctx.state["clarification_attempts"] = 0
 
-    # Update last_agent
+    # Update last_agent and previous_agent
     ctx.state["last_agent"] = current_agent
+    if next_agent == "ClarifyingAgent" and current_agent != "ClarifyingAgent":
+        ctx.state["previous_agent"] = current_agent
 
     # Run transition hook if agent changed
     if next_agent != current_agent:
@@ -1996,7 +2006,7 @@ async def terminate_node(ctx: Context, node_input: Any):
     trans = list(ctx.state.get("raw_audio_transcription", []))
     trans.append(f"Agent: {msg}")
     ctx.state["raw_audio_transcription"] = trans
-    return msg
+    return ctx.state.to_dict()
 
 @node(name="FallbackNode")
 async def fallback_node(ctx: Context, node_input: Any):
@@ -2010,7 +2020,7 @@ async def fallback_node(ctx: Context, node_input: Any):
     trans = list(ctx.state.get("raw_audio_transcription", []))
     trans.append(f"Agent: {msg}")
     ctx.state["raw_audio_transcription"] = trans
-    return msg
+    return ctx.state.to_dict()
 
 # ---------------------------------------------------------------------------
 # Workflow Graph
