@@ -642,11 +642,37 @@ class AgentContract:
     async def transition(self, memory: dict, state: dict) -> tuple[str, dict]:
         return self.goal, memory
 
+    def goal_satisfied(self, classification: TurnClassification, memory: dict, state: dict) -> bool:
+        return state.get("last_outcome") in ("success", "accepted")
+
     def determine_next_agent(self, classification: TurnClassification, state: dict, user_input_str: str) -> tuple[str, dict]:
+        memory = state.get("agent_memory", {})
+        if self.goal_satisfied(classification, memory, state):
+            return self._route_on_goal_complete(state)
+        return self._route_on_goal_incomplete(classification, state, user_input_str)
+
+    def _route_on_goal_complete(self, state: dict) -> tuple[str, dict]:
+        if len(self.possible_next_actions) == 1:
+            return self.possible_next_actions[0], {}
+        raise NotImplementedError
+
+    def _route_on_goal_incomplete(self, classification: TurnClassification, state: dict, user_input_str: str) -> tuple[str, dict]:
         raise NotImplementedError
 
 
-class GreetingAgentContract(AgentContract):
+class IdentityConfirmationContract(AgentContract):
+    def _route_on_goal_complete(self, state: dict) -> tuple[str, dict]:
+        return "EventAgent", {}
+
+    def _route_on_goal_incomplete(self, classification: TurnClassification, state: dict, user_input_str: str) -> tuple[str, dict]:
+        if classification.is_decline or state.get("last_outcome") == "declined":
+            return "ApologyAgent", {}
+        if state.get("last_outcome") == "pending":
+            return "ClarifyingAgent", {"previous_agent": self.name}
+        return "VerificationAgent", {}
+
+
+class GreetingAgentContract(IdentityConfirmationContract):
     def __init__(self):
         super().__init__(
             name="GreetingAgent",
@@ -657,29 +683,22 @@ class GreetingAgentContract(AgentContract):
         )
 
     async def post_process(self, classification, memory, state):
-        if classification.is_valid_answer:
+        if classification.confidence_score < 0.75:
+            last_outcome = "pending"
+        elif classification.is_valid_answer:
             last_outcome = "success"
         elif classification.is_decline:
             last_outcome = "declined"
         else:
-            last_outcome = "failed"
+            last_outcome = "pending"
         memory["welcomed"] = True
         return last_outcome, memory
 
     async def transition(self, memory, state):
         return "verify_identity_greeting", memory
 
-    def determine_next_agent(self, classification, state, user_input_str):
-        if classification.is_decline:
-            return "ApologyAgent", {}
-        if classification.is_valid_answer:
-            if classification.confidence_score < 0.75:
-                return "ClarifyingAgent", {"previous_agent": self.name}
-            return "EventAgent", {}
-        return "VerificationAgent", {}
 
-
-class VerificationAgentContract(AgentContract):
+class VerificationAgentContract(IdentityConfirmationContract):
     def __init__(self):
         super().__init__(
             name="VerificationAgent",
@@ -690,26 +709,19 @@ class VerificationAgentContract(AgentContract):
         )
 
     async def post_process(self, classification, memory, state):
-        if classification.is_valid_answer:
+        if classification.confidence_score < 0.75:
+            last_outcome = "pending"
+        elif classification.is_valid_answer:
             last_outcome = "success"
             memory["verified"] = True
         elif classification.is_decline:
             last_outcome = "declined"
         else:
-            last_outcome = "failed"
+            last_outcome = "pending"
         return last_outcome, memory
 
     async def transition(self, memory, state):
         return "verify_identity_explicit", memory
-
-    def determine_next_agent(self, classification, state, user_input_str):
-        if classification.is_decline:
-            return "ApologyAgent", {}
-        if classification.is_valid_answer:
-            if classification.confidence_score < 0.75:
-                return "ClarifyingAgent", {"previous_agent": self.name}
-            return "EventAgent", {}
-        return "VerificationAgent", {}
 
 
 class EventAgentContract(AgentContract):
@@ -728,7 +740,10 @@ class EventAgentContract(AgentContract):
     async def transition(self, memory, state):
         return "introduce_birthday_event", memory
 
-    def determine_next_agent(self, classification, state, user_input_str):
+    def _route_on_goal_complete(self, state):
+        return "SpendingHistoryAgent", {}
+
+    def _route_on_goal_incomplete(self, classification, state, user_input_str):
         return "SpendingHistoryAgent", {}
 
 
@@ -759,12 +774,22 @@ class SpendingHistoryAgentContract(AgentContract):
             memory["pitch_category"] = "Fashion"
         return "retrieve_spending_history_and_pitch_interest", memory
 
-    def determine_next_agent(self, classification, state, user_input_str):
-        if state.get("offer_pitched", False) and classification.is_acceptance:
-            if classification.confidence_score < 0.75:
-                return "ClarifyingAgent", {"previous_agent": self.name}
+    def goal_satisfied(self, classification, memory, state):
+        if not state.get("offer_pitched", False):
+            return True
+        return state.get("last_outcome") in ("accepted", "declined")
+
+    def _route_on_goal_complete(self, state):
+        if not state.get("offer_pitched", False):
+            return "OfferAgent", {}
+        if state.get("last_outcome") == "accepted":
             return "PostCallAgent", {"offer_accepted": True}
-        return "OfferAgent", {}
+        return "ApologyAgent", {}
+
+    def _route_on_goal_incomplete(self, classification, state, user_input_str):
+        if classification.is_loyalty_question:
+            return "SpendingHistoryAgent", {}
+        return "ClarifyingAgent", {"previous_agent": self.name}
 
 
 class OfferAgentContract(AgentContract):
@@ -778,29 +803,35 @@ class OfferAgentContract(AgentContract):
         )
 
     async def post_process(self, classification, memory, state):
-        if classification.is_acceptance:
+        if classification.confidence_score < 0.75:
+            last_outcome = "pending"
+        elif classification.is_acceptance:
             last_outcome = "accepted"
         elif classification.is_decline:
             last_outcome = "declined"
         elif classification.is_loyalty_question:
             last_outcome = "tangent"
         else:
-            last_outcome = "declined"
+            last_outcome = "pending"
         return last_outcome, memory
 
     async def transition(self, memory, state):
         memory["offer_pitched"] = True
         return "pitch_personalized_offer", memory
 
-    def determine_next_agent(self, classification, state, user_input_str):
+    def goal_satisfied(self, classification, memory, state):
+        return state.get("last_outcome") in ("accepted", "declined")
+
+    def _route_on_goal_complete(self, state):
+        if state.get("last_outcome") == "accepted":
+            return "PostCallAgent", {"offer_accepted": True}
+        return "ApologyAgent", {}
+
+    def _route_on_goal_incomplete(self, classification, state, user_input_str):
         if classification.is_loyalty_question:
             return "SpendingHistoryAgent", {}
-        if classification.confidence_score < 0.75:
+        if state.get("last_outcome") == "pending":
             return "ClarifyingAgent", {"previous_agent": self.name}
-        if classification.is_acceptance:
-            return "PostCallAgent", {"offer_accepted": True}
-        if classification.is_decline:
-            return "ApologyAgent", {}
         return "ApologyAgent", {}
 
 
@@ -820,12 +851,15 @@ class ApologyAgentContract(AgentContract):
     async def transition(self, memory, state):
         return "apologize_and_warn_or_exit", memory
 
-    def determine_next_agent(self, classification, state, user_input_str):
+    def _route_on_goal_complete(self, state):
         injection_attempts = state.get("injection_attempts", 0)
         previous_agent = state.get("previous_agent", "")
         if injection_attempts == 1 and previous_agent:
             return previous_agent, {}
         return "Terminate", {}
+
+    def _route_on_goal_incomplete(self, classification, state, user_input_str):
+        return self._route_on_goal_complete(state)
 
 
 class EscalationAgentContract(AgentContract):
@@ -844,8 +878,11 @@ class EscalationAgentContract(AgentContract):
     async def transition(self, memory, state):
         return "escalate_to_supervisor", memory
 
-    def determine_next_agent(self, classification, state, user_input_str):
+    def _route_on_goal_complete(self, state):
         return "Terminate", {}
+
+    def _route_on_goal_incomplete(self, classification, state, user_input_str):
+        return self._route_on_goal_complete(state)
 
 
 class PostCallAgentContract(AgentContract):
@@ -865,8 +902,11 @@ class PostCallAgentContract(AgentContract):
         memory["whatsapp_sent"] = True
         return "send_whatsapp_and_confirm", memory
 
-    def determine_next_agent(self, classification, state, user_input_str):
+    def _route_on_goal_complete(self, state):
         return "Terminate", {}
+
+    def _route_on_goal_incomplete(self, classification, state, user_input_str):
+        return self._route_on_goal_complete(state)
 
 
 class ClarifyingAgentContract(AgentContract):
@@ -880,23 +920,30 @@ class ClarifyingAgentContract(AgentContract):
         )
 
     async def post_process(self, classification, memory, state):
-        if classification.is_acceptance:
+        if classification.confidence_score < 0.75:
+            last_outcome = "pending"
+        elif classification.is_acceptance:
             last_outcome = "accepted"
         elif classification.is_decline:
             last_outcome = "declined"
         elif classification.is_valid_answer:
             last_outcome = "success"
         else:
-            last_outcome = "failed"
+            last_outcome = "pending"
         return last_outcome, memory
 
     async def transition(self, memory, state):
         memory["clarification_count"] = memory.get("clarification_count", 0) + 1
         return "clarify_ambiguous_intent", memory
 
-    def determine_next_agent(self, classification, state, user_input_str):
-        previous_agent = state.get("previous_agent", "GreetingAgent")
-        return previous_agent, {}
+    def goal_satisfied(self, classification, memory, state):
+        return classification.confidence_score >= 0.75 and state.get("last_outcome") in ("success", "accepted", "declined")
+
+    def _route_on_goal_complete(self, state):
+        return state.get("previous_agent", "GreetingAgent"), {}
+
+    def _route_on_goal_incomplete(self, classification, state, user_input_str):
+        return "ClarifyingAgent", {}
 
 
 class TerminateContract(AgentContract):
@@ -912,8 +959,11 @@ class TerminateContract(AgentContract):
     async def transition(self, memory, state):
         return "end_call_and_terminate", memory
 
-    def determine_next_agent(self, classification, state, user_input_str):
+    def _route_on_goal_complete(self, state):
         return "Terminate", {}
+
+    def _route_on_goal_incomplete(self, classification, state, user_input_str):
+        return self._route_on_goal_complete(state)
 
 
 class FallbackNodeContract(AgentContract):
@@ -926,8 +976,11 @@ class FallbackNodeContract(AgentContract):
             possible_next_actions=["Terminate"]
         )
 
-    def determine_next_agent(self, classification, state, user_input_str):
+    def _route_on_goal_complete(self, state):
         return "Terminate", {}
+
+    def _route_on_goal_incomplete(self, classification, state, user_input_str):
+        return self._route_on_goal_complete(state)
 
 
 _AGENTS = {
