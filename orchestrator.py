@@ -464,8 +464,13 @@ Key rules:
 - is_silent_turn: true for '...', empty, wind/ambient sounds, clearly no speech content.
 - Sarcasm rule: exaggerated positive words ("AMAZING", "GREAT", "SO helpful") after bad news
   (expiring credits, rejection) = call_sentiment="Agitated", NOT "Positive".
- 
- 
+
+AMBIGUITY RULES:
+- Strictly Limit ambiguity_reason: This field should ONLY be used when the utterance is genuinely unclear, incomplete, or impossible to map to a single intent (e.g., "nice", "maybe", "huh?").
+- Detail Requests are NOT Vague: Questions asking for details (e.g., "what is it?", "tell me more", "what coupon?", "how does it work?") are NOT ambiguous. They clearly indicate interest and engagement.
+- Contextual Single Words: Single-word utterances like "what" are ambiguous ONLY if isolated with no context. Do not flag them as vague if they are a natural follow-up to an offer pitch.
+- Handle Interest Correctly: If the user is clearly asking for offer details or expressing curiosity, set is_acceptance=true (or your equivalent interest flag) and keep ambiguity_reason="" (or set a non-vague descriptive note like "Clear request for offer details" if the schema requires a string).
+
 CRITICAL NEGATIVE CONSTRAINTS:
 - NEVER set is_third_party to true for evasive, vague, or defensive questions like "depends who's asking", "who is this", "why do you need to know", "maybe, maybe not". Evasive answers are NOT third-party calls; you MUST set is_third_party to false for these.
  
