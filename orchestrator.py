@@ -2,7 +2,7 @@ import os
 import json
 import dotenv
 import httpx
-from typing import List, Any
+from typing import List, Any, Literal
 from pydantic import BaseModel, Field, model_validator
 from google.adk.agents import LlmAgent, Context
 from google.adk.workflow import node, Workflow, START, DEFAULT_ROUTE
@@ -36,6 +36,8 @@ _VALID_CONTEXT_KEYS = {
     "offer_accepted", "escalation_triggered", "raw_audio_transcription",
     "silent_turns", "injection_attempts", "escalation_reason", "previous_agent",
     "clarification_attempts",
+    # Critic / decision revision fields
+    "revision_count", "revision_reason",
     # Allowed derived/helper fields
     "has_escalation_keywords"
 }
@@ -120,6 +122,8 @@ def init_state_defaults(ctx: Context):
         "last_agent": "",
         "last_outcome": "",
         "agent_memory": {},
+        "revision_count": 0,
+        "revision_reason": "",
     }
     for key, val in state_defaults.items():
         ctx.state.setdefault(key, val)
@@ -284,6 +288,47 @@ class TurnClassification(BaseModel):
             elif isinstance(v, str):
                 values[f] = v.lower() in ("true", "yes", "1")
         return values
+
+# ---------------------------------------------------------------------------
+# Critique — Typed return shape for criticize_decision()
+# ---------------------------------------------------------------------------
+
+class Critique(BaseModel):
+    """
+    Typed result of a contract's criticize_decision() call.
+    failure_reason is the only field revision logic branches on.
+    note is for debug logging only — never shown to the user.
+    """
+    is_acceptable: bool
+    failure_reason: Literal[
+        "",
+        "route_context_mismatch",       # route doesn't fit prior conversational context
+        "outcome_contradicts_utterance", # e.g. question/interest signal but routed to end call
+        "unstated_precondition",         # e.g. routed to end call before offer was ever stated
+    ] = ""
+    note: str = Field(default="", description="Short human-readable reason for logging/debugging only.")
+
+
+# ---------------------------------------------------------------------------
+# _OFFER_INTEREST_PATTERNS — Phrase-level patterns for OfferAgentContract critic
+#
+# Deliberately phrase-level (not bare single words like "what"/"how") to avoid
+# false positives on legitimate declines containing those words as substrings
+# (e.g. "however, I'll pass" or "I don't know what you mean, no thanks").
+# ---------------------------------------------------------------------------
+
+_OFFER_INTEREST_PATTERNS = frozenset([
+    "?",           # trailing question mark — clearest interest/question signal
+    "what is",     # "what is the offer", "what is this coupon"
+    "what coupon", # specific phrase confirmed in classification regression tests
+    "what offer",
+    "tell me",     # "tell me more", "tell me about it"
+    "how much",    # "how much is the discount"
+    "how does",    # "how does it work"
+    "which coupon",
+    "which offer",
+])
+
 
 # ---------------------------------------------------------------------------
 # Injection Pre-Filter — Hard, High-Confidence Surface Markers Only
@@ -666,6 +711,32 @@ class AgentContract:
     def _route_on_goal_incomplete(self, classification: TurnClassification, state: dict, user_input_str: str) -> tuple[str, dict]:
         raise NotImplementedError
 
+    def criticize_decision(
+        self,
+        classification: TurnClassification,
+        state: dict,
+        proposed_next_agent: str,
+        proposed_updates: dict,
+        user_input_str: str = "",
+    ) -> Critique:
+        """Default: no critique — safe no-op. Only contracts with a documented,
+        real failure mode override this. Never speculatively add critics."""
+        return Critique(is_acceptable=True)
+
+    def revise_decision(
+        self,
+        classification: TurnClassification,
+        state: dict,
+        critique: Critique,
+        proposed_next_agent: str,
+        proposed_updates: dict,
+        user_input_str: str = "",
+    ) -> tuple[str, dict]:
+        """Default fallback when a contract doesn't override: route to ClarifyingAgent
+        to keep the conversation alive. A wrong critique should re-engage the user,
+        not end the call — ending the call is a stronger claim than 'this route seems wrong'."""
+        return "ClarifyingAgent", {"previous_agent": self.name}
+
 
 class IdentityConfirmationContract(AgentContract):
     def _route_on_goal_complete(self, state: dict) -> tuple[str, dict]:
@@ -806,6 +877,37 @@ class SpendingHistoryAgentContract(AgentContract):
             return "SpendingHistoryAgent", {}
         return "ClarifyingAgent", {"previous_agent": self.name}
 
+    def criticize_decision(self, classification, state, proposed_next_agent, proposed_updates, user_input_str=""):
+        # Catch: routing to ApologyAgent on a decline when offer was never pitched.
+        # This fires when ClarifyingAgent resolves a customer's ambiguous response as
+        # is_decline=True, but the customer declined *before the offer was stated* —
+        # ending the call here is premature.
+        # Architectural note: this override lives on SpendingHistoryAgentContract (not
+        # ClarifyingAgentContract) because when current_agent=ClarifyingAgent the
+        # orchestrator uses previous_agent's contract as the strategy contract, so
+        # ClarifyingAgentContract.criticize_decision would never be invoked.
+        if (
+            proposed_next_agent == "ApologyAgent"
+            and state.get("last_outcome") == "declined"
+            and not state.get("offer_pitched", False)
+        ):
+            return Critique(
+                is_acceptable=False,
+                failure_reason="unstated_precondition",
+                note=(
+                    "Routing to ApologyAgent on decline but offer_pitched=False — "
+                    "customer declined before hearing the offer; route to OfferAgent instead."
+                ),
+            )
+        return Critique(is_acceptable=True)
+
+    def revise_decision(self, classification, state, critique, proposed_next_agent, proposed_updates, user_input_str=""):
+        if critique.failure_reason == "unstated_precondition":
+            # Skip back to OfferAgent — spending history context is already gathered,
+            # pitch the offer directly rather than re-entering clarification.
+            return "OfferAgent", {}
+        return "ClarifyingAgent", {"previous_agent": self.name}
+
 
 class OfferAgentContract(AgentContract):
     def __init__(self):
@@ -848,6 +950,35 @@ class OfferAgentContract(AgentContract):
         if state.get("last_outcome") == "pending":
             return "ClarifyingAgent", {"previous_agent": self.name}
         return "ApologyAgent", {}
+
+    def criticize_decision(self, classification, state, proposed_next_agent, proposed_updates, user_input_str=""):
+        # Catch: routing to ApologyAgent on is_decline=True, but the utterance contains
+        # a question or interest signal — the classifier likely missed the real intent.
+        # This is the realistic failure shape: not a contradictory dual-flag classification
+        # (post_process's elif chain makes that near-impossible) but a genuine decline
+        # mis-tag on a question-like utterance.
+        if (
+            state.get("last_outcome") == "declined"
+            and proposed_next_agent == "ApologyAgent"
+            and classification.is_decline
+            and any(pat in user_input_str.lower() for pat in _OFFER_INTEREST_PATTERNS)
+        ):
+            return Critique(
+                is_acceptable=False,
+                failure_reason="outcome_contradicts_utterance",
+                note=(
+                    f"Utterance '{user_input_str[:60]}' contains question/interest signal "
+                    f"but is_decline=True routed to ApologyAgent — likely missed intent."
+                ),
+            )
+        return Critique(is_acceptable=True)
+
+    def revise_decision(self, classification, state, critique, proposed_next_agent, proposed_updates, user_input_str=""):
+        # For outcome_contradicts_utterance: send to ClarifyingAgent to re-ask,
+        # not to ApologyAgent which would end the call.
+        if critique.failure_reason == "outcome_contradicts_utterance":
+            return "ClarifyingAgent", {"previous_agent": self.name}
+        return "ClarifyingAgent", {"previous_agent": self.name}
 
 
 class ApologyAgentContract(AgentContract):
@@ -1082,6 +1213,45 @@ def check_safety_guardrails(
     return None
 
 
+def _apply_critic_pass(
+    contract: "AgentContract",
+    classification: TurnClassification,
+    state: dict,
+    next_agent: str,
+    resolved_updates: dict,
+    user_input_str: str,
+) -> tuple[str, dict, int, str]:
+    """
+    Runs the critic pass for a given contract and proposed route.
+    Returns (final_agent, final_updates, new_revision_count, new_revision_reason).
+
+    PURITY GUARANTEE: This function does not mutate its inputs. All overrides of
+    criticize_decision() and revise_decision() in this codebase return fresh dicts
+    and must not mutate state or proposed_updates in place. If you add a new
+    criticize_decision/revise_decision override, do not mutate the dicts you receive.
+    """
+    critique = contract.criticize_decision(
+        classification, state, next_agent, resolved_updates, user_input_str
+    )
+    current_revision_count = state.get("revision_count", 0)
+
+    if not critique.is_acceptable:
+        if current_revision_count >= 1:
+            # Consecutive-turn revision cap reached — accept route as-is.
+            # Do NOT reset revision_count here; it resets only when critique is acceptable.
+            # This prevents the critic from becoming a persistent override on genuinely
+            # unresolved conversations.
+            return next_agent, resolved_updates, current_revision_count, state.get("revision_reason", "")
+        else:
+            revised_agent, revised_updates = contract.revise_decision(
+                classification, state, critique, next_agent, resolved_updates, user_input_str
+            )
+            return revised_agent, revised_updates, current_revision_count + 1, critique.failure_reason
+    else:
+        # Critique passed — reset counter. This is the ONLY place revision_count resets to 0.
+        return next_agent, resolved_updates, 0, ""
+
+
 def _get_agent_memory(ctx: Context) -> dict:
     from session_state import AgentMemory
     mem = ctx.state.get("agent_memory", {})
@@ -1226,7 +1396,23 @@ async def orchestrator_node(ctx: Context, node_input: Any):
         next_agent, resolved_updates = contract_for_strategy.determine_next_agent(
             classification, ctx.state.to_dict(), user_input_str
         )
-        
+
+        # --- Step 5.5: Critic pass ---
+        # Only runs when safety guardrails did NOT intercept (safety_result is None).
+        # Safety-triggered routes are never second-guessed by the critic.
+        final_agent, final_updates, new_revision_count, new_revision_reason = _apply_critic_pass(
+            contract_for_strategy, classification, ctx.state.to_dict(),
+            next_agent, resolved_updates, user_input_str
+        )
+        if final_agent != next_agent:
+            print(f"[Critic] Route revised: {next_agent} \u2192 {final_agent} (reason: {new_revision_reason})")
+        elif new_revision_count == ctx.state.get("revision_count", 0) and new_revision_count > 0:
+            print(f"[Critic] Consecutive revision cap reached \u2014 accepted {next_agent} as-is.")
+        next_agent = final_agent
+        resolved_updates = final_updates
+        ctx.state["revision_count"] = new_revision_count
+        ctx.state["revision_reason"] = new_revision_reason
+
         # --- Step 6: Route Validation ---
         valid_destinations = set(contract_for_strategy.possible_next_actions) | {"ApologyAgent", "EscalationAgent", "Terminate", "FallbackNode"}
         if next_agent not in valid_destinations:

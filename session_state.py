@@ -50,3 +50,7 @@ class SessionState(BaseModel):
     last_outcome: Literal["success", "failed", "accepted", "declined", "tangent", "silence", "pending", ""] = Field(default="", description="The outcome of the last agent's turn.")
     agent_memory: AgentMemory = Field(default_factory=AgentMemory, description="Schema-enforced persistent agent memory.")
 
+    # Internal Critic / Decision Revision Layer (#4 + #5)
+    revision_count: int = Field(default=0, description="Consecutive-turn critic revision counter. Increments when critic revises a route; resets to 0 only when critique is acceptable. Caps at 1 to prevent persistent re-revision on unresolved conversations.")
+    revision_reason: Literal["", "route_context_mismatch", "outcome_contradicts_utterance", "unstated_precondition"] = Field(default="", description="The failure_reason from the last Critique that triggered a revision, or empty string if no revision occurred.")
+
