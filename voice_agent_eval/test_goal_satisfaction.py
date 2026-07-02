@@ -22,6 +22,8 @@ def test_verification_agent_goal_satisfied():
     assert contract.goal_satisfied(None, {}, {"last_outcome": "success"}) is True
     assert contract.goal_satisfied(None, {}, {"last_outcome": "pending"}) is False
 
+import asyncio
+
 def test_spending_history_agent_goal_satisfied():
     contract = SpendingHistoryAgentContract()
     # if offer not pitched yet, goal is satisfied immediately
@@ -30,6 +32,13 @@ def test_spending_history_agent_goal_satisfied():
     assert contract.goal_satisfied(None, {}, {"offer_pitched": True, "last_outcome": "accepted"}) is True
     assert contract.goal_satisfied(None, {}, {"offer_pitched": True, "last_outcome": "declined"}) is True
     assert contract.goal_satisfied(None, {}, {"offer_pitched": True, "last_outcome": "pending"}) is False
+
+def test_spending_history_post_process_decline():
+    contract = SpendingHistoryAgentContract()
+    classification = TurnClassification(is_acceptance=False, is_decline=True, confidence_score=0.95)
+    memory = {"offer_pitched": True}
+    outcome, updated_mem = asyncio.run(contract.post_process(classification, memory, {}))
+    assert outcome == "declined"
 
 def test_offer_agent_goal_satisfied():
     contract = OfferAgentContract()

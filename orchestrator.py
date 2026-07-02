@@ -758,8 +758,12 @@ class SpendingHistoryAgentContract(AgentContract):
         )
 
     async def post_process(self, classification, memory, state):
-        if classification.is_acceptance and memory.get("offer_pitched", False):
+        if classification.confidence_score < 0.75:
+            last_outcome = "pending"
+        elif classification.is_acceptance and memory.get("offer_pitched", False):
             last_outcome = "accepted"
+        elif classification.is_decline and memory.get("offer_pitched", False):
+            last_outcome = "declined"
         else:
             last_outcome = "success"
         return last_outcome, memory
