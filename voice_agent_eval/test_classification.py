@@ -21,7 +21,7 @@ async def test_classify_turn_regression(case):
     expected = case["expected"]
 
     # Sleep to stay within Groq TPM limit (6000 TPM)
-    await asyncio.sleep(8.0)
+    await asyncio.sleep(12.0)
 
     # Invoke isolated classification function
     result = await classify_turn(user_input, state)

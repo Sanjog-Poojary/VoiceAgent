@@ -60,5 +60,35 @@
       "is_decline": true,
       "confidence_score_gte": 0.75
     }
+  },
+  {
+    "user_input": "nice what is it",
+    "state": {
+      "current_agent": "SpendingHistoryAgent"
+    },
+    "expected": {
+      "is_acceptance": true,
+      "confidence_score_gte": 0.85
+    }
+  },
+  {
+    "user_input": "what coupon",
+    "state": {
+      "current_agent": "SpendingHistoryAgent"
+    },
+    "expected": {
+      "is_acceptance": true,
+      "confidence_score_gte": 0.85
+    }
+  },
+  {
+    "user_input": "tell me",
+    "state": {
+      "current_agent": "SpendingHistoryAgent"
+    },
+    "expected": {
+      "is_acceptance": true,
+      "confidence_score_gte": 0.85
+    }
   }
 ]

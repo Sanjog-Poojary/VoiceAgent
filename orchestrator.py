@@ -172,9 +172,9 @@ class TurnClassification(BaseModel):
     is_acceptance: bool = Field(
         default=False,
         description=(
-            "True if the user agreed to or accepted the retail offer, even if phrased indirectly, "
-            "in slang, or colloquially (e.g. 'sure', 'yeah do it', 'activate it', 'no cap I want it', "
-            "'heard enough let's go'). Consider the conversational context."
+            "True if the user agreed to, accepted the retail offer, or showed clear interest in hearing the offer "
+            "(e.g., 'sure', 'yeah do it', 'what is it', 'tell me', 'what coupon', 'what is the offer', 'no cap I want it'). "
+            "Consider the conversational context."
         )
     )
     is_decline: bool = Field(
@@ -345,8 +345,8 @@ _CLASSIFY_TOOL_SCHEMA = {
                 "is_acceptance": {
                     "type": "boolean",
                     "description": (
-                        "True if user agreed to/accepted the offer, even in slang or indirectly "
-                        "(e.g. 'no cap I want it', 'sure do it', 'heard enough')."
+                        "True if user agreed to, accepted the offer, or showed clear interest in hearing the offer "
+                        "(e.g. 'sure', 'what is it', 'tell me', 'what coupon', 'what is the offer')."
                     )
                 },
                 "is_decline": {
@@ -405,9 +405,9 @@ Key rules:
 - is_valid_answer: true ONLY for unambiguous affirmative identity confirmation.
   Examples of valid confirmations: "Yes", "yes", "That's me", "Speaking", "Haan", "haa mai hu", "haa main hu", "yes, I am".
   These are NOT vague; they are standard identity confirmations and MUST yield is_valid_answer=true and confidence_score >= 0.85.
-  Vague, slang, or partial answers (e.g. "nice", "maybe", "why", "who is this", "what coupon") = false.
+  Vague, slang, or partial answers (e.g. "nice", "maybe", "why", "who is this") = false.
 - is_acceptance: true covers slang ("no cap", "sure", "yep"), indirect accepts ("heard enough, just do it"),
-  and code-switch accepts ("haan de do"). Consider full context.
+  code-switch accepts ("haan de do"), and any request for details or showing interest (e.g. "what is it", "tell me", "what coupon", "what is the offer"). You MUST set is_acceptance to true and confidence_score >= 0.85 for these.
 - is_decline: true covers indirect refusals ("maybe later", "I'll pass"), polite nos, and disinterest.
   Does not overlap with is_acceptance.
 - is_third_party: true only if caller explicitly says they are not the named person (e.g. "I am her husband", "she's not available", "this is his wife"). Evasive or vague questions (e.g., "depends who's asking", "why do you need to know") do NOT mean they are a third party; classify as false.
