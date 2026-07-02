@@ -705,9 +705,45 @@ class AgentContract:
 
     def determine_next_agent(self, classification: TurnClassification, state: dict, user_input_str: str) -> tuple[str, dict]:
         memory = state.get("agent_memory", {})
+        updates = {}
+        
+        # Global Tangent Recovery & Guardrails
+        plans = state.get("bounded_plans", {})
+        for agent_name, plan in plans.items():
+            if agent_name != self.name and getattr(plan, "plan_status", plan.get("plan_status")) == "In Progress":
+                if state.get("last_outcome") == "tangent" or self.goal_satisfied(classification, memory, state):
+                    rev_count = getattr(plan, "revision_count", plan.get("revision_count", 0))
+                    max_revs = getattr(plan, "max_revisions", plan.get("max_revisions", 3))
+                    
+                    if rev_count >= max_revs:
+                        if isinstance(plan, dict):
+                            plan["plan_status"] = "Abandoned"
+                        else:
+                            plan.plan_status = "Abandoned"
+                        updates["bounded_plans"] = plans
+                        return "ApologyAgent", updates
+                    
+                    if state.get("last_outcome") == "tangent":
+                        if isinstance(plan, dict):
+                            plan["revision_count"] = rev_count + 1
+                        else:
+                            plan.revision_count = rev_count + 1
+                        updates["bounded_plans"] = plans
+                    else:
+                        if isinstance(plan, dict):
+                            plan["is_resuming"] = True
+                        else:
+                            plan.is_resuming = True
+                        updates["bounded_plans"] = plans
+                        return agent_name, updates
+
         if self.goal_satisfied(classification, memory, state):
-            return self._route_on_goal_complete(state)
-        return self._route_on_goal_incomplete(classification, state, user_input_str)
+            next_agent, route_updates = self._route_on_goal_complete(state)
+        else:
+            next_agent, route_updates = self._route_on_goal_incomplete(classification, state, user_input_str)
+            
+        updates.update(route_updates)
+        return next_agent, updates
 
     def _route_on_goal_complete(self, state: dict) -> tuple[str, dict]:
         if len(self.possible_next_actions) == 1:
@@ -838,12 +874,33 @@ class VerificationAgentContract(IdentityConfirmationContract):
         )
 
     async def post_process(self, classification, memory, state):
+        plans = state.setdefault("bounded_plans", {})
+        plan = plans.get("VerificationAgent")
+        if not plan or plan.get("plan_status") != "In Progress":
+            plan = {
+                "current_objective": "Verify Customer Identity",
+                "remaining_steps": ["Ask Name", "Confirm Match"],
+                "active_step": "Ask Name",
+                "step_history": [],
+                "plan_status": "In Progress",
+                "revision_count": 0,
+                "max_revisions": 3,
+                "is_resuming": False
+            }
+            plans["VerificationAgent"] = plan
+            
         if classification.confidence_score < 0.75:
             last_outcome = "pending"
         elif classification.is_valid_answer:
+            plan["step_history"].append(plan["active_step"])
+            plan["active_step"] = "Confirm Match"
+            if "Confirm Match" in plan["remaining_steps"]:
+                plan["remaining_steps"].remove("Confirm Match")
+            plan["plan_status"] = "Completed"
             last_outcome = "success"
             memory["verified"] = True
         elif classification.is_decline:
+            plan["plan_status"] = "Abandoned"
             last_outcome = "declined"
         else:
             last_outcome = "failed"
@@ -912,7 +969,8 @@ class SpendingHistoryAgentContract(AgentContract):
     def goal_satisfied(self, classification, memory, state):
         if not state.get("offer_pitched", False):
             return state.get("last_outcome") in ("success", "declined")
-        return state.get("last_outcome") in ("accepted", "declined")
+        # If offer_pitched is True, we might be answering a tangent. 'success' or 'accepted' or 'declined' satisfy it.
+        return state.get("last_outcome") in ("success", "accepted", "declined")
 
     def _route_on_goal_complete(self, state):
         if state.get("last_outcome") == "declined":
@@ -921,7 +979,8 @@ class SpendingHistoryAgentContract(AgentContract):
             return "OfferAgent", {}
         if state.get("last_outcome") == "accepted":
             return "PostCallAgent", {"offer_accepted": True}
-        return "ApologyAgent", {}
+        # If last_outcome is success and we didn't recover a tangent, go back to OfferAgent just in case
+        return "OfferAgent", {}
 
     def _route_on_goal_incomplete(self, classification, state, user_input_str):
         if classification.is_loyalty_question:
@@ -935,7 +994,7 @@ class SpendingHistoryAgentContract(AgentContract):
             return c
 
         # 2. Precondition check (generalized)
-        c = _critique_preconditions(proposed_next_agent, state)
+        c = _critique_preconditions(proposed_next_agent, state, proposed_updates)
         if not c.is_acceptable:
             return c
 
@@ -965,13 +1024,35 @@ class OfferAgentContract(AgentContract):
         )
 
     async def post_process(self, classification, memory, state):
+        plans = state.setdefault("bounded_plans", {})
+        plan = plans.get("OfferAgent")
+        if not plan or plan.get("plan_status") != "In Progress":
+            plan = {
+                "current_objective": "Secure Coupon Activation",
+                "remaining_steps": ["Present Offer", "Answer Questions", "Confirm Acceptance"],
+                "active_step": "Present Offer",
+                "step_history": [],
+                "plan_status": "In Progress",
+                "revision_count": 0,
+                "max_revisions": 3,
+                "is_resuming": False
+            }
+            plans["OfferAgent"] = plan
+
         if classification.confidence_score < 0.75:
             last_outcome = "pending"
         elif classification.is_acceptance:
+            plan["step_history"].append(plan["active_step"])
+            plan["active_step"] = "Confirm Acceptance"
+            if "Confirm Acceptance" in plan["remaining_steps"]:
+                plan["remaining_steps"].remove("Confirm Acceptance")
+            plan["plan_status"] = "Completed"
             last_outcome = "accepted"
         elif classification.is_decline:
+            plan["plan_status"] = "Abandoned"
             last_outcome = "declined"
         elif classification.is_loyalty_question:
+            # Leave status as In Progress to resume later
             last_outcome = "tangent"
         else:
             last_outcome = "pending"
@@ -1003,7 +1084,7 @@ class OfferAgentContract(AgentContract):
             return c
 
         # 2. Precondition check
-        c = _critique_preconditions(proposed_next_agent, state)
+        c = _critique_preconditions(proposed_next_agent, state, proposed_updates)
         if not c.is_acceptable:
             return c
 
@@ -1374,11 +1455,16 @@ def _critique_premature_termination(
 def _critique_preconditions(
     proposed_next_agent: str,
     state: dict,
+    proposed_updates: dict,
 ) -> Critique:
     """Reject if routing to PostCallAgent without offer acceptance, or ApologyAgent
     on decline without offer pitched."""
+    # Combine state with proposed_updates for the check
+    effective_offer_accepted = proposed_updates.get("offer_accepted", state.get("offer_accepted", False))
+    effective_offer_pitched = proposed_updates.get("offer_pitched", state.get("offer_pitched", False))
+    
     # PostCallAgent requires offer_accepted=True
-    if proposed_next_agent == "PostCallAgent" and not state.get("offer_accepted", False):
+    if proposed_next_agent == "PostCallAgent" and not effective_offer_accepted:
         return Critique(
             is_acceptable=False,
             failure_reason="unstated_precondition",
@@ -1389,7 +1475,7 @@ def _critique_preconditions(
     if (
         proposed_next_agent == "ApologyAgent"
         and state.get("last_outcome") == "declined"
-        and not state.get("offer_pitched", False)
+        and not effective_offer_pitched
     ):
         return Critique(
             is_acceptable=False,
@@ -1598,8 +1684,11 @@ async def orchestrator_node(ctx: Context, node_input: Any):
         ctx.state["last_outcome"] = "silence"
     elif strategy_agent in _AGENTS:
         memory_dict = _get_agent_memory(ctx)
-        outcome, updated_memory = await _AGENTS[strategy_agent].post_process(classification, memory_dict, ctx.state.to_dict())
+        state_dict = ctx.state.to_dict()
+        outcome, updated_memory = await _AGENTS[strategy_agent].post_process(classification, memory_dict, state_dict)
         ctx.state["last_outcome"] = outcome
+        if "bounded_plans" in state_dict:
+            ctx.state["bounded_plans"] = state_dict["bounded_plans"]
         _set_agent_memory(ctx, updated_memory)
 
     # Increment/reset verification_attempts
@@ -1701,6 +1790,13 @@ async def orchestrator_node(ctx: Context, node_input: Any):
                     f"valid={classification.is_valid_answer}, accept={classification.is_acceptance}, "
                     f"decline={classification.is_decline}, silent={classification.is_silent_turn}]")
 
+    # Graceful Plan Termination on Escalation/Termination
+    if next_agent in ("EscalationAgent", "ApologyAgent", "Terminate") or ctx.state.get("call_sentiment") == "Agitated":
+        plans = ctx.state.get("bounded_plans", {})
+        for agent_name, plan in plans.items():
+            if plan.get("plan_status") == "In Progress":
+                plan["plan_status"] = "Abandoned"
+
     ctx.route = next_agent
     return next_agent
 
@@ -1786,6 +1882,15 @@ async def verification_agent(ctx: Context, node_input: Any):
         msg = f"आगे बढ़ने के लिए, कृपया अपना नाम सत्यापित करें। क्या आप {name} हैं?"
     else:
         msg = f"To proceed, please verify your name. Are you {name}?"
+
+    plan = ctx.state.get("bounded_plans", {}).get("VerificationAgent")
+    if plan and getattr(plan, "is_resuming", False):
+        active_step = getattr(plan, "active_step", "")
+        if lang == "Hindi":
+            msg = f"जैसा कि हम बात कर रहे थे, {active_step} पर लौटते हुए... " + msg
+        else:
+            msg = f"Acknowledge the previous tangent was resolved and smoothly resume the step: {active_step}. " + msg
+        plan.is_resuming = False
 
     trans = list(ctx.state.get("raw_audio_transcription", []))
     trans.append(f"Agent: {msg}")
@@ -1879,6 +1984,15 @@ async def offer_agent(ctx: Context, node_input: Any):
         msg = f"हम आपको आपकी अगली खरीदारी पर एक विशेष {discount}% छूट कूपन कोड '{code}' दे रहे हैं। क्या आप इसे सक्रिय करना चाहेंगे?"
     else:
         msg = f"We are offering you a special {discount}% off coupon code '{code}' on your next purchase. Would you like to activate it?"
+
+    plan = ctx.state.get("bounded_plans", {}).get("OfferAgent")
+    if plan and getattr(plan, "is_resuming", False):
+        active_step = getattr(plan, "active_step", "")
+        if lang == "Hindi":
+            msg = f"जैसा कि हम बात कर रहे थे, {active_step} पर लौटते हुए... " + msg
+        else:
+            msg = f"Acknowledge the previous tangent was resolved and smoothly resume the step: {active_step}. " + msg
+        plan.is_resuming = False
 
     trans = list(ctx.state.get("raw_audio_transcription", []))
     trans.append(f"Agent: {msg}")

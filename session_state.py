@@ -10,6 +10,17 @@ class AgentMemory(BaseModel):
     whatsapp_sent: bool = Field(default=False, description="WhatsApp notification status.")
     clarification_count: int = Field(default=0, description="Ambiguity clarification tracker.")
 
+class BoundedPlan(BaseModel):
+    """Schema for individual sub-agent bounded multi-step plans."""
+    current_objective: str = Field(..., description="The end goal (e.g., 'Secure Coupon Activation').")
+    remaining_steps: List[str] = Field(default_factory=list, description="Steps left to accomplish the objective.")
+    active_step: str = Field(default="", description="The step currently being executed.")
+    step_history: List[str] = Field(default_factory=list, description="Steps already completed.")
+    plan_status: str = Field(default="In Progress", description="e.g., 'In Progress', 'Completed', 'Abandoned'.")
+    revision_count: int = Field(default=0, description="Tracks how many times the plan was modified due to tangents.")
+    max_revisions: int = Field(default=3, description="Maximum number of allowable revisions before abandoning the plan.")
+    is_resuming: bool = Field(default=False, description="Whether the plan is resuming from a tangent context break.")
+
 class SessionState(BaseModel):
     """Pydantic schema representing the Shoppers Stop AI Voice Agent session state.
     
@@ -54,6 +65,7 @@ class SessionState(BaseModel):
     last_agent: str = Field(default="", description="The name of the last active sub-agent.")
     last_outcome: Literal["success", "failed", "accepted", "declined", "tangent", "silence", "pending", ""] = Field(default="", description="The outcome of the last agent's turn.")
     agent_memory: AgentMemory = Field(default_factory=AgentMemory, description="Schema-enforced persistent agent memory.")
+    bounded_plans: Dict[str, BoundedPlan] = Field(default_factory=dict, description="Active multi-step plans mapped by agent name.")
 
     # Internal Critic / Decision Revision Layer (#4 + #5)
     revision_count: int = Field(default=0, description="Consecutive-turn critic revision counter. Increments when critic revises a route; resets to 0 only when critique is acceptable. Caps at 1 to prevent persistent re-revision on unresolved conversations.")
