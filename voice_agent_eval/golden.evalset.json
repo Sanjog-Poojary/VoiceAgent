@@ -508,6 +508,80 @@
         "escalation_triggered": false,
         "last_outcome": "declined"
       }
+    },
+    {
+      "evalId": "scenario_m_personal_shopper_flow",
+      "conversation": [
+        {
+          "invocationId": "",
+          "userContent": {
+            "parts": [
+              {
+                "text": "Yes, speaking."
+              }
+            ],
+            "role": "user"
+          },
+          "creationTimestamp": 0.0
+        },
+        {
+          "invocationId": "",
+          "userContent": {
+            "parts": [
+              {
+                "text": "what is the offer?"
+              }
+            ],
+            "role": "user"
+          },
+          "creationTimestamp": 0.0
+        },
+        {
+          "invocationId": "",
+          "userContent": {
+            "parts": [
+              {
+                "text": "no thanks, not interested in clothes right now"
+              }
+            ],
+            "role": "user"
+          },
+          "creationTimestamp": 0.0
+        },
+        {
+          "invocationId": "",
+          "userContent": {
+            "parts": [
+              {
+                "text": "actually yeah, a personal shopper sounds good"
+              }
+            ],
+            "role": "user"
+          },
+          "creationTimestamp": 0.0
+        },
+        {
+          "invocationId": "",
+          "userContent": {
+            "parts": [
+              {
+                "text": "Friday at 3 PM"
+              }
+            ],
+            "role": "user"
+          },
+          "creationTimestamp": 0.0
+        }
+      ],
+      "creationTimestamp": 0.0,
+      "finalSessionState": {
+        "current_agent": "Terminate",
+        "offer_accepted": false,
+        "personal_shopper_offered": true,
+        "personal_shopper_accepted": true,
+        "preferred_appointment_slot": "Friday at 3 PM",
+        "escalation_triggered": false
+      }
     }
   ],
   "creation_timestamp": 0.0

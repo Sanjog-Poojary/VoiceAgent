@@ -43,6 +43,11 @@ class SessionState(BaseModel):
     previous_agent: str = Field(default="", description="The previous agent active before an injection warning deflection occurred.")
     clarification_attempts: int = Field(default=0, description="The number of clarification attempts during ambiguous turns.")
 
+    # Personal Shopper / Post-Call Action Layer
+    personal_shopper_offered: bool = Field(default=False, description="Whether the personal shopper follow-up was offered this call.")
+    personal_shopper_accepted: bool = Field(default=False, description="Whether the customer accepted the personal shopper appointment.")
+    preferred_appointment_slot: str = Field(default="", description="Customer's stated preferred day/time for the appointment, raw text.")
+
     # Coordinator / Persistent Memory Layer
     current_goal: str = Field(default="", description="The current conversational goal or target agent's objective.")
     goal_history: List[str] = Field(default_factory=list, description="A historical log of conversational goals (max 5).")
@@ -52,5 +57,23 @@ class SessionState(BaseModel):
 
     # Internal Critic / Decision Revision Layer (#4 + #5)
     revision_count: int = Field(default=0, description="Consecutive-turn critic revision counter. Increments when critic revises a route; resets to 0 only when critique is acceptable. Caps at 1 to prevent persistent re-revision on unresolved conversations.")
-    revision_reason: Literal["", "route_context_mismatch", "outcome_contradicts_utterance", "unstated_precondition"] = Field(default="", description="The failure_reason from the last Critique that triggered a revision, or empty string if no revision occurred.")
+    revision_reason: Literal[
+        "", 
+        "route_context_mismatch", 
+        "outcome_contradicts_utterance", 
+        "unstated_precondition",
+        "low_confidence",
+        "goal_misalignment",
+        "premature_termination",
+        "ambiguous_intent"
+    ] = Field(default="", description="The failure_reason from the last Critique that triggered a revision, or empty string if no revision occurred.")
+    
+    # Reflection and decision observability
+    reflection_enabled: bool = Field(default=True, description="Whether the critic pass is active. Can be toggled for debugging or A/B testing.")
+    reflection_status: Literal["", "accepted", "revised", "cap_reached"] = Field(default="", description="Mechanical outcome of the critic pass.")
+    last_decision: str = Field(default="", description="Proposed next_agent before the critic ran.")
+    last_decision_confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Classification confidence_score on the turn that produced last_decision.")
+    last_critique: str = Field(default="", description="Critic's note from the last critique.")
+    revision_applied: bool = Field(default=False, description="True if the critic actually revised the route.")
+
 

@@ -4,9 +4,15 @@ from orchestrator import (
     SpendingHistoryAgentContract,
     OfferAgentContract,
     ClarifyingAgentContract,
+    ApologyAgentContract,
+    PersonalShopperAgentContract,
     AgentContract,
     _AGENTS,
     _apply_critic_pass,
+    _critique_confidence,
+    _critique_premature_termination,
+    _critique_preconditions,
+    _critique_goal_alignment,
     check_safety_guardrails,
     TurnClassification,
     Critique,
@@ -212,21 +218,25 @@ def test_apply_critic_pass_bounded_revision():
 
     # Turn N: revision_count=0 → critique fires → revision applied (count becomes 1)
     state_n = {"revision_count": 0, "revision_reason": ""}
-    agent_n, _, count_n, reason_n = _apply_critic_pass(
+    agent_n, _, count_n, reason_n, refl_n, rev_app_n = _apply_critic_pass(
         contract, classification, state_n, "OfferAgent", {}, "test input"
     )
     assert count_n == 1
     assert reason_n == "route_context_mismatch"
     assert agent_n == "ClarifyingAgent"  # revision fired
+    assert refl_n == "revised"
+    assert rev_app_n is True
 
     # Turn N+1: revision_count=1 → consecutive-turn cap → route accepted as-is, count NOT reset
     state_n1 = {"revision_count": 1, "revision_reason": "route_context_mismatch"}
-    agent_n1, _, count_n1, reason_n1 = _apply_critic_pass(
+    agent_n1, _, count_n1, reason_n1, refl_n1, rev_app_n1 = _apply_critic_pass(
         contract, classification, state_n1, "OfferAgent", {}, "test input"
     )
     assert count_n1 == 1          # NOT reset to 0 — stays at cap
     assert agent_n1 == "OfferAgent"    # route accepted as-is, no revision
     assert reason_n1 == "route_context_mismatch"  # reason preserved from prior turn
+    assert refl_n1 == "cap_reached"
+    assert rev_app_n1 is False
 
 
 def test_apply_critic_pass_resets_only_on_acceptable():
@@ -238,12 +248,14 @@ def test_apply_critic_pass_resets_only_on_acceptable():
         "revision_count": 1, "revision_reason": "unstated_precondition",
         "offer_pitched": True, "last_outcome": "declined"
     }
-    agent, updates, count, reason = _apply_critic_pass(
+    agent, updates, count, reason, refl, rev_app = _apply_critic_pass(
         contract, classification, state, "ApologyAgent", {}, "no thanks"
     )
     assert count == 0   # reset because critique was acceptable
     assert reason == ""
     assert agent == "ApologyAgent"  # route unchanged
+    assert refl == "accepted"
+    assert rev_app is False
 
 
 def test_safety_precedence_critic_block_unreachable():
@@ -309,3 +321,123 @@ def test_offer_agent_critic_defense_in_depth_contradictory_flags():
     critique = contract.criticize_decision(classification, state, "ApologyAgent", {}, "no")
     # "no" has no interest pattern → critic passes — intentional, utterance-based check
     assert critique.is_acceptable
+
+# ---------------------------------------------------------------------------
+# Phase 1 & 2: Critic Expansion & Personal Shopper Tests
+# ---------------------------------------------------------------------------
+
+def test_identity_critic_low_confidence_to_event():
+    contract = GreetingAgentContract()
+    classification = TurnClassification(confidence_score=0.7)
+    critique = contract.criticize_decision(classification, {}, "EventAgent", {}, "idk")
+    assert not critique.is_acceptable
+    assert critique.failure_reason == "ambiguous_intent"
+
+def test_identity_critic_acceptable_high_confidence():
+    contract = GreetingAgentContract()
+    classification = TurnClassification(confidence_score=0.9)
+    critique = contract.criticize_decision(classification, {}, "EventAgent", {}, "yes")
+    assert critique.is_acceptable
+
+def test_identity_critic_premature_termination():
+    contract = GreetingAgentContract()
+    classification = TurnClassification(confidence_score=0.9)
+    critique = contract.criticize_decision(classification, {}, "ApologyAgent", {}, "uh")
+    assert not critique.is_acceptable
+    assert critique.failure_reason == "premature_termination"
+
+def test_clarifying_agent_critic_ambiguous_to_terminal():
+    contract = ClarifyingAgentContract()
+    classification = TurnClassification(confidence_score=0.7)
+    critique = contract.criticize_decision(classification, {"last_outcome": "pending"}, "Terminate", {}, "uh")
+    assert not critique.is_acceptable
+    assert critique.failure_reason == "ambiguous_intent"
+
+def test_clarifying_agent_critic_clear_decline_passes():
+    contract = ClarifyingAgentContract()
+    classification = TurnClassification(confidence_score=0.9, is_decline=True)
+    critique = contract.criticize_decision(classification, {"last_outcome": "declined"}, "Terminate", {}, "no")
+    assert critique.is_acceptable
+
+def test_should_revise_base_policy():
+    contract = AgentContract(name="test", goal="test", expected_input="test", success_criteria="test", possible_next_actions=[])
+    assert contract.should_revise(Critique(is_acceptable=False, confidence=0.9), {"revision_count": 0}) is True
+    assert contract.should_revise(Critique(is_acceptable=False, confidence=0.9), {"revision_count": 1}) is False
+    assert contract.should_revise(Critique(is_acceptable=True, confidence=0.9), {"revision_count": 0}) is False
+
+def test_should_revise_low_critic_confidence():
+    contract = AgentContract(name="test", goal="test", expected_input="test", success_criteria="test", possible_next_actions=[])
+    assert contract.should_revise(Critique(is_acceptable=False, confidence=0.6), {"revision_count": 0}) is False
+
+def test_critique_confidence_helper():
+    critique = _critique_confidence(TurnClassification(confidence_score=0.7), "Terminate", {"last_outcome": "pending"})
+    assert not critique.is_acceptable
+    assert critique.failure_reason == "low_confidence"
+
+def test_critique_premature_termination_helper():
+    critique = _critique_premature_termination("ApologyAgent", {"offer_pitched": False})
+    assert not critique.is_acceptable
+    assert critique.failure_reason == "premature_termination"
+
+def test_critique_preconditions_postcall_no_acceptance():
+    critique = _critique_preconditions("PostCallAgent", {"offer_accepted": False})
+    assert not critique.is_acceptable
+    assert critique.failure_reason == "unstated_precondition"
+
+def test_apply_critic_pass_reflection_disabled():
+    contract = SpendingHistoryAgentContract()
+    classification = TurnClassification(confidence_score=0.5)
+    state = {"reflection_enabled": False}
+    # It would normally fail confidence check, but reflection is disabled.
+    agent, _, _, _, refl, rev_app = _apply_critic_pass(contract, classification, state, "ApologyAgent", {}, "test")
+    assert agent == "ApologyAgent"
+    assert refl == "accepted"
+    assert rev_app is False
+
+def test_apply_critic_pass_returns_reflection_status():
+    contract = SpendingHistoryAgentContract()
+    classification = TurnClassification(confidence_score=0.5)
+    state = {"reflection_enabled": True}
+    agent, _, count, reason, refl, rev_app = _apply_critic_pass(contract, classification, state, "ApologyAgent", {}, "test")
+    assert agent == "ClarifyingAgent"
+    assert refl == "revised"
+    assert rev_app is True
+
+def test_apology_trigger_personal_shopper():
+    contract = ApologyAgentContract()
+    state = {"previous_agent": "OfferAgent", "last_outcome": "declined"}
+    route, updates = contract._route_on_goal_complete(state)
+    assert route == "PersonalShopperAgent"
+    assert updates == {"personal_shopper_offered": True}
+
+def test_apology_personal_shopper_one_shot_guard():
+    contract = ApologyAgentContract()
+    state = {"previous_agent": "OfferAgent", "last_outcome": "declined", "personal_shopper_offered": True}
+    route, updates = contract._route_on_goal_complete(state)
+    assert route == "Terminate"
+    
+def test_apology_ignores_personal_shopper_on_injection():
+    contract = ApologyAgentContract()
+    # If injection triggered this, injection_attempts = 1
+    state = {"previous_agent": "OfferAgent", "last_outcome": "declined", "injection_attempts": 1}
+    route, updates = contract._route_on_goal_complete(state)
+    assert route == "OfferAgent" # returns back to previous agent
+
+def test_personal_shopper_agent_goal_satisfied():
+    contract = PersonalShopperAgentContract()
+    
+    # Phase 1 -> 2: Accept
+    out, _ = asyncio.run(contract.post_process(TurnClassification(is_appointment_accept=True), {}, {}))
+    assert out == "accepted"
+    assert contract.goal_satisfied(None, {}, {"last_outcome": out}) is False
+
+    # Phase 2 -> 3: Slot provided
+    out, _ = asyncio.run(contract.post_process(TurnClassification(), {}, {"preferred_appointment_slot": "Monday 2pm"}))
+    assert out == "success"
+    assert contract.goal_satisfied(None, {}, {"last_outcome": out, "preferred_appointment_slot": "Monday 2pm"}) is True
+
+    # Phase 1 -> Terminate: Decline
+    out, _ = asyncio.run(contract.post_process(TurnClassification(is_appointment_decline=True), {}, {}))
+    assert out == "declined"
+    assert contract.goal_satisfied(None, {}, {"last_outcome": out}) is True
+

@@ -85,6 +85,10 @@ class CRMTicket(BaseModel):
     issue_description: str
     priority: str = "medium"
 
+class AppointmentRequest(BaseModel):
+    customer_id: str
+    preferred_slot: str
+
 # Endpoints
 @app.get("/api/users/{customer_id}", response_model=Customer)
 def get_user(customer_id: str):
@@ -124,6 +128,11 @@ def send_whatsapp(payload: WhatsAppNotification):
 def create_crm_ticket(payload: CRMTicket):
     logger.info(f"Generating CRM ticket for customer {payload.customer_id}: [{payload.priority.upper()}] {payload.issue_description}")
     return {"status": "success", "ticket_id": f"ticket_{payload.customer_id}_999", "message": "CRM ticket created successfully"}
+
+@app.post("/api/appointments/personal-shopper")
+def create_appointment(payload: AppointmentRequest):
+    logger.info(f"Creating personal shopper appointment for customer {payload.customer_id} at {payload.preferred_slot}")
+    return {"status": "success", "appointment_id": f"apt_{payload.customer_id}_123"}
 
 
 # ==========================================
