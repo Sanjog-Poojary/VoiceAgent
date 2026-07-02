@@ -141,11 +141,6 @@ def init_state_defaults(ctx: Context):
         "revision_count": 0,
         "revision_reason": "",
         "reflection_enabled": True,
-        "reflection_status": "",
-        "last_decision": "",
-        "last_decision_confidence": 1.0,
-        "last_critique": "",
-        "revision_applied": False,
     }
     for key, val in state_defaults.items():
         ctx.state.setdefault(key, val)
@@ -313,7 +308,6 @@ class Critique(BaseModel):
         "ambiguous_intent",
     ] = ""
     note: str = Field(default="", description="Short human-readable reason for logging/debugging only.")
-    confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="How certain the critic is about its own assessment.")
 
 
 # ---------------------------------------------------------------------------
@@ -705,45 +699,9 @@ class AgentContract:
 
     def determine_next_agent(self, classification: TurnClassification, state: dict, user_input_str: str) -> tuple[str, dict]:
         memory = state.get("agent_memory", {})
-        updates = {}
-        
-        # Global Tangent Recovery & Guardrails
-        plans = state.get("bounded_plans", {})
-        for agent_name, plan in plans.items():
-            if agent_name != self.name and getattr(plan, "plan_status", plan.get("plan_status")) == "In Progress":
-                if state.get("last_outcome") == "tangent" or self.goal_satisfied(classification, memory, state):
-                    rev_count = getattr(plan, "revision_count", plan.get("revision_count", 0))
-                    max_revs = getattr(plan, "max_revisions", plan.get("max_revisions", 3))
-                    
-                    if rev_count >= max_revs:
-                        if isinstance(plan, dict):
-                            plan["plan_status"] = "Abandoned"
-                        else:
-                            plan.plan_status = "Abandoned"
-                        updates["bounded_plans"] = plans
-                        return "ApologyAgent", updates
-                    
-                    if state.get("last_outcome") == "tangent":
-                        if isinstance(plan, dict):
-                            plan["revision_count"] = rev_count + 1
-                        else:
-                            plan.revision_count = rev_count + 1
-                        updates["bounded_plans"] = plans
-                    else:
-                        if isinstance(plan, dict):
-                            plan["is_resuming"] = True
-                        else:
-                            plan.is_resuming = True
-                        updates["bounded_plans"] = plans
-                        return agent_name, updates
-
         if self.goal_satisfied(classification, memory, state):
-            next_agent, route_updates = self._route_on_goal_complete(state)
-        else:
-            next_agent, route_updates = self._route_on_goal_incomplete(classification, state, user_input_str)
-            
-        updates.update(route_updates)
-        return next_agent, updates
+            return self._route_on_goal_complete(state)
+        return self._route_on_goal_incomplete(classification, state, user_input_str)
 
     def _route_on_goal_complete(self, state: dict) -> tuple[str, dict]:
         if len(self.possible_next_actions) == 1:
@@ -779,17 +737,52 @@ class AgentContract:
         not end the call — ending the call is a stronger claim than 'this route seems wrong'."""
         return "ClarifyingAgent", {"previous_agent": self.name}
 
-    def should_revise(self, critique: Critique, state: dict) -> bool:
-        """Policy gate: determines whether a critique is strong enough to trigger revision.
-        Default: revise if critique is unacceptable, critic confidence >= 0.7,
-        and revision_count < 1 (consecutive-turn cap)."""
-        if critique.is_acceptable:
-            return False
-        if state.get("revision_count", 0) >= 1:
-            return False
-        if critique.confidence < 0.7:
-            return False
-        return True
+
+
+
+class PlanningAgentContract(AgentContract):
+    def determine_next_agent(self, classification: TurnClassification, state: dict, user_input_str: str) -> tuple[str, dict]:
+        memory = state.get("agent_memory", {})
+        updates = {}
+        
+        # Global Tangent Recovery & Guardrails
+        plans = state.get("bounded_plans", {})
+        for agent_name, plan in plans.items():
+            plan_status = getattr(plan, "plan_status", plan.get("plan_status", "")) if isinstance(plan, dict) else getattr(plan, "plan_status", "")
+            if agent_name != self.name and plan_status == "In Progress":
+                if state.get("last_outcome") == "tangent" or self.goal_satisfied(classification, memory, state):
+                    rev_count = plan.get("revision_count", 0) if isinstance(plan, dict) else getattr(plan, "revision_count", 0)
+                    max_revs = plan.get("max_revisions", 3) if isinstance(plan, dict) else getattr(plan, "max_revisions", 3)
+                    
+                    if rev_count >= max_revs:
+                        if isinstance(plan, dict):
+                            plan["plan_status"] = "Abandoned"
+                        else:
+                            plan.plan_status = "Abandoned"
+                        updates["bounded_plans"] = plans
+                        return "ApologyAgent", updates
+                    
+                    if state.get("last_outcome") == "tangent":
+                        if isinstance(plan, dict):
+                            plan["revision_count"] = rev_count + 1
+                        else:
+                            plan.revision_count = rev_count + 1
+                        updates["bounded_plans"] = plans
+                    else:
+                        if isinstance(plan, dict):
+                            plan["is_resuming"] = True
+                        else:
+                            plan.is_resuming = True
+                        updates["bounded_plans"] = plans
+                        return agent_name, updates
+
+        if self.goal_satisfied(classification, memory, state):
+            next_agent, route_updates = self._route_on_goal_complete(state)
+        else:
+            next_agent, route_updates = self._route_on_goal_incomplete(classification, state, user_input_str)
+            
+        updates.update(route_updates)
+        return next_agent, updates
 
 
 class IdentityConfirmationContract(AgentContract):
@@ -823,7 +816,6 @@ class IdentityConfirmationContract(AgentContract):
             return Critique(
                 is_acceptable=False,
                 failure_reason="ambiguous_intent",
-                confidence=0.85,
                 note="Routing to EventAgent but identity confirmation confidence is too low.",
             )
 
@@ -874,33 +866,12 @@ class VerificationAgentContract(IdentityConfirmationContract):
         )
 
     async def post_process(self, classification, memory, state):
-        plans = state.setdefault("bounded_plans", {})
-        plan = plans.get("VerificationAgent")
-        if not plan or plan.get("plan_status") != "In Progress":
-            plan = {
-                "current_objective": "Verify Customer Identity",
-                "remaining_steps": ["Ask Name", "Confirm Match"],
-                "active_step": "Ask Name",
-                "step_history": [],
-                "plan_status": "In Progress",
-                "revision_count": 0,
-                "max_revisions": 3,
-                "is_resuming": False
-            }
-            plans["VerificationAgent"] = plan
-            
         if classification.confidence_score < 0.75:
             last_outcome = "pending"
         elif classification.is_valid_answer:
-            plan["step_history"].append(plan["active_step"])
-            plan["active_step"] = "Confirm Match"
-            if "Confirm Match" in plan["remaining_steps"]:
-                plan["remaining_steps"].remove("Confirm Match")
-            plan["plan_status"] = "Completed"
             last_outcome = "success"
             memory["verified"] = True
         elif classification.is_decline:
-            plan["plan_status"] = "Abandoned"
             last_outcome = "declined"
         else:
             last_outcome = "failed"
@@ -933,7 +904,7 @@ class EventAgentContract(AgentContract):
         return "SpendingHistoryAgent", {}
 
 
-class SpendingHistoryAgentContract(AgentContract):
+class SpendingHistoryAgentContract(PlanningAgentContract):
     def __init__(self):
         super().__init__(
             name="SpendingHistoryAgent",
@@ -1013,7 +984,7 @@ class SpendingHistoryAgentContract(AgentContract):
         return "ClarifyingAgent", {"previous_agent": self.name}
 
 
-class OfferAgentContract(AgentContract):
+class OfferAgentContract(PlanningAgentContract):
     def __init__(self):
         super().__init__(
             name="OfferAgent",
@@ -1026,7 +997,11 @@ class OfferAgentContract(AgentContract):
     async def post_process(self, classification, memory, state):
         plans = state.setdefault("bounded_plans", {})
         plan = plans.get("OfferAgent")
-        if not plan or plan.get("plan_status") != "In Progress":
+        
+        # Safely extract plan_status whether it's dict or Pydantic
+        plan_status = plan.get("plan_status") if isinstance(plan, dict) else getattr(plan, "plan_status", "") if plan else ""
+        
+        if not plan or plan_status != "In Progress":
             plan = {
                 "current_objective": "Secure Coupon Activation",
                 "remaining_steps": ["Present Offer", "Answer Questions", "Confirm Acceptance"],
@@ -1042,20 +1017,31 @@ class OfferAgentContract(AgentContract):
         if classification.confidence_score < 0.75:
             last_outcome = "pending"
         elif classification.is_acceptance:
-            plan["step_history"].append(plan["active_step"])
-            plan["active_step"] = "Confirm Acceptance"
-            if "Confirm Acceptance" in plan["remaining_steps"]:
-                plan["remaining_steps"].remove("Confirm Acceptance")
-            plan["plan_status"] = "Completed"
+            if isinstance(plan, dict):
+                plan["step_history"].append(plan["active_step"])
+                plan["active_step"] = "Confirm Acceptance"
+                if "Confirm Acceptance" in plan["remaining_steps"]:
+                    plan["remaining_steps"].remove("Confirm Acceptance")
+                plan["plan_status"] = "Completed"
+            else:
+                plan.step_history.append(plan.active_step)
+                plan.active_step = "Confirm Acceptance"
+                if "Confirm Acceptance" in plan.remaining_steps:
+                    plan.remaining_steps.remove("Confirm Acceptance")
+                plan.plan_status = "Completed"
             last_outcome = "accepted"
         elif classification.is_decline:
-            plan["plan_status"] = "Abandoned"
+            if isinstance(plan, dict):
+                plan["plan_status"] = "Abandoned"
+            else:
+                plan.plan_status = "Abandoned"
             last_outcome = "declined"
         elif classification.is_loyalty_question:
             # Leave status as In Progress to resume later
             last_outcome = "tangent"
         else:
             last_outcome = "pending"
+            
         return last_outcome, memory
 
     async def transition(self, memory, state):
@@ -1098,7 +1084,6 @@ class OfferAgentContract(AgentContract):
             return Critique(
                 is_acceptable=False,
                 failure_reason="outcome_contradicts_utterance",
-                confidence=0.85,
                 note=(
                     f"Utterance '{user_input_str[:60]}' contains question/interest signal "
                     f"but is_decline=True routed to ApologyAgent — likely missed intent."
@@ -1244,7 +1229,6 @@ class ClarifyingAgentContract(AgentContract):
             return Critique(
                 is_acceptable=False,
                 failure_reason="ambiguous_intent",
-                confidence=0.80,
                 note="Routing to terminal agent from ClarifyingAgent on a still-ambiguous response.",
             )
         return Critique(is_acceptable=True)
@@ -1427,7 +1411,6 @@ def _critique_confidence(
         return Critique(
             is_acceptable=False,
             failure_reason="low_confidence",
-            confidence=0.85,
             note=f"Confidence {classification.confidence_score:.2f} too low for decisive route {proposed_next_agent}.",
         )
     return Critique(is_acceptable=True)
@@ -1447,7 +1430,6 @@ def _critique_premature_termination(
         return Critique(
             is_acceptable=False,
             failure_reason="premature_termination",
-            confidence=0.90,
             note="Routing to terminal agent before offer was pitched and without explicit decline.",
         )
     return Critique(is_acceptable=True)
@@ -1468,7 +1450,6 @@ def _critique_preconditions(
         return Critique(
             is_acceptable=False,
             failure_reason="unstated_precondition",
-            confidence=0.95,
             note="Routing to PostCallAgent but offer_accepted is False.",
         )
     # ApologyAgent on decline before offer was pitched
@@ -1480,7 +1461,6 @@ def _critique_preconditions(
         return Critique(
             is_acceptable=False,
             failure_reason="unstated_precondition",
-            confidence=0.90,
             note="Routing to ApologyAgent on decline before offer was pitched.",
         )
     return Critique(is_acceptable=True)
@@ -1502,7 +1482,6 @@ def _critique_goal_alignment(
         return Critique(
             is_acceptable=False,
             failure_reason="goal_misalignment",
-            confidence=0.90,
             note="Routing to EventAgent without identity verification.",
         )
     # Can't go to OfferAgent without spending history being gathered (pitch_category set)
@@ -1514,7 +1493,6 @@ def _critique_goal_alignment(
         return Critique(
             is_acceptable=False,
             failure_reason="goal_misalignment",
-            confidence=0.80,
             note="Routing to OfferAgent without spending history context.",
         )
     return Critique(is_acceptable=True)
@@ -1544,7 +1522,7 @@ def _apply_critic_pass(
         classification, state, next_agent, resolved_updates, user_input_str
     )
 
-    if not critique.is_acceptable and contract.should_revise(critique, state):
+    if not critique.is_acceptable and state.get("revision_count", 0) < 1:
         revised_agent, revised_updates = contract.revise_decision(
             classification, state, critique, next_agent, resolved_updates, user_input_str
         )
@@ -1722,8 +1700,7 @@ async def orchestrator_node(ctx: Context, node_input: Any):
         # --- Step 5.5: Critic pass ---
         # Only runs when safety guardrails did NOT intercept (safety_result is None).
         # Safety-triggered routes are never second-guessed by the critic.
-        ctx.state["last_decision"] = next_agent
-        ctx.state["last_decision_confidence"] = classification.confidence_score
+
 
         final_agent, final_updates, new_rev_count, new_rev_reason, refl_status, rev_applied = _apply_critic_pass(
             contract_for_strategy, classification, ctx.state.to_dict(),
@@ -1737,9 +1714,6 @@ async def orchestrator_node(ctx: Context, node_input: Any):
         resolved_updates = final_updates
         ctx.state["revision_count"] = new_rev_count
         ctx.state["revision_reason"] = new_rev_reason
-        ctx.state["reflection_status"] = refl_status
-        ctx.state["revision_applied"] = rev_applied
-        ctx.state["last_critique"] = ""  # cleared each turn; set by debug logging if needed
 
         # --- Step 6: Route Validation ---
         valid_destinations = set(contract_for_strategy.possible_next_actions) | {"ApologyAgent", "EscalationAgent", "Terminate", "FallbackNode"}
@@ -1794,8 +1768,12 @@ async def orchestrator_node(ctx: Context, node_input: Any):
     if next_agent in ("EscalationAgent", "ApologyAgent", "Terminate") or ctx.state.get("call_sentiment") == "Agitated":
         plans = ctx.state.get("bounded_plans", {})
         for agent_name, plan in plans.items():
-            if plan.get("plan_status") == "In Progress":
-                plan["plan_status"] = "Abandoned"
+            plan_status = plan.get("plan_status", "") if isinstance(plan, dict) else getattr(plan, "plan_status", "")
+            if plan_status == "In Progress":
+                if isinstance(plan, dict):
+                    plan["plan_status"] = "Abandoned"
+                else:
+                    plan.plan_status = "Abandoned"
 
     ctx.route = next_agent
     return next_agent

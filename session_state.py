@@ -67,7 +67,7 @@ class SessionState(BaseModel):
     agent_memory: AgentMemory = Field(default_factory=AgentMemory, description="Schema-enforced persistent agent memory.")
     bounded_plans: Dict[str, BoundedPlan] = Field(default_factory=dict, description="Active multi-step plans mapped by agent name.")
 
-    # Internal Critic / Decision Revision Layer (#4 + #5)
+    # Internal Critic / Decision Revision Layer
     revision_count: int = Field(default=0, description="Consecutive-turn critic revision counter. Increments when critic revises a route; resets to 0 only when critique is acceptable. Caps at 1 to prevent persistent re-revision on unresolved conversations.")
     revision_reason: Literal[
         "", 
@@ -80,12 +80,6 @@ class SessionState(BaseModel):
         "ambiguous_intent"
     ] = Field(default="", description="The failure_reason from the last Critique that triggered a revision, or empty string if no revision occurred.")
     
-    # Reflection and decision observability
     reflection_enabled: bool = Field(default=True, description="Whether the critic pass is active. Can be toggled for debugging or A/B testing.")
-    reflection_status: Literal["", "accepted", "revised", "cap_reached"] = Field(default="", description="Mechanical outcome of the critic pass.")
-    last_decision: str = Field(default="", description="Proposed next_agent before the critic ran.")
-    last_decision_confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Classification confidence_score on the turn that produced last_decision.")
-    last_critique: str = Field(default="", description="Critic's note from the last critique.")
-    revision_applied: bool = Field(default=False, description="True if the critic actually revised the route.")
 
 
