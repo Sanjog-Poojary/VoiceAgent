@@ -26,8 +26,10 @@ import asyncio
 
 def test_spending_history_agent_goal_satisfied():
     contract = SpendingHistoryAgentContract()
-    # if offer not pitched yet, goal is satisfied immediately
+    # if offer not pitched yet, goal is satisfied on success/decline but not tangent/pending
     assert contract.goal_satisfied(None, {}, {"offer_pitched": False, "last_outcome": "success"}) is True
+    assert contract.goal_satisfied(None, {}, {"offer_pitched": False, "last_outcome": "declined"}) is True
+    assert contract.goal_satisfied(None, {}, {"offer_pitched": False, "last_outcome": "tangent"}) is False
     # if offer pitched, requires accepted or declined resolution
     assert contract.goal_satisfied(None, {}, {"offer_pitched": True, "last_outcome": "accepted"}) is True
     assert contract.goal_satisfied(None, {}, {"offer_pitched": True, "last_outcome": "declined"}) is True
@@ -39,6 +41,20 @@ def test_spending_history_post_process_decline():
     memory = {"offer_pitched": True}
     outcome, updated_mem = asyncio.run(contract.post_process(classification, memory, {}))
     assert outcome == "declined"
+
+def test_spending_history_post_process_decline_no_pitch():
+    contract = SpendingHistoryAgentContract()
+    classification = TurnClassification(is_acceptance=False, is_decline=True, confidence_score=0.95)
+    memory = {"offer_pitched": False}
+    outcome, updated_mem = asyncio.run(contract.post_process(classification, memory, {}))
+    assert outcome == "declined"
+
+def test_spending_history_post_process_tangent():
+    contract = SpendingHistoryAgentContract()
+    classification = TurnClassification(is_loyalty_question=True, confidence_score=0.95)
+    memory = {}
+    outcome, updated_mem = asyncio.run(contract.post_process(classification, memory, {}))
+    assert outcome == "tangent"
 
 def test_offer_agent_goal_satisfied():
     contract = OfferAgentContract()

@@ -754,16 +754,18 @@ class SpendingHistoryAgentContract(AgentContract):
             goal="retrieve_spending_history_and_pitch_interest",
             expected_input="Customer response showing interest in offer or requesting details",
             success_criteria="Spending history context shared and interest gauged",
-            possible_next_actions=["PostCallAgent", "OfferAgent", "ClarifyingAgent"]
+            possible_next_actions=["PostCallAgent", "OfferAgent", "ClarifyingAgent", "SpendingHistoryAgent"]
         )
 
     async def post_process(self, classification, memory, state):
         if classification.confidence_score < 0.75:
             last_outcome = "pending"
+        elif classification.is_loyalty_question:
+            last_outcome = "tangent"
+        elif classification.is_decline:
+            last_outcome = "declined"
         elif classification.is_acceptance and memory.get("offer_pitched", False):
             last_outcome = "accepted"
-        elif classification.is_decline and memory.get("offer_pitched", False):
-            last_outcome = "declined"
         else:
             last_outcome = "success"
         return last_outcome, memory
@@ -780,10 +782,12 @@ class SpendingHistoryAgentContract(AgentContract):
 
     def goal_satisfied(self, classification, memory, state):
         if not state.get("offer_pitched", False):
-            return True
+            return state.get("last_outcome") in ("success", "declined")
         return state.get("last_outcome") in ("accepted", "declined")
 
     def _route_on_goal_complete(self, state):
+        if state.get("last_outcome") == "declined":
+            return "ApologyAgent", {}
         if not state.get("offer_pitched", False):
             return "OfferAgent", {}
         if state.get("last_outcome") == "accepted":

@@ -448,6 +448,66 @@
         "last_outcome": "accepted",
         "current_goal": "send_whatsapp_and_confirm"
       }
+    },
+    {
+      "evalId": "scenario_l_post_pitch_decline_via_tangent",
+      "conversation": [
+        {
+          "invocationId": "",
+          "userContent": {
+            "parts": [
+              {
+                "text": "Yes, this is Sanjog."
+              }
+            ],
+            "role": "user"
+          },
+          "creationTimestamp": 0.0
+        },
+        {
+          "invocationId": "",
+          "userContent": {
+            "parts": [
+              {
+                "text": "sure, what's the offer"
+              }
+            ],
+            "role": "user"
+          },
+          "creationTimestamp": 0.0
+        },
+        {
+          "invocationId": "",
+          "userContent": {
+            "parts": [
+              {
+                "text": "wait, how many loyalty points do I have first?"
+              }
+            ],
+            "role": "user"
+          },
+          "creationTimestamp": 0.0
+        },
+        {
+          "invocationId": "",
+          "userContent": {
+            "parts": [
+              {
+                "text": "no thanks, not interested"
+              }
+            ],
+            "role": "user"
+          },
+          "creationTimestamp": 0.0
+        }
+      ],
+      "creationTimestamp": 0.0,
+      "finalSessionState": {
+        "current_agent": "ApologyAgent",
+        "offer_accepted": false,
+        "escalation_triggered": false,
+        "last_outcome": "declined"
+      }
     }
   ],
   "creation_timestamp": 0.0
