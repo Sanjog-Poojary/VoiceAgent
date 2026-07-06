@@ -55,9 +55,10 @@ class SessionState(BaseModel):
     clarification_attempts: int = Field(default=0, description="The number of clarification attempts during ambiguous turns.")
 
     # Personal Shopper / Post-Call Action Layer
-    personal_shopper_offered: bool = Field(default=False, description="Whether the personal shopper follow-up was offered this call.")
-    personal_shopper_accepted: bool = Field(default=False, description="Whether the customer accepted the personal shopper appointment.")
+    personal_shopper_offered: bool = Field(default=False, description="True if the user was offered the personal shopper service.")
+    personal_shopper_accepted: bool = Field(default=False, description="True if the user accepted the personal shopper service.")
     preferred_appointment_slot: str = Field(default="", description="Customer's stated preferred day/time for the appointment, raw text.")
+    user_declined_offer: bool = Field(default=False, description="Persistent flag indicating the user explicitly declined the main offer.")
 
     # Coordinator / Persistent Memory Layer
     current_goal: str = Field(default="", description="The current conversational goal or target agent's objective.")

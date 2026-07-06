@@ -991,6 +991,28 @@
                 consoleOutput.appendChild(log);
                 consoleOutput.scrollTop = consoleOutput.scrollHeight;
             }
+
+            // If Appointment Created logged
+            if (state.preferred_appointment_slot && !document.getElementById('appt_logged_' + sessionId)) {
+                const log = document.createElement('div');
+                log.id = 'appt_logged_' + sessionId;
+                log.classList.add('log-entry');
+                
+                const apptJSON = {
+                    customer_id: state.customer_id,
+                    preferred_slot: state.preferred_appointment_slot,
+                    status: "success",
+                    appointment_id: "apt_" + state.customer_id + "_123"
+                };
+
+                log.innerHTML = `
+                    <div class="log-time">[${timeStr}] POST /api/appointments/personal-shopper</div>
+                    <div class="log-title"><i class="fa-solid fa-calendar-check" style="color:var(--accent-blue);"></i> Personal Shopper Appointment Created</div>
+                    <pre class="log-json">${JSON.stringify(apptJSON, null, 2)}</pre>
+                `;
+                consoleOutput.appendChild(log);
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            }
         }
     </script>
 </body>

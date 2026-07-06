@@ -2,5 +2,5 @@ fastapi
 uvicorn[standard]
 pydantic
 google-adk
-litellm
+google-genai
 httpx

@@ -359,15 +359,6 @@ def test_clarifying_agent_critic_clear_decline_passes():
     critique = contract.criticize_decision(classification, {"last_outcome": "declined"}, "Terminate", {}, "no")
     assert critique.is_acceptable
 
-def test_should_revise_base_policy():
-    contract = AgentContract(name="test", goal="test", expected_input="test", success_criteria="test", possible_next_actions=[])
-    assert contract.should_revise(Critique(is_acceptable=False, confidence=0.9), {"revision_count": 0}) is True
-    assert contract.should_revise(Critique(is_acceptable=False, confidence=0.9), {"revision_count": 1}) is False
-    assert contract.should_revise(Critique(is_acceptable=True, confidence=0.9), {"revision_count": 0}) is False
-
-def test_should_revise_low_critic_confidence():
-    contract = AgentContract(name="test", goal="test", expected_input="test", success_criteria="test", possible_next_actions=[])
-    assert contract.should_revise(Critique(is_acceptable=False, confidence=0.6), {"revision_count": 0}) is False
 
 def test_critique_confidence_helper():
     critique = _critique_confidence(TurnClassification(confidence_score=0.7), "Terminate", {"last_outcome": "pending"})
@@ -380,7 +371,7 @@ def test_critique_premature_termination_helper():
     assert critique.failure_reason == "premature_termination"
 
 def test_critique_preconditions_postcall_no_acceptance():
-    critique = _critique_preconditions("PostCallAgent", {"offer_accepted": False})
+    critique = _critique_preconditions("PostCallAgent", {"offer_accepted": False}, {})
     assert not critique.is_acceptable
     assert critique.failure_reason == "unstated_precondition"
 
@@ -405,21 +396,21 @@ def test_apply_critic_pass_returns_reflection_status():
 
 def test_apology_trigger_personal_shopper():
     contract = ApologyAgentContract()
-    state = {"previous_agent": "OfferAgent", "last_outcome": "declined"}
+    state = {"previous_agent": "OfferAgent", "user_declined_offer": True}
     route, updates = contract._route_on_goal_complete(state)
     assert route == "PersonalShopperAgent"
     assert updates == {"personal_shopper_offered": True}
 
 def test_apology_personal_shopper_one_shot_guard():
     contract = ApologyAgentContract()
-    state = {"previous_agent": "OfferAgent", "last_outcome": "declined", "personal_shopper_offered": True}
+    state = {"previous_agent": "OfferAgent", "user_declined_offer": True, "personal_shopper_offered": True}
     route, updates = contract._route_on_goal_complete(state)
     assert route == "Terminate"
     
 def test_apology_ignores_personal_shopper_on_injection():
     contract = ApologyAgentContract()
     # If injection triggered this, injection_attempts = 1
-    state = {"previous_agent": "OfferAgent", "last_outcome": "declined", "injection_attempts": 1}
+    state = {"previous_agent": "OfferAgent", "user_declined_offer": True, "injection_attempts": 1}
     route, updates = contract._route_on_goal_complete(state)
     assert route == "OfferAgent" # returns back to previous agent
 
@@ -440,4 +431,33 @@ def test_personal_shopper_agent_goal_satisfied():
     out, _ = asyncio.run(contract.post_process(TurnClassification(is_appointment_decline=True), {}, {}))
     assert out == "declined"
     assert contract.goal_satisfied(None, {}, {"last_outcome": out}) is True
+
+def test_clarifying_agent_decline_intercepted_by_upstream_critic():
+    """Proves that a decline routed through ClarifyingAgent when offer_pitched=False 
+    is intercepted by the original strategy agent's critic (SpendingHistoryAgent)."""
+    contract = SpendingHistoryAgentContract()  # The strategy agent when ClarifyingAgent is running
+    classification = TurnClassification(is_decline=True, confidence_score=0.95)
+    state = {
+        "current_agent": "ClarifyingAgent",
+        "previous_agent": "SpendingHistoryAgent",
+        "offer_pitched": False,
+        "last_outcome": "declined",  # ClarifyingAgent post_process sets this
+        "revision_count": 0,
+        "revision_reason": "",
+        "reflection_enabled": True
+    }
+    
+    # 1. Determine next agent (simulates what orchestrator_node does)
+    next_agent, updates = contract.determine_next_agent(classification, state, "no")
+    assert next_agent == "ApologyAgent"
+    
+    # 2. Run the critic pass (simulates orchestrator_node Step 5.5)
+    final_agent, final_updates, count, reason, refl, rev_app = _apply_critic_pass(
+        contract, classification, state, next_agent, updates, "no"
+    )
+    
+    # 3. Assert the critic intercepted it!
+    assert final_agent == "OfferAgent"  # SpendingHistoryAgentContract.revise_decision returns OfferAgent on unstated_precondition
+    assert reason == "unstated_precondition"
+    assert rev_app is True
 

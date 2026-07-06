@@ -1,0 +1,277 @@
+{
+  "eval_set_file": "voice_agent_golden_v1",
+  "eval_set_id": "voice_agent_golden_v1",
+  "eval_id": "scenario_j_silent_user",
+  "final_eval_status": 3,
+  "eval_metric_results": null,
+  "overall_eval_metric_results": [],
+  "eval_metric_result_per_invocation": [
+    {
+      "actual_invocation": {
+        "invocation_id": "e-c7c4805b-1339-4724-9a06-0d9efcb707af",
+        "user_content": {
+          "parts": [
+            {
+              "media_resolution": null,
+              "code_execution_result": null,
+              "executable_code": null,
+              "file_data": null,
+              "function_call": null,
+              "function_response": null,
+              "inline_data": null,
+              "text": "...",
+              "thought": null,
+              "thought_signature": null,
+              "video_metadata": null,
+              "tool_call": null,
+              "tool_response": null,
+              "part_metadata": null
+            }
+          ],
+          "role": "user"
+        },
+        "final_response": {
+          "parts": [
+            {
+              "media_resolution": null,
+              "code_execution_result": null,
+              "executable_code": null,
+              "file_data": null,
+              "function_call": {
+                "id": "b7c1afe8-e9c4-48b0-9560-0342c6ff79d8",
+                "args": {
+                  "interruptId": "b7c1afe8-e9c4-48b0-9560-0342c6ff79d8",
+                  "payload": null,
+                  "message": "Hello, am I speaking with Sanjog?",
+                  "response_schema": null
+                },
+                "name": "adk_request_input",
+                "partial_args": null,
+                "will_continue": null
+              },
+              "function_response": null,
+              "inline_data": null,
+              "text": null,
+              "thought": null,
+              "thought_signature": null,
+              "video_metadata": null,
+              "tool_call": null,
+              "tool_response": null,
+              "part_metadata": null
+            }
+          ],
+          "role": "model"
+        },
+        "intermediate_data": {
+          "invocation_events": [
+            {
+              "author": "voice_agent_workflow",
+              "content": {
+                "parts": [
+                  {
+                    "media_resolution": null,
+                    "code_execution_result": null,
+                    "executable_code": null,
+                    "file_data": null,
+                    "function_call": {
+                      "id": "b7c1afe8-e9c4-48b0-9560-0342c6ff79d8",
+                      "args": {
+                        "interruptId": "b7c1afe8-e9c4-48b0-9560-0342c6ff79d8",
+                        "payload": null,
+                        "message": "Hello, am I speaking with Sanjog?",
+                        "response_schema": null
+                      },
+                      "name": "adk_request_input",
+                      "partial_args": null,
+                      "will_continue": null
+                    },
+                    "function_response": null,
+                    "inline_data": null,
+                    "text": null,
+                    "thought": null,
+                    "thought_signature": null,
+                    "video_metadata": null,
+                    "tool_call": null,
+                    "tool_response": null,
+                    "part_metadata": null
+                  }
+                ],
+                "role": "model"
+              }
+            }
+          ]
+        },
+        "creation_timestamp": 1782982486.9824064,
+        "rubrics": null,
+        "app_details": {
+          "agent_details": {}
+        }
+      },
+      "expected_invocation": {
+        "invocation_id": "",
+        "user_content": {
+          "parts": [
+            {
+              "media_resolution": null,
+              "code_execution_result": null,
+              "executable_code": null,
+              "file_data": null,
+              "function_call": null,
+              "function_response": null,
+              "inline_data": null,
+              "text": "...",
+              "thought": null,
+              "thought_signature": null,
+              "video_metadata": null,
+              "tool_call": null,
+              "tool_response": null,
+              "part_metadata": null
+            }
+          ],
+          "role": "user"
+        },
+        "final_response": null,
+        "intermediate_data": null,
+        "creation_timestamp": 0.0,
+        "rubrics": null,
+        "app_details": null
+      },
+      "eval_metric_results": []
+    },
+    {
+      "actual_invocation": {
+        "invocation_id": "e-01c69cf6-58f3-48c4-b5f4-f19d70e57640",
+        "user_content": {
+          "parts": [
+            {
+              "media_resolution": null,
+              "code_execution_result": null,
+              "executable_code": null,
+              "file_data": null,
+              "function_call": null,
+              "function_response": null,
+              "inline_data": null,
+              "text": "...",
+              "thought": null,
+              "thought_signature": null,
+              "video_metadata": null,
+              "tool_call": null,
+              "tool_response": null,
+              "part_metadata": null
+            }
+          ],
+          "role": "user"
+        },
+        "final_response": {
+          "parts": [
+            {
+              "media_resolution": null,
+              "code_execution_result": null,
+              "executable_code": null,
+              "file_data": null,
+              "function_call": {
+                "id": "f42f2990-3005-43b9-917c-ed0d29a77abf",
+                "args": {
+                  "interruptId": "f42f2990-3005-43b9-917c-ed0d29a77abf",
+                  "payload": null,
+                  "message": "Hello, am I speaking with Sanjog?",
+                  "response_schema": null
+                },
+                "name": "adk_request_input",
+                "partial_args": null,
+                "will_continue": null
+              },
+              "function_response": null,
+              "inline_data": null,
+              "text": null,
+              "thought": null,
+              "thought_signature": null,
+              "video_metadata": null,
+              "tool_call": null,
+              "tool_response": null,
+              "part_metadata": null
+            }
+          ],
+          "role": "model"
+        },
+        "intermediate_data": {
+          "invocation_events": [
+            {
+              "author": "voice_agent_workflow",
+              "content": {
+                "parts": [
+                  {
+                    "media_resolution": null,
+                    "code_execution_result": null,
+                    "executable_code": null,
+                    "file_data": null,
+                    "function_call": {
+                      "id": "f42f2990-3005-43b9-917c-ed0d29a77abf",
+                      "args": {
+                        "interruptId": "f42f2990-3005-43b9-917c-ed0d29a77abf",
+                        "payload": null,
+                        "message": "Hello, am I speaking with Sanjog?",
+                        "response_schema": null
+                      },
+                      "name": "adk_request_input",
+                      "partial_args": null,
+                      "will_continue": null
+                    },
+                    "function_response": null,
+                    "inline_data": null,
+                    "text": null,
+                    "thought": null,
+                    "thought_signature": null,
+                    "video_metadata": null,
+                    "tool_call": null,
+                    "tool_response": null,
+                    "part_metadata": null
+                  }
+                ],
+                "role": "model"
+              }
+            }
+          ]
+        },
+        "creation_timestamp": 1782982487.4323263,
+        "rubrics": null,
+        "app_details": {
+          "agent_details": {}
+        }
+      },
+      "expected_invocation": {
+        "invocation_id": "",
+        "user_content": {
+          "parts": [
+            {
+              "media_resolution": null,
+              "code_execution_result": null,
+              "executable_code": null,
+              "file_data": null,
+              "function_call": null,
+              "function_response": null,
+              "inline_data": null,
+              "text": "...",
+              "thought": null,
+              "thought_signature": null,
+              "video_metadata": null,
+              "tool_call": null,
+              "tool_response": null,
+              "part_metadata": null
+            }
+          ],
+          "role": "user"
+        },
+        "final_response": null,
+        "intermediate_data": null,
+        "creation_timestamp": 0.0,
+        "rubrics": null,
+        "app_details": null
+      },
+      "eval_metric_results": []
+    }
+  ],
+  "session_id": "___eval___session___5e59f800-9e60-43eb-8479-651f258baf45",
+  "session_details": null,
+  "user_id": "test_user_id"
+}

@@ -20,8 +20,8 @@ async def test_classify_turn_regression(case):
     state = case["state"]
     expected = case["expected"]
 
-    # Sleep to stay within Groq TPM limit (6000 TPM)
-    await asyncio.sleep(12.0)
+    # Sleep to stay within Gemini 2.5 Flash free tier RPM limit (5 RPM)
+    await asyncio.sleep(12.5)
 
     # Invoke isolated classification function
     result = await classify_turn(user_input, state)
