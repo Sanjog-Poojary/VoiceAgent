@@ -90,5 +90,17 @@
       "is_acceptance": true,
       "confidence_score_gte": 0.85
     }
+  },
+  {
+    "user_input": "I'm busy right now, can I book a personal shopper for later",
+    "state": {
+      "current_agent": "OfferAgent",
+      "offer_pitched": true
+    },
+    "expected": {
+      "is_decline": true,
+      "is_appointment_accept": true,
+      "confidence_score_gte": 0.85
+    }
   }
 ]

@@ -613,6 +613,10 @@ class AgentContract:
 
 class PlanningAgentContract(AgentContract):
     def determine_next_agent(self, classification: TurnClassification, state: dict, user_input_str: str) -> tuple[str, dict]:
+        universal = self.check_universal_intents(classification, state)
+        if universal:
+            return universal
+            
         memory = state.get("agent_memory", {})
         updates = {}
         

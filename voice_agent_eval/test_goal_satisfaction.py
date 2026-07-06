@@ -432,6 +432,13 @@ def test_personal_shopper_agent_goal_satisfied():
     assert out == "declined"
     assert contract.goal_satisfied(None, {}, {"last_outcome": out}) is True
 
+def test_appointment_override_priority():
+    contract = OfferAgentContract()
+    classification = TurnClassification(is_decline=True, is_appointment_accept=True, confidence_score=1.0)
+    state = {"agent_memory": {}, "last_outcome": "pending"}
+    next_agent, updates = contract.determine_next_agent(classification, state, "I'm busy right now, can I book a personal shopper for later")
+    assert next_agent == "PersonalShopperAgent", "is_appointment_accept must override is_decline"
+
 def test_clarifying_agent_decline_intercepted_by_upstream_critic():
     """Proves that a decline routed through ClarifyingAgent when offer_pitched=False 
     is intercepted by the original strategy agent's critic (SpendingHistoryAgent)."""
