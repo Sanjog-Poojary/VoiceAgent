@@ -17,6 +17,8 @@ except ModuleNotFoundError:
 # Load environment variables
 dotenv.load_dotenv()
 
+logger = logging.getLogger(__name__)
+
 MOCK_SERVER_URL = "http://127.0.0.1:8001"
 
 import time
@@ -1188,8 +1190,12 @@ class PersonalShopperAgentContract(AgentContract):
             possible_next_actions=["PersonalShopperAgent", "ClarifyingAgent", "Terminate"]
         )
     
-    async def post_process(self, classification, memory, state, user_input_str=""): 
-        if state.get("preferred_appointment_slot"):
+    async def post_process(self, classification, memory, state, user_input_str=""):
+        # Slot has just been captured this turn → self-loop so the node can fire the booking POST
+        if state.get("preferred_appointment_slot") and not state.get("appointment_booked"):
+            return "slot_captured", memory
+        # Booking already done → success → route to Terminate
+        if state.get("appointment_booked"):
             return "success", memory
         if classification.confidence_score < 0.75:
             return "pending", memory
@@ -1201,15 +1207,17 @@ class PersonalShopperAgentContract(AgentContract):
 
     async def transition(self, memory, state):
         return "offer_personal_shopper", memory
-    
+
     def goal_satisfied(self, classification, memory, state):
         # "accepted" means Phase 1 is done, but Phase 2 (slot) is still pending.
         return state.get("last_outcome") in ("success", "declined")
-    
+
     def _route_on_goal_complete(self, state):
         return "Terminate", {}
-    
+
     def _route_on_goal_incomplete(self, classification, state, user_input_str):
+        if state.get("last_outcome") == "slot_captured":
+            return "PersonalShopperAgent", {}  # Self-loop to fire the booking POST
         if state.get("last_outcome") in ("pending", "incomplete"):
             return "ClarifyingAgent", {"previous_agent": self.name}
         return "PersonalShopperAgent", {}
@@ -1567,7 +1575,7 @@ async def orchestrator_node(ctx: Context, node_input: Any):
             and any(w in _ui_lower for w in _WH_TOKENS)
             and any(o in _ui_lower for o in _OFFER_TOKENS)
             and current_agent == "SalesPitchAgent"):
-        logging.getLogger(__name__).info(f"[Heuristic] Overriding is_knowledge_question=True for: '{user_input_raw[:60]}'")
+        logger.info(f"[Heuristic] Overriding is_knowledge_question=True for: '{user_input_raw[:60]}'")
         classification = classification.model_copy(update={
             "is_knowledge_question": True,
             "is_acceptance": False,
@@ -2010,6 +2018,7 @@ async def personal_shopper_agent(ctx: Context, node_input: Any):
     if slot:
         # Phase 3: Slot captured, create appointment and confirm
         await create_personal_shopper_appointment(customer_id, slot)
+        ctx.state["appointment_booked"] = True
         if lang == "Hindi":
             msg = f"धन्यवाद! हमने आपके लिए {slot} का समय बुक कर दिया है। आपको जल्द ही विवरण प्राप्त होंगे।"
         else:
