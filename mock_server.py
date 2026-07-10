@@ -313,7 +313,7 @@ async def chat_start(payload: ChatStartRequest):
     initial_state = {
         "customer_id": payload.customer_id,
         "detected_language": "English",
-        "current_agent": "GreetingAgent",
+        "current_agent": "IdentityAgent",
         "verification_attempts": 0,
         "call_sentiment": "Neutral",
         "offer_pitched": False,
