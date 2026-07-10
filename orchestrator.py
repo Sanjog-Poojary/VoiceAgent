@@ -1859,6 +1859,13 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
             else:
                 msg = "Great! We wanted to inform you that your Shoppers Stop credits are expiring soon. We have a special gift for you."
 
+        if isinstance(agent_memory, dict):
+            agent_memory["event_introduced"] = True
+            _set_agent_memory(ctx, agent_memory)
+        else:
+            agent_memory.event_introduced = True
+            ctx.state["agent_memory"] = agent_memory
+
         trans = list(ctx.state.get("raw_audio_transcription", []))
         trans.append(f"Agent: {msg}")
         ctx.state["raw_audio_transcription"] = trans
