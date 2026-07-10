@@ -137,20 +137,53 @@ def get_offer(customer_id: str):
         raise HTTPException(status_code=404, detail="No personalized offers for customer")
     return offer
 
+WHATSAPP_LOGS = []
+CRM_LOGS = []
+APPOINTMENT_LOGS = []
+
 @app.post("/api/notify/whatsapp")
 def send_whatsapp(payload: WhatsAppNotification):
     logger.info(f"Simulating WhatsApp message to customer {payload.customer_id} ({payload.phone}): {payload.message}")
+    entry = {"customer_id": payload.customer_id, "phone": payload.phone, "message": payload.message, "status": "success"}
+    WHATSAPP_LOGS.append(entry)
     return {"status": "success", "message": f"WhatsApp message successfully sent to {payload.phone}"}
+
+@app.get("/api/notify/whatsapp/logs")
+def get_whatsapp_logs():
+    return WHATSAPP_LOGS
 
 @app.post("/api/tickets/crm")
 def create_crm_ticket(payload: CRMTicket):
     logger.info(f"Generating CRM ticket for customer {payload.customer_id}: [{payload.priority.upper()}] {payload.issue_description}")
+    entry = {
+        "customer_id": payload.customer_id,
+        "issue_description": payload.issue_description,
+        "priority": payload.priority,
+        "ticket_id": f"ticket_{payload.customer_id}_999",
+        "status": "success"
+    }
+    CRM_LOGS.append(entry)
     return {"status": "success", "ticket_id": f"ticket_{payload.customer_id}_999", "message": "CRM ticket created successfully"}
+
+@app.get("/api/tickets/crm/logs")
+def get_crm_logs():
+    return CRM_LOGS
 
 @app.post("/api/appointments/personal-shopper")
 def create_appointment(payload: AppointmentRequest):
     logger.info(f"Creating personal shopper appointment for customer {payload.customer_id} at {payload.preferred_slot}")
+    entry = {
+        "customer_id": payload.customer_id,
+        "preferred_slot": payload.preferred_slot,
+        "status": "success",
+        "appointment_id": f"apt_{payload.customer_id}_123"
+    }
+    APPOINTMENT_LOGS.append(entry)
     return {"status": "success", "appointment_id": f"apt_{payload.customer_id}_123"}
+
+@app.get("/api/appointments/personal-shopper/logs")
+def get_appointment_logs():
+    return APPOINTMENT_LOGS
 
 
 # ==========================================
@@ -342,7 +375,11 @@ KNOWLEDGE_BASE = {
     "exclusion": "Our standard offers apply to most categories, but premium luxury brands and cosmetics are generally excluded.",
     "tailor": "Shoppers Stop offers free basic alterations for our First Citizen loyalty members at all major outlets.",
     "return": "You can exchange apparel within 14 days at any Shoppers Stop store, provided the tags are intact.",
-    "parking": "Most of our mall locations, including Inorbit Malad, offer valet parking and remain open until 9:30 PM."
+    "parking": "Most of our mall locations, including Inorbit Malad, offer valet parking and remain open until 9:30 PM.",
+    "loyalty": "Points earned today will upgrade your tier immediately, and they do not expire for 12 months from the date of purchase.",
+    "tom ford": "Yes, we carry Tom Ford fragrances in our SSBeauty premium sections, though they are excluded from standard discount codes.",
+    "football": "Our activewear section carries professional performance gear, including football studs from both Puma and Adidas.",
+    "online": "Yes, you can apply this promo code on our mobile app and select the 'Buy Online, Pick Up In Store' option at checkout."
 }
 
 @app.get("/api/knowledge")

@@ -927,7 +927,7 @@
         }
 
         // Check state conditions to simulate side-effect API outputs in the Web Console
-        function checkMockWebhookLogs(state) {
+        async function checkMockWebhookLogs(state) {
             if (!state) return;
             
             // Clear placeholder text on first log
@@ -937,81 +937,79 @@
 
             const timeStr = new Date().toLocaleTimeString();
             
-            // If Escalation Triggered & CRM Ticket logged
+            // Fetch CRM Logs
             if (state.escalation_triggered && !document.getElementById('crm_logged_' + sessionId)) {
-                const log = document.createElement('div');
-                log.id = 'crm_logged_' + sessionId;
-                log.classList.add('log-entry');
-                
-                const crmJSON = {
-                    customer_id: state.customer_id,
-                    issue_description: "Customer became agitated during outbound sales call. Escalated to supervisor.",
-                    priority: "high",
-                    timestamp: new Date().toISOString()
-                };
-
-                log.innerHTML = `
-                    <div class="log-time">[${timeStr}] POST /api/tickets/crm</div>
-                    <div class="log-title"><i class="fa-solid fa-headset"></i> CRM Ticket Created (ticket_${state.customer_id}_999)</div>
-                    <pre class="log-json">${JSON.stringify(crmJSON, null, 2)}</pre>
-                `;
-                consoleOutput.appendChild(log);
-                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                try {
+                    const resp = await fetch('/api/tickets/crm/logs');
+                    if (resp.ok) {
+                        const logs = await resp.json();
+                        const myLog = logs.find(l => l.customer_id === state.customer_id);
+                        if (myLog) {
+                            const log = document.createElement('div');
+                            log.id = 'crm_logged_' + sessionId;
+                            log.classList.add('log-entry');
+                            log.innerHTML = `
+                                <div class="log-time">[${timeStr}] POST /api/tickets/crm</div>
+                                <div class="log-title"><i class="fa-solid fa-headset"></i> CRM Ticket Created (${myLog.ticket_id})</div>
+                                <pre class="log-json">${JSON.stringify(myLog, null, 2)}</pre>
+                            `;
+                            consoleOutput.appendChild(log);
+                            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to load CRM logs", e);
+                }
             }
 
-            // If Offer Accepted & WhatsApp logged
+            // Fetch WhatsApp Logs
             if (state.offer_accepted && !document.getElementById('wa_logged_' + sessionId)) {
-                const log = document.createElement('div');
-                log.id = 'wa_logged_' + sessionId;
-                log.classList.add('log-entry');
-                
-                // Get customer specific info to simulate JSON alert payload
-                const customerMap = {
-                    "1": { name: "Sanjog", phone: "+1234567890", code: "BIRTHDAY20", discount: 20 },
-                    "2": { name: "Aarav", phone: "+919876543210", code: "CREDIT15", discount: 15 },
-                    "3": { name: "Ananya", phone: "+918888888888", code: "LUX25", discount: 25 }
-                };
-                
-                const cust = customerMap[state.customer_id] || { name: "Customer", phone: "+00000", code: "PROMO", discount: 10 };
-                
-                const waJSON = {
-                    customer_id: state.customer_id,
-                    phone: cust.phone,
-                    message: state.detected_language === 'Hindi' 
-                        ? `नमस्ते ${cust.name}, आपका ${cust.discount}% छूट कूपन कोड '${cust.code}' सक्रिय कर दिया गया है। धन्यवाद!` 
-                        : `Hello ${cust.name}, your ${cust.discount}% off coupon code '${cust.code}' has been activated. Thank you!`,
-                    status: "success"
-                };
-
-                log.innerHTML = `
-                    <div class="log-time">[${timeStr}] POST /api/notify/whatsapp</div>
-                    <div class="log-title"><i class="fa-brands fa-whatsapp" style="color:var(--accent-green);"></i> WhatsApp Confirmation Triggered</div>
-                    <pre class="log-json">${JSON.stringify(waJSON, null, 2)}</pre>
-                `;
-                consoleOutput.appendChild(log);
-                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                try {
+                    const resp = await fetch('/api/notify/whatsapp/logs');
+                    if (resp.ok) {
+                        const logs = await resp.json();
+                        const myLog = logs.find(l => l.customer_id === state.customer_id);
+                        if (myLog) {
+                            const log = document.createElement('div');
+                            log.id = 'wa_logged_' + sessionId;
+                            log.classList.add('log-entry');
+                            log.innerHTML = `
+                                <div class="log-time">[${timeStr}] POST /api/notify/whatsapp</div>
+                                <div class="log-title"><i class="fa-brands fa-whatsapp" style="color:var(--accent-green);"></i> WhatsApp Confirmation Triggered</div>
+                                <pre class="log-json">${JSON.stringify(myLog, null, 2)}</pre>
+                            `;
+                            consoleOutput.appendChild(log);
+                            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to load WhatsApp logs", e);
+                }
             }
 
-            // If Appointment Created logged
+            // Fetch Appointment Logs
             if (state.preferred_appointment_slot && !document.getElementById('appt_logged_' + sessionId)) {
-                const log = document.createElement('div');
-                log.id = 'appt_logged_' + sessionId;
-                log.classList.add('log-entry');
-                
-                const apptJSON = {
-                    customer_id: state.customer_id,
-                    preferred_slot: state.preferred_appointment_slot,
-                    status: "success",
-                    appointment_id: "apt_" + state.customer_id + "_123"
-                };
-
-                log.innerHTML = `
-                    <div class="log-time">[${timeStr}] POST /api/appointments/personal-shopper</div>
-                    <div class="log-title"><i class="fa-solid fa-calendar-check" style="color:var(--accent-blue);"></i> Personal Shopper Appointment Created</div>
-                    <pre class="log-json">${JSON.stringify(apptJSON, null, 2)}</pre>
-                `;
-                consoleOutput.appendChild(log);
-                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                try {
+                    const resp = await fetch('/api/appointments/personal-shopper/logs');
+                    if (resp.ok) {
+                        const logs = await resp.json();
+                        const myLog = logs.find(l => l.customer_id === state.customer_id);
+                        if (myLog) {
+                            const log = document.createElement('div');
+                            log.id = 'appt_logged_' + sessionId;
+                            log.classList.add('log-entry');
+                            log.innerHTML = `
+                                <div class="log-time">[${timeStr}] POST /api/appointments/personal-shopper</div>
+                                <div class="log-title"><i class="fa-solid fa-calendar-check" style="color:var(--accent-blue);"></i> Personal Shopper Appointment Created</div>
+                                <pre class="log-json">${JSON.stringify(myLog, null, 2)}</pre>
+                            `;
+                            consoleOutput.appendChild(log);
+                            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to load appointment logs", e);
+                }
             }
         }
     </script>

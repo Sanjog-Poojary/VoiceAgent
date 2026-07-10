@@ -53,12 +53,12 @@ _PHASE1_NO_BRAND_EN = "We noticed you recently shopped in our {category} categor
 _PHASE1_NO_BRAND_HI = "हमने देखा कि आपने हाल ही में हमारे {category_hi} श्रेणी में खरीदारी की है। हम आपके साथ एक एक्सक्लूसिव ऑफ़र साझा करना चाहेंगे।"
 
 _PHASE2_EN = [
-    "We have an exclusive deal running on {brand} right now. {offer_desc} Would you like me to send these details to your WhatsApp?",
-    "Since you shop {brand}, we wanted to let you know about a special {discount}% off. {offer_desc} Shall I forward this to your WhatsApp?",
+    "We have an exclusive deal running on {brand} right now with coupon code '{code}'. {offer_desc} Would you like me to send these details to your WhatsApp?",
+    "Since you shop {brand}, we wanted to let you know about a special {discount}% off using code '{code}'. {offer_desc} Shall I forward this to your WhatsApp?",
 ]
 _PHASE2_HI = [
-    "हमारे पास अभी {brand} पर एक एक्सक्लूसिव डील चल रही है। {offer_desc} क्या मैं ये विवरण आपके व्हाट्सएप पर भेज दूँ?",
-    "चूँकि आप {brand} से खरीदारी करते हैं, हम आपको एक विशेष {discount}% छूट के बारे में बताना चाहते थे। {offer_desc} क्या मैं इसे आपके व्हाट्सएप पर फॉरवर्ड कर दूँ?",
+    "हमारे पास अभी {brand} पर कूपन कोड '{code}' के साथ एक एक्सक्लूसिव डील चल रही है। {offer_desc} क्या मैं ये विवरण आपके व्हाट्सएप पर भेज दूँ?",
+    "चूँकि आप {brand} से खरीदारी करते हैं, हम आपको कोड '{code}' का उपयोग करके एक विशेष {discount}% छूट के बारे में बताना चाहते थे। {offer_desc} क्या मैं इसे आपके व्हाट्सएप पर फॉरवर्ड कर दूँ?",
 ]
 
 _PHASE3_EN = [
