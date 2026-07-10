@@ -422,6 +422,13 @@ def query_knowledge(q: str = ""):
     query = q.lower().strip()
     
     # 1. Local keyword matches (fast & guaranteed for E2E scenarios)
+    # Check specific returns first to avoid collision with general "return" key
+    if "return" in query or "exchange" in query:
+        if any(w in query for w in ("perfume", "cosmetic", "beauty", "fragrance", "deodorant")):
+            ans = "Shoppers Stop does not accept returns or exchanges on perfumes, cosmetics, or innerwear due to hygiene reasons."
+            logger.info(f"Found specific perfume/cosmetic return match: {ans}")
+            return {"status": "success", "answer": ans}
+
     for key, answer in KNOWLEDGE_BASE.items():
         if key in query:
             logger.info(f"Found local match for '{key}': {answer}")
