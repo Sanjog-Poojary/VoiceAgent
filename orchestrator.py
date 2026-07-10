@@ -1567,7 +1567,7 @@ async def orchestrator_node(ctx: Context, node_input: Any):
             and any(w in _ui_lower for w in _WH_TOKENS)
             and any(o in _ui_lower for o in _OFFER_TOKENS)
             and current_agent == "SalesPitchAgent"):
-        logger.info(f"[Heuristic] Overriding is_knowledge_question=True for: '{user_input_raw[:60]}'")
+        logging.getLogger(__name__).info(f"[Heuristic] Overriding is_knowledge_question=True for: '{user_input_raw[:60]}'")
         classification = classification.model_copy(update={
             "is_knowledge_question": True,
             "is_acceptance": False,
