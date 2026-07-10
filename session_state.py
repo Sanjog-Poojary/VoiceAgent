@@ -36,7 +36,7 @@ class SessionState(BaseModel):
     detected_language: str = Field(default="English", description="The customer's language, dynamically updated during verification.")
     
     # Conversation State & Metadata
-    current_agent: str = Field(default="GreetingAgent", description="The name of the currently active sub-agent.")
+    current_agent: str = Field(default="IdentityAgent", description="The name of the currently active sub-agent.")
     verification_attempts: int = Field(default=0, description="The number of identity verification attempts.")
     call_sentiment: str = Field(default="Neutral", description="Current overall sentiment of the call (Positive, Neutral, Agitated).")
     

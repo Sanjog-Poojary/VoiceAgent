@@ -11,7 +11,7 @@ class TestSessionState(unittest.TestCase):
         state = SessionState()
         self.assertEqual(state.customer_id, "")
         self.assertEqual(state.detected_language, "English")
-        self.assertEqual(state.current_agent, "GreetingAgent")
+        self.assertEqual(state.current_agent, "IdentityAgent")
         self.assertEqual(state.verification_attempts, 0)
         self.assertEqual(state.call_sentiment, "Neutral")
         self.assertFalse(state.offer_pitched)

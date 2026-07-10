@@ -148,7 +148,7 @@ def init_state_defaults(ctx: Context):
     state_defaults = {
         "customer_id": "1",
         "detected_language": "English",
-        "current_agent": "GreetingAgent",
+        "current_agent": "IdentityAgent",
         "verification_attempts": 0,
         "call_sentiment": "Neutral",
         "offer_pitched": False,
@@ -205,9 +205,8 @@ class TurnClassification(BaseModel):
     # Verification signals
     is_valid_answer: bool = Field(
         description=(
-            "True ONLY if the user gave a clear, unambiguous affirmative confirmation of their "
-            "identity (e.g. 'Yes', 'That's me', 'Speaking', 'Haan'). False for vague, evasive, "
-            "or slang responses that do not clearly confirm identity."
+            "True if the user confirmed their identity, including standard responses ('Yes', 'Speaking', 'Haan') "
+            "as well as casual acknowledgments like 'yeah', 'yep', 'correct', 'mm-hmm', and short casual affirmations."
         )
     )
 
@@ -439,7 +438,7 @@ _CLASSIFY_TOOL_SCHEMA = {
                 },
                 "is_valid_answer": {
                     "type": "boolean",
-                    "description": "True if user gave a clear, unambiguous affirmative identity confirmation."
+                    "description": "True if user gave an affirmative identity confirmation (including 'yes', 'speaking', 'yeah', 'yep', 'correct', 'mm-hmm')."
                 },
                 "is_acceptance": {
                     "type": "boolean",
@@ -521,10 +520,10 @@ IMPORTANT: You MUST analyze the entire latest user utterance. Do not truncate it
 
 Key rules:
 - detected_language: "English" or "Hindi". Set to "Hindi" ONLY if the user explicitly speaks Hindi words (e.g. "haan", "boliye", "kya", "naam", "baat"). If the user speaks English (e.g. "yes", "this is", "hello", "speaking", "activate", "sure"), MUST set to "English".
-- is_valid_answer: true ONLY for unambiguous affirmative identity confirmation.
-  Examples of valid confirmations: "Yes", "yes", "That's me", "Speaking", "Haan", "haa mai hu", "haa main hu", "yes, I am".
-  These are NOT vague; they are standard identity confirmations and MUST yield is_valid_answer=true and confidence_score >= 0.85.
-  Vague, slang, or partial answers (e.g. "nice", "maybe", "why", "who is this") = false.
+- is_valid_answer: true for any affirmative identity confirmation.
+  Examples of valid confirmations: "Yes", "yes", "That's me", "Speaking", "Haan", "haa mai hu", "yeah", "yep", "correct", "mm-hmm", "yup", "speaking".
+  These are standard/casual identity confirmations and MUST yield is_valid_answer=true and confidence_score >= 0.60.
+  Vague or evasive non-confirmations (e.g. "maybe", "why", "who is this") = false.
 - is_acceptance: true covers slang ("no cap", "sure", "yep"), indirect accepts ("heard enough, just do it"),
   code-switch accepts ("haan de do"), and any request for details or showing interest (e.g. "what is it", "tell me", "what coupon", "what is the offer"). You MUST set is_acceptance to true and confidence_score >= 0.85 for these.
 - is_decline: true covers indirect refusals ("maybe later", "I'll pass"), polite nos, and disinterest.
@@ -587,7 +586,7 @@ async def classify_turn(user_input: str, state: dict) -> TurnClassification:
         f"Current call time: {current_time_str}\n"
         f"Conversation context (last 6 turns):\n{recent_transcript}\n\n"
         f"Latest user utterance to classify:\n\"{user_input}\"\n\n"
-        f"Current agent: {state.get('current_agent', 'GreetingAgent')}\n"
+        f"Current agent: {state.get('current_agent', 'IdentityAgent')}\n"
         f"offer_pitched: {state.get('offer_pitched', False)}\n"
         f"verification_attempts: {state.get('verification_attempts', 0)}\n"
     )
@@ -791,7 +790,7 @@ class IdentityConfirmationContract(AgentContract):
             return "ApologyAgent", {}
         if state.get("last_outcome") == "pending":
             return "ClarifyingAgent", {"previous_agent": self.name}
-        return "VerificationAgent", {}
+        return "IdentityAgent", {}
 
 
     def criticize_decision(self, classification, state, proposed_next_agent, proposed_updates, user_input_str=""):
@@ -826,58 +825,61 @@ class IdentityConfirmationContract(AgentContract):
         return "ClarifyingAgent", {"previous_agent": self.name}
 
 
-class GreetingAgentContract(IdentityConfirmationContract):
+class IdentityAgentContract(AgentContract):
     def __init__(self):
         super().__init__(
-            name="GreetingAgent",
-            goal="verify_identity_greeting",
-            expected_input="Customer identity confirmation (yes/no or greeting)",
-            success_criteria="Customer confirms they are the target customer",
-            possible_next_actions=["SalesPitchAgent", "VerificationAgent", "ApologyAgent", "ClarifyingAgent", "PersonalShopperAgent"]
+            name="IdentityAgent",
+            goal="verify_identity",
+            expected_input="Customer identity confirmation (yes/no or casual affirmation)",
+            success_criteria="Identity successfully verified or declined",
+            possible_next_actions=["IdentityAgent", "SalesPitchAgent", "ClarifyingAgent", "PostCallAgent"]
         )
 
-    async def post_process(self, classification, memory, state, user_input_str=""): 
-        if classification.confidence_score < 0.75:
+    async def post_process(self, classification, memory, state, user_input_str=""):
+        plans = state.setdefault("bounded_plans", {})
+        plan = plans.get("IdentityAgent")
+        if not plan:
+            plan = {
+                "current_objective": "Confirm Identity",
+                "remaining_steps": ["Confirm Identity"],
+                "active_step": "Confirm Identity",
+                "step_history": [],
+                "plan_status": "In Progress",
+                "revision_count": 0,
+                "max_revisions": 3,
+                "is_resuming": False
+            }
+            plans["IdentityAgent"] = plan
+
+        if classification.confidence_score < 0.6:
             last_outcome = "pending"
+        elif classification.is_third_party:
+            last_outcome = "third_party"
         elif classification.is_valid_answer:
             last_outcome = "success"
-        elif classification.is_decline:
-            last_outcome = "declined"
+        elif getattr(classification, "is_decline", False):
+            last_outcome = "decline"
         else:
-            last_outcome = "failed"
-        memory["welcomed"] = True
-        return last_outcome, memory
-
-    async def transition(self, memory, state):
-        return "verify_identity_greeting", memory
-
-
-class VerificationAgentContract(IdentityConfirmationContract):
-    def __init__(self):
-        super().__init__(
-            name="VerificationAgent",
-            goal="verify_identity_explicit",
-            expected_input="Explicit verification details (name, yes/no)",
-            success_criteria="Verification attempts < 3 and identity successfully verified",
-            possible_next_actions=["SalesPitchAgent", "VerificationAgent", "ApologyAgent", "ClarifyingAgent", "PersonalShopperAgent"]
-        )
-
-    async def post_process(self, classification, memory, state, user_input_str=""): 
-        if classification.confidence_score < 0.75:
             last_outcome = "pending"
-        elif classification.is_valid_answer:
-            last_outcome = "success"
-            memory["verified"] = True
-        elif classification.is_decline:
-            last_outcome = "declined"
-        else:
-            last_outcome = "failed"
+
+        if last_outcome in ["success", "third_party", "decline"]:
+            if isinstance(plan, dict):
+                plan["plan_status"] = "Completed"
+            else:
+                plan.plan_status = "Completed"
+
         return last_outcome, memory
 
-    async def transition(self, memory, state):
-        return "verify_identity_explicit", memory
+    def _route_on_goal_complete(self, state, user_input_str=""):
+        outcome = state.get("last_outcome")
+        if outcome == "third_party":
+            return "PostCallAgent", {"transition_reason": "Third party detected. Must end call."}
+        if outcome == "decline":
+            return "PostCallAgent", {"transition_reason": "User declined identity. Must end call."}
+        return "SalesPitchAgent", {}
 
-
+    def _route_on_goal_incomplete(self, classification, state, user_input_str):
+        return "IdentityAgent", {}
 
 class SalesPitchAgentContract(PlanningAgentContract):
     def __init__(self):
@@ -890,11 +892,6 @@ class SalesPitchAgentContract(PlanningAgentContract):
         )
 
     async def post_process(self, classification, memory, state, user_input_str=""): 
-        event_introduced = memory.get("event_introduced", False) if isinstance(memory, dict) else getattr(memory, "event_introduced", False)
-        offer_pitched = memory.get("offer_pitched", False) if isinstance(memory, dict) else getattr(memory, "offer_pitched", False)
-        secondary_offer_pitched = memory.get("secondary_offer_pitched", False) if isinstance(memory, dict) else getattr(memory, "secondary_offer_pitched", False)
-        has_secondary_offer = memory.get("has_secondary_offer", False) if isinstance(memory, dict) else getattr(memory, "has_secondary_offer", False)
-
         plans = state.setdefault("bounded_plans", {})
         plan = plans.get("SalesPitchAgent")
         
@@ -902,9 +899,9 @@ class SalesPitchAgentContract(PlanningAgentContract):
         
         if not plan or plan_status != "In Progress":
             plan = {
-                "current_objective": "Secure Coupon Activation",
-                "remaining_steps": ["Event Intro", "Gather Context", "Present Offer", "Present Secondary Offer", "Answer Questions", "Confirm Acceptance"],
-                "active_step": "Event Intro" if not event_introduced else ("Gather Context" if not offer_pitched else ("Present Secondary Offer" if (secondary_offer_pitched and has_secondary_offer) else "Present Offer")),
+                "current_objective": "Present Offer",
+                "remaining_steps": ["Present Offer", "Present Secondary Offer", "Confirm Acceptance"],
+                "active_step": "Present Offer",
                 "step_history": [],
                 "plan_status": "In Progress",
                 "revision_count": 0,
@@ -913,47 +910,21 @@ class SalesPitchAgentContract(PlanningAgentContract):
             }
             plans["SalesPitchAgent"] = plan
 
+        # Hardcode the flag since the offer is pitched immediately on entry
+        if isinstance(memory, dict):
+            memory["offer_pitched"] = True
+        else:
+            memory.offer_pitched = True
+
+        secondary_offer_pitched = memory.get("secondary_offer_pitched", False) if isinstance(memory, dict) else getattr(memory, "secondary_offer_pitched", False)
+        has_secondary_offer = memory.get("has_secondary_offer", False) if isinstance(memory, dict) else getattr(memory, "has_secondary_offer", False)
+
         if classification.confidence_score < 0.75:
             last_outcome = "pending"
         elif getattr(classification, "is_knowledge_question", False):
             last_outcome = "knowledge_q"
         elif classification.is_loyalty_question:
             last_outcome = "tangent"
-        elif not event_introduced:
-            # Phase 0: Response to event intro (birthday/credit greeting).
-            if isinstance(memory, dict):
-                memory["event_introduced"] = True
-            else:
-                memory.event_introduced = True
-            if isinstance(plan, dict):
-                plan["step_history"].append(plan["active_step"])
-                plan["active_step"] = "Gather Context"
-            else:
-                plan.step_history.append(plan.active_step)
-                plan.active_step = "Gather Context"
-            last_outcome = "success"  # Triggers self-loop via _route_on_goal_complete
-        elif not offer_pitched:
-            # Phase 1: gathering interest, offer not stated yet.
-            if classification.is_acceptance:
-                if isinstance(memory, dict):
-                    memory["offer_pitched"] = True
-                else:
-                    memory.offer_pitched = True
-                if isinstance(plan, dict):
-                    plan["step_history"].append(plan["active_step"])
-                    plan["active_step"] = "Present Offer"
-                else:
-                    plan.step_history.append(plan.active_step)
-                    plan.active_step = "Present Offer"
-                last_outcome = "success"
-            elif classification.is_decline:
-                if isinstance(plan, dict):
-                    plan["plan_status"] = "Abandoned"
-                else:
-                    plan.plan_status = "Abandoned"
-                last_outcome = "declined"
-            else:
-                last_outcome = "pending"
         elif not secondary_offer_pitched and has_secondary_offer:
             # Phase 2 -> Phase 3 (Secondary Pitch)
             if classification.is_acceptance:
@@ -1074,7 +1045,7 @@ class ApologyAgentContract(AgentContract):
             goal="apologize_and_warn_or_exit",
             expected_input="None (terminal response or redirect)",
             success_criteria="Customer is apologized to and call gracefully closed or returned",
-            possible_next_actions=["GreetingAgent", "VerificationAgent", "SalesPitchAgent", "PersonalShopperAgent", "Terminate"]
+            possible_next_actions=["IdentityAgent", "SalesPitchAgent", "PersonalShopperAgent", "Terminate"]
         )
 
     async def post_process(self, classification, memory, state, user_input_str=""): 
@@ -1157,7 +1128,7 @@ class ClarifyingAgentContract(AgentContract):
             goal="clarify_ambiguous_intent",
             expected_input="Clarified yes/no or details matching the previous context",
             success_criteria="Ambiguity is resolved and control returned to previous agent",
-            possible_next_actions=["GreetingAgent", "VerificationAgent", "SalesPitchAgent", "ApologyAgent", "ClarifyingAgent", "PersonalShopperAgent"]
+            possible_next_actions=["IdentityAgent", "SalesPitchAgent", "ApologyAgent", "ClarifyingAgent", "PersonalShopperAgent"]
         )
 
     async def post_process(self, classification, memory, state, user_input_str=""): 
@@ -1184,7 +1155,7 @@ class ClarifyingAgentContract(AgentContract):
         return classification.confidence_score >= 0.75 and state.get("last_outcome") in ("success", "accepted", "declined")
 
     def _route_on_goal_complete(self, state):
-        return state.get("previous_agent", "GreetingAgent"), {}
+        return state.get("previous_agent", "IdentityAgent"), {}
 
     def _route_on_goal_incomplete(self, classification, state, user_input_str):
         return "ClarifyingAgent", {}
@@ -1283,8 +1254,7 @@ class FallbackNodeContract(AgentContract):
 
 
 _AGENTS = {
-    "GreetingAgent": GreetingAgentContract(),
-    "VerificationAgent": VerificationAgentContract(),
+    "IdentityAgent": IdentityAgentContract(),
 
     "SalesPitchAgent": SalesPitchAgentContract(),
     "ApologyAgent": ApologyAgentContract(),
@@ -1309,7 +1279,7 @@ def check_safety_guardrails(
     Evaluates global safety and security guardrails centrally.
     Returns (next_agent, state_updates) if a guardrail is tripped, else None.
     """
-    current_agent = state.get("current_agent", "GreetingAgent")
+    current_agent = state.get("current_agent", "IdentityAgent")
     
     # 1. Hard Escalation Keywords / Agitated Sentiment
     has_esc_keywords = any(x in user_input_str for x in _ESCALATION_KEYWORDS)
@@ -1338,7 +1308,12 @@ def check_safety_guardrails(
     # 4. Consecutive Silence
     if classification.is_silent_turn:
         silent_turns = state.get("silent_turns", 0) + 1
-        if silent_turns >= 2:
+        if silent_turns >= 3:
+            return "Terminate", {
+                "offer_accepted": False,
+                "escalation_triggered": False
+            }
+        elif silent_turns >= 2:
             return "ApologyAgent", {
                 "offer_accepted": False,
                 "escalation_triggered": False
@@ -1350,14 +1325,14 @@ def check_safety_guardrails(
             }
 
     # 5. Third Party Gatekeeper
-    if classification.is_third_party and current_agent in ("GreetingAgent", "VerificationAgent"):
+    if classification.is_third_party and current_agent in ("IdentityAgent"):
         return "EscalationAgent", {
             "offer_accepted": False,
             "escalation_triggered": True
         }
 
     # 6. Verification Limit Exceeded
-    if state.get("verification_attempts", 0) >= 3 and current_agent in ("GreetingAgent", "VerificationAgent"):
+    if state.get("verification_attempts", 0) >= 3 and current_agent in ("IdentityAgent"):
         return "ApologyAgent", {
             "offer_accepted": False,
             "escalation_triggered": False
@@ -1447,7 +1422,7 @@ def _critique_goal_alignment(
         proposed_next_agent == "SalesPitchAgent"
         and not (agent_memory.get("verified", False) if isinstance(agent_memory, dict) else getattr(agent_memory, "verified", False))
         and not (agent_memory.get("welcomed", False) if isinstance(agent_memory, dict) else getattr(agent_memory, "welcomed", False))
-        and current_agent_name not in ("GreetingAgent", "VerificationAgent")
+        and current_agent_name not in ("IdentityAgent")
     ):
         return Critique(
             is_acceptable=False,
@@ -1521,7 +1496,7 @@ async def orchestrator_node(ctx: Context, node_input: Any):
         ctx.state["raw_audio_transcription"] = trans
     user_input_str = user_input_raw.lower()
 
-    current_agent = ctx.state.get("current_agent", "GreetingAgent")
+    current_agent = ctx.state.get("current_agent", "IdentityAgent")
     previous_agent = ctx.state.get("previous_agent", "")
 
     # --- Step 1: Hard injection pre-filter (no LLM) — short-circuiting precedence ---
@@ -1618,7 +1593,7 @@ async def orchestrator_node(ctx: Context, node_input: Any):
         _set_agent_memory(ctx, updated_memory)
 
     # Increment/reset verification_attempts
-    if current_agent in ("GreetingAgent", "VerificationAgent"):
+    if current_agent in ("IdentityAgent"):
         if classification.is_valid_answer:
             ctx.state["verification_attempts"] = 0
         else:
@@ -1745,17 +1720,17 @@ async def clarifying_agent(ctx: Context, node_input: Any):
     init_state_defaults(ctx)
     customer_id = ctx.state.get("customer_id", "1")
     lang = ctx.state.get("detected_language", "English")
-    prev_agent = ctx.state.get("previous_agent", "GreetingAgent")
+    prev_agent = ctx.state.get("previous_agent", "IdentityAgent")
 
     details = await fetch_customer_details(customer_id)
     name = details.get("name", "Customer")
 
-    if prev_agent == "GreetingAgent":
+    if prev_agent == "IdentityAgent":
         if lang == "Hindi":
             msg = "माफ़ कीजियेगा, मैं समझ नहीं पाया। क्या आप वही ग्राहक हैं जिनसे हम बात करना चाहते हैं?"
         else:
             msg = "I'm sorry, I didn't quite catch that. Are you the customer we are looking for?"
-    elif prev_agent == "VerificationAgent":
+    elif prev_agent == "IdentityAgent":
         if lang == "Hindi":
             msg = f"माफ़ कीजियेगा, क्या आप कृपया स्पष्ट रूप से पुष्टि कर सकते हैं कि क्या आप वाकई {name} हैं?"
         else:
@@ -1776,47 +1751,18 @@ async def clarifying_agent(ctx: Context, node_input: Any):
     ctx.state["raw_audio_transcription"] = trans
     yield RequestInput(message=msg)
 
-@node(name="GreetingAgent")
-async def greeting_agent(ctx: Context, node_input: Any):
+@node(name="IdentityAgent")
+async def identity_agent(ctx: Context, node_input: Any):
     init_state_defaults(ctx)
     customer_id = ctx.state.get("customer_id", "1")
     lang = ctx.state.get("detected_language", "English")
-
-    details = await fetch_customer_details(customer_id)
-    name = details.get("name", "Customer")
-
-    if lang == "Hindi":
-        msg = f"नमस्ते, क्या मैं {name} जी से बात कर रहा हूँ?"
-    else:
-        msg = f"Hello, am I speaking with {name}?"
-
-    trans = list(ctx.state.get("raw_audio_transcription", []))
-    trans.append(f"Agent: {msg}")
-    ctx.state["raw_audio_transcription"] = trans
-    yield RequestInput(message=msg)
-
-@node(name="VerificationAgent")
-async def verification_agent(ctx: Context, node_input: Any):
-    init_state_defaults(ctx)
-    customer_id = ctx.state.get("customer_id", "1")
-    lang = ctx.state.get("detected_language", "English")
-
-    details = await fetch_customer_details(customer_id)
-    name = details.get("name", "Customer")
+    customer_data = await fetch_customer_details(customer_id)
+    name = customer_data.get("name", "Customer")
 
     if lang == "Hindi":
-        msg = f"आगे बढ़ने के लिए, कृपया अपना नाम सत्यापित करें। क्या आप {name} हैं?"
+        msg = f"नमस्ते, क्या मेरी बात {name} जी से हो रही है?"
     else:
-        msg = f"To proceed, please verify your name. Are you {name}?"
-
-    plan = ctx.state.get("bounded_plans", {}).get("VerificationAgent")
-    if plan and getattr(plan, "is_resuming", False):
-        active_step = getattr(plan, "active_step", "")
-        if lang == "Hindi":
-            msg = f"जैसा कि हम बात कर रहे थे, {active_step} पर लौटते हुए... " + msg
-        else:
-            msg = f"Acknowledge the previous tangent was resolved and smoothly resume the step: {active_step}. " + msg
-        plan.is_resuming = False
+        msg = f"Hi, am I speaking with {name}?"
 
     trans = list(ctx.state.get("raw_audio_transcription", []))
     trans.append(f"Agent: {msg}")
@@ -1831,8 +1777,6 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
 
     # Read agent_memory for phase flags
     agent_memory = ctx.state.get("agent_memory", {})
-    event_introduced = agent_memory.get("event_introduced", False) if isinstance(agent_memory, dict) else getattr(agent_memory, "event_introduced", False)
-    offer_pitched = ctx.state.get("offer_pitched", False)
     secondary_offer_pitched = agent_memory.get("secondary_offer_pitched", False) if isinstance(agent_memory, dict) else getattr(agent_memory, "secondary_offer_pitched", False)
 
     raw_transcript = ctx.state.get("raw_audio_transcription", [])
@@ -1843,48 +1787,6 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
             break
     user_input_str = last_user_message.lower()
 
-    # Phase 0: Event Intro — play birthday/credit-expiry greeting (fire-and-forget)
-    if not event_introduced:
-        event_data = await fetch_event_triggers(customer_id)
-        event_type = event_data.get("event_type", "Birthday")
-
-        if event_type == "Birthday":
-            if lang == "Hindi":
-                msg = "बहुत बढ़िया! शॉपर्स स्टॉप आपको जन्मदिन की बहुत-बहुत शुभकामनाएँ देता है! हमारे पास आपके लिए एक विशेष उपहार है।"
-            else:
-                msg = "Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you."
-        else:  # Credit Expiry
-            if lang == "Hindi":
-                msg = "बहुत बढ़िया! हम आपको सूचित करना चाहते हैं कि आपके शॉपर्स स्टॉप क्रेडिट जल्द ही समाप्त हो रहे हैं। हमारे पास आपके लिए एक विशेष उपहार है।"
-            else:
-                msg = "Great! We wanted to inform you that your Shoppers Stop credits are expiring soon. We have a special gift for you."
-
-        if isinstance(agent_memory, dict):
-            agent_memory["event_introduced"] = True
-            _set_agent_memory(ctx, agent_memory)
-        else:
-            agent_memory.event_introduced = True
-            ctx.state["agent_memory"] = agent_memory
-
-        trans = list(ctx.state.get("raw_audio_transcription", []))
-        trans.append(f"Agent: {msg}")
-        ctx.state["raw_audio_transcription"] = trans
-        yield RequestInput(message=msg)
-        return
-
-    # Tangent handling for loyalty (Phase 1 only — offer not yet pitched)
-    if not offer_pitched and any(x in user_input_str for x in ("points", "loyalty", "tier", "balance", "rewards")):
-        if lang == "Hindi":
-            msg = "आप 1,250ポイント के साथ गोल्ड टियर लॉयल्टी सदस्य हैं! अब, उस जन्मदिन के ऑफ़र के बारे में जिसे हम सक्रिय कर सकते हैं..."
-        else:
-            msg = "You are a Gold Tier loyalty member with 1,250 points! Now, about that birthday offer we have for you..."
-        
-        trans = list(ctx.state.get("raw_audio_transcription", []))
-        trans.append(f"Agent: {msg}")
-        ctx.state["raw_audio_transcription"] = trans
-        yield RequestInput(message=msg)
-        return
-
     # Fetch customer details and offers
     customer_data = await fetch_customer_details(customer_id)
     preferred_category = customer_data.get("preferred_category", "Fashion")
@@ -1892,15 +1794,14 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
     all_offers = await fetch_all_offers()
     
     # Phase 1: Set secondary flag if data exists
-    if secondary_brand and not offer_pitched:
-        sec_offer = next((o for o in all_offers if o.get("offer_brand") == secondary_brand), None)
-        if sec_offer:
-            if isinstance(agent_memory, dict):
-                agent_memory["has_secondary_offer"] = True
-                _set_agent_memory(ctx, agent_memory)
-            else:
-                agent_memory.has_secondary_offer = True
-                ctx.state["agent_memory"] = agent_memory
+    sec_offer = next((o for o in all_offers if o.get("offer_brand") == secondary_brand), None) if secondary_brand else None
+    if sec_offer:
+        if isinstance(agent_memory, dict):
+            agent_memory["has_secondary_offer"] = True
+            _set_agent_memory(ctx, agent_memory)
+        else:
+            agent_memory.has_secondary_offer = True
+            ctx.state["agent_memory"] = agent_memory
 
     matched_offer = next(
         (o for o in all_offers if (o.get("offer_category") or o.get("category")) == preferred_category),
@@ -1942,34 +1843,50 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
     category_map_hi = {"Fashion": "फ़ैशन", "Beauty": "ब्यूटी", "Luxury Watches": "लक्ज़री घड़ियाँ"}
     category_hi = category_map_hi.get(category, category)
 
+    # Fetch event triggers
+    event_data = await fetch_event_triggers(customer_id)
+    event_type = event_data.get("event_type", "Birthday")
+
     # Deterministic tone index: stable per customer across phases and server restarts.
     tone_idx = int(hashlib.md5(customer_id.encode()).hexdigest(), 16)
 
-    if not offer_pitched:
-        # Phase 1: Gather Context — rotate template, with brand falsy guard
-        if not brand:
-            template = _PHASE1_NO_BRAND_HI if lang == "Hindi" else _PHASE1_NO_BRAND_EN
+    # Tangent handling for loyalty
+    if any(x in user_input_str for x in ("points", "loyalty", "tier", "balance", "rewards")):
+        if lang == "Hindi":
+            msg = "आप 1,250ポイント के साथ गोल्ड टियर लॉयल्टी सदस्य हैं! अब, उस ऑफ़र के बारे में..."
         else:
-            tlist = _PHASE1_HI if lang == "Hindi" else _PHASE1_EN
-            template = tlist[tone_idx % len(tlist)]
-        msg = template.format(category=category, brand=brand, category_hi=category_hi)
-    elif not secondary_offer_pitched:
-        # Phase 2: Present Offer — rotate template, append offer_desc (Hinglish-safe)
-        tlist = _PHASE2_HI if lang == "Hindi" else _PHASE2_EN
+            msg = "You are a Gold Tier loyalty member with 1,250 points! Now, about that offer we have for you..."
+        
+        trans = list(ctx.state.get("raw_audio_transcription", []))
+        trans.append(f"Agent: {msg}")
+        ctx.state["raw_audio_transcription"] = trans
+        yield RequestInput(message=msg)
+        return
+
+    if secondary_offer_pitched:
+        # Phase 3: Secondary Pitch logic
+        sec_offer = next((o for o in all_offers if o.get("offer_brand") == secondary_brand), {})
+        sec_discount = sec_offer.get("discount_percentage", "15")
+        tlist = _PHASE3_HI if lang == "Hindi" else _PHASE3_EN
         template = tlist[tone_idx % len(tlist)]
-        msg = template.format(discount=discount, code=code, offer_desc=offer_desc, brand=brand)
+        msg = template.format(secondary_brand=secondary_brand, sec_discount=sec_discount)
+    else:
+        # Phase 2: Deliver unified direct action pitch (Birthday vs Credit Expiry)
+        if event_type == "Birthday":
+            _HOOK_EN = "Happy Birthday, {name}! To celebrate, we have an exclusive {discount}% off {brand} with code {code}. Would you like me to send these details to your WhatsApp?"
+            _HOOK_HI = "जन्मदिन की शुभकामनाएँ, {name}! जश्न मनाने के लिए, हमारे पास आपके लिए {brand} पर {discount}% की विशेष छूट है, कोड {code} के साथ। क्या मैं ये विवरण आपके व्हाट्सएप पर भेज दूँ?"
+        else:
+            _HOOK_EN = "Hi {name}, we noticed your First Citizen points are expiring soon! To help you use them, we have a special {discount}% off {brand} with code {code}. Shall I forward this to your WhatsApp?"
+            _HOOK_HI = "नमस्ते {name}, हमने देखा कि आपके फर्स्ट सिटीजन पॉइंट जल्द ही समाप्त हो रहे हैं! इनका उपयोग करने में आपकी मदद के लिए, हमारे पास {brand} पर {discount}% की विशेष छूट है, कोड {code} के साथ। क्या मैं इसे आपके व्हाट्सएप पर फॉरवर्ड कर दूँ?"
+
+        template = _HOOK_HI if lang == "Hindi" else _HOOK_EN
+        msg = template.format(name=customer_data.get("name", ""), discount=discount, brand=brand, code=code)
+        ctx.state["offer_pitched"] = True
 
         plan = ctx.state.get("bounded_plans", {}).get("SalesPitchAgent")
         if ctx.state.get("last_outcome") == "interest":
-            # Interest follow-up: check if the user is asking specifically about dates;
-            # if so, answer with the validity window. Otherwise use the generic interest template.
-            raw_q = ""
-            for line in reversed(ctx.state.get("raw_audio_transcription", [])):
-                if line.startswith("User:"):
-                    raw_q = line[5:].strip().lower()
-                    break
             _DATE_SIGNALS = ("when", "from when", "till when", "valid", "expire", "expiry", "date", "start", "end", "until")
-            if any(s in raw_q for s in _DATE_SIGNALS) and (valid_from_str or valid_to_str):
+            if any(s in user_input_str for s in _DATE_SIGNALS) and (valid_from_str or valid_to_str):
                 if lang == "Hindi":
                     msg = (
                         f"यह ऑफ़र {valid_from_hi} से शुरू होती है और {valid_to_hi} तक वैध है। "
@@ -1981,7 +1898,6 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
                         f"Would you like me to send these details to your WhatsApp?"
                     )
             else:
-                # Generic interest follow-up (e.g. "how does it work?", "any conditions?")
                 safe_brand = (brand + " ") if brand else ""
                 tlist = _INTEREST_HI if lang == "Hindi" else _INTEREST_EN
                 template = tlist[tone_idx % len(tlist)]
@@ -1989,56 +1905,6 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
                     discount=discount, code=code,
                     brand=safe_brand, category=category, category_hi=category_hi
                 )
-        elif plan and getattr(plan, "is_resuming", False):
-            active_step = getattr(plan, "active_step", "Present Offer")
-            # Context Firewall: explicitly instructs Gemini to not synthesise the
-            # preceding tangent topic into the offer response (prevents context bleed
-            # where the model bridges loyalty-points / competitor mentions into the coupon).
-            if lang == "Hindi":
-                msg = (
-                    "[SYSTEM DIRECTIVE: उपयोगकर्ता एक अलग विषय के बारे में पूछने के बाद वापस आ गया है। "
-                    "उस पिछले विषय को पूरी तरह से अनदेखा करें। उसे इस ऑफ़र से जोड़ने का प्रयास बिल्कुल न करें। "
-                    f"आपका एकमात्र काम सीधे '{active_step}' को पूरा करना है।] " + msg
-                )
-            else:
-                msg = (
-                    "[SYSTEM DIRECTIVE: The user has returned from a tangent about a different topic. "
-                    "IGNORE the previous topic completely. Do NOT attempt to connect it to the offer. "
-                    f"Your ONLY objective is to smoothly execute: {active_step}.] " + msg
-                )
-            # Reset flag so the firewall fires exactly once per resumption
-            if isinstance(plan, dict):
-                plan["is_resuming"] = False
-            else:
-                plan.is_resuming = False
-    else:
-        # Phase 3: Secondary Pitch logic
-        sec_offer = next((o for o in all_offers if o.get("offer_brand") == secondary_brand), {})
-        sec_discount = sec_offer.get("discount_percentage", "15")
-        tlist = _PHASE3_HI if lang == "Hindi" else _PHASE3_EN
-        template = tlist[tone_idx % len(tlist)]
-        msg = template.format(secondary_brand=secondary_brand, sec_discount=sec_discount)
-
-        plan = ctx.state.get("bounded_plans", {}).get("SalesPitchAgent")
-        if plan and getattr(plan, "is_resuming", False):
-            active_step = getattr(plan, "active_step", "Present Secondary Offer")
-            if lang == "Hindi":
-                msg = (
-                    "[SYSTEM DIRECTIVE: उपयोगकर्ता एक अलग विषय के बारे में पूछने के बाद वापस आ गया है। "
-                    "उस पिछले विषय को पूरी तरह से अनदेखा करें। उसे इस ऑफ़र से जोड़ने का प्रयास बिल्कुल न करें। "
-                    f"आपका एकमात्र काम सीधे '{active_step}' को पूरा करना है।]" + msg
-                )
-            else:
-                msg = (
-                    "[SYSTEM DIRECTIVE: The user has returned from a tangent about a different topic. "
-                    "IGNORE the previous topic completely. Do NOT attempt to connect it to the offer. "
-                    f"Your ONLY objective is to smoothly execute: {active_step}.] " + msg
-                )
-            # Reset flag so the firewall fires exactly once per resumption
-            if isinstance(plan, dict):
-                plan["is_resuming"] = False
-            else:
-                plan.is_resuming = False
 
     # RAG Knowledge Injection Block
     if ctx.state.get("last_outcome") == "knowledge_q":
@@ -2254,9 +2120,8 @@ class VoiceAgentWorkflow(Workflow):
     state_schema: type[BaseModel] = SessionState
 
     edges: list[Any] = [
-        (START, greeting_agent),
-        (greeting_agent, orchestrator_node),
-        (verification_agent, orchestrator_node),
+        (START, identity_agent),
+        (identity_agent, orchestrator_node),
         (sales_pitch_agent, orchestrator_node),
         (apology_agent, orchestrator_node),
         (personal_shopper_agent, orchestrator_node),
@@ -2266,9 +2131,8 @@ class VoiceAgentWorkflow(Workflow):
 
         # Conditional routes from orchestrator to sub-agents
         (orchestrator_node, {
-            "GreetingAgent":         greeting_agent,
-            "VerificationAgent":     verification_agent,
-            "SalesPitchAgent":       sales_pitch_agent,
+            "IdentityAgent":         identity_agent,
+                "SalesPitchAgent":       sales_pitch_agent,
             "ApologyAgent":          apology_agent,
             "PersonalShopperAgent":  personal_shopper_agent,
             "EscalationAgent":       escalation_agent,
