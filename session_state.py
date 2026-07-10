@@ -62,6 +62,7 @@ class SessionState(BaseModel):
     personal_shopper_offered: bool = Field(default=False, description="True if the user was offered the personal shopper service.")
     personal_shopper_accepted: bool = Field(default=False, description="True if the user accepted the personal shopper service.")
     preferred_appointment_slot: str = Field(default="", description="Customer's stated preferred day/time for the appointment, raw text.")
+    appointment_booked: bool = Field(default=False, description="True once the personal shopper appointment POST has been successfully fired.")
     user_declined_offer: bool = Field(default=False, description="Persistent flag indicating the user explicitly declined the main offer.")
     last_knowledge_query: str = Field(default="", description="The specific RAG query asked by the user.")
 
