@@ -919,14 +919,13 @@ class SalesPitchAgentContract(PlanningAgentContract):
         secondary_offer_pitched = memory.get("secondary_offer_pitched", False) if isinstance(memory, dict) else getattr(memory, "secondary_offer_pitched", False)
         has_secondary_offer = memory.get("has_secondary_offer", False) if isinstance(memory, dict) else getattr(memory, "has_secondary_offer", False)
 
-        if classification.confidence_score < 0.75:
+        # PRIORITY: knowledge questions always freeze the phase — never advance to secondary pitch
+        if getattr(classification, "is_knowledge_question", False) or classification.is_loyalty_question:
+            last_outcome = "knowledge_q" if getattr(classification, "is_knowledge_question", False) else "tangent"
+        elif classification.confidence_score < 0.75:
             last_outcome = "pending"
-        elif getattr(classification, "is_knowledge_question", False):
-            last_outcome = "knowledge_q"
-        elif classification.is_loyalty_question:
-            last_outcome = "tangent"
         elif not secondary_offer_pitched and has_secondary_offer:
-            # Phase 2 -> Phase 3 (Secondary Pitch)
+            # Phase 2 -> Phase 3 (Secondary Pitch) — only on clear acceptance/decline
             if classification.is_acceptance:
                 if isinstance(memory, dict):
                     memory["primary_offer_accepted"] = True
@@ -1908,16 +1907,52 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
 
     # RAG Knowledge Injection Block
     if ctx.state.get("last_outcome") == "knowledge_q":
-        q = ctx.state.get("last_knowledge_query", "")
-        try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                rag_resp = await client.get(f"{MOCK_SERVER_URL}/api/knowledge?q={q}")
-                if rag_resp.status_code == 200:
-                    answer = rag_resp.json().get("answer", "")
-                    if answer:
-                        msg = f"{answer} Now, as I was saying... {msg}"
-        except Exception as rag_err:
-            logger.warning(f"RAG knowledge lookup failed (skipping): {rag_err}")
+        q = ctx.state.get("last_knowledge_query", "").lower()
+
+        # Fast-path: answer brand/discount/code questions directly from already-fetched offer data
+        _BRAND_SIGNALS = ("brand", "which brand", "what brand", "store", "which store", "offer on")
+        _CODE_SIGNALS  = ("code", "coupon", "promo", "voucher", "discount code")
+        _DISC_SIGNALS  = ("discount", "percent", "how much off", "percentage", "%")
+
+        if any(s in q for s in _BRAND_SIGNALS):
+            offer_answer = (
+                f"The offer is for {brand} — {discount}% off using code {code}."
+                if lang != "Hindi" else
+                f"यह ऑफ़र {brand} के लिए है — कोड {code} के साथ {discount}% की छूट।"
+            )
+        elif any(s in q for s in _CODE_SIGNALS):
+            offer_answer = (
+                f"The promo code is {code} — use it to get {discount}% off at {brand}."
+                if lang != "Hindi" else
+                f"प्रोमो कोड {code} है — {brand} पर {discount}% छूट के लिए इसका उपयोग करें।"
+            )
+        elif any(s in q for s in _DISC_SIGNALS):
+            offer_answer = (
+                f"The discount is {discount}% off on {brand} using code {code}."
+                if lang != "Hindi" else
+                f"छूट {brand} पर {discount}% है, कोड {code} के साथ।"
+            )
+        else:
+            offer_answer = None
+
+        if offer_answer:
+            repitch = (
+                f" Would you like me to send these details to your WhatsApp?"
+                if lang != "Hindi" else
+                f" क्या मैं ये विवरण आपके व्हाट्सएप पर भेज दूँ?"
+            )
+            msg = offer_answer + repitch
+        else:
+            # Fall back to RAG for general policy/non-offer questions
+            try:
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    rag_resp = await client.get(f"{MOCK_SERVER_URL}/api/knowledge?q={q}")
+                    if rag_resp.status_code == 200:
+                        answer = rag_resp.json().get("answer", "")
+                        if answer:
+                            msg = f"{answer} Now, as I was saying... {msg}"
+            except Exception as rag_err:
+                logger.warning(f"RAG knowledge lookup failed (skipping): {rag_err}")
 
     trans = list(ctx.state.get("raw_audio_transcription", []))
     trans.append(f"Agent: {msg}")
