@@ -10,6 +10,9 @@ class AgentMemory(BaseModel):
     offer_pitched: bool = Field(default=False, description="Personalized offer pitch status.")
     whatsapp_sent: bool = Field(default=False, description="WhatsApp notification status.")
     clarification_count: int = Field(default=0, description="Ambiguity clarification tracker.")
+    has_secondary_offer: bool = Field(default=False, description="True if a secondary brand offer exists.")
+    secondary_offer_pitched: bool = Field(default=False, description="True if the secondary offer was pitched.")
+    primary_offer_accepted: bool = Field(default=False, description="True if the primary offer was accepted.")
 
 class BoundedPlan(BaseModel):
     """Schema for individual sub-agent bounded multi-step plans."""
@@ -60,12 +63,13 @@ class SessionState(BaseModel):
     personal_shopper_accepted: bool = Field(default=False, description="True if the user accepted the personal shopper service.")
     preferred_appointment_slot: str = Field(default="", description="Customer's stated preferred day/time for the appointment, raw text.")
     user_declined_offer: bool = Field(default=False, description="Persistent flag indicating the user explicitly declined the main offer.")
+    last_knowledge_query: str = Field(default="", description="The specific RAG query asked by the user.")
 
     # Coordinator / Persistent Memory Layer
     current_goal: str = Field(default="", description="The current conversational goal or target agent's objective.")
     goal_history: List[str] = Field(default_factory=list, description="A historical log of conversational goals (max 5).")
     last_agent: str = Field(default="", description="The name of the last active sub-agent.")
-    last_outcome: Literal["success", "failed", "accepted", "declined", "tangent", "silence", "pending", "interest", ""] = Field(default="", description="The outcome of the last agent's turn.")
+    last_outcome: Literal["success", "failed", "accepted", "declined", "tangent", "silence", "pending", "interest", "knowledge_q", "secondary_pitch", ""] = Field(default="", description="The outcome of the last agent's turn.")
     agent_memory: AgentMemory = Field(default_factory=AgentMemory, description="Schema-enforced persistent agent memory.")
     bounded_plans: Dict[str, BoundedPlan] = Field(default_factory=dict, description="Active multi-step plans mapped by agent name.")
 

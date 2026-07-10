@@ -204,9 +204,9 @@ class TestVoiceAgentOrchestrator(unittest.IsolatedAsyncioTestCase):
         await asyncio.sleep(INTER_TURN_SLEEP)
         agent_message, interrupt_id, invocation_id = await run_turn(
             self.runner, self.user_id, session_id,
-            make_resume_message(interrupt_id, "Yes please, activate it"), invocation_id
+            make_resume_message(interrupt_id, "Yes please, send it to my WhatsApp"), invocation_id
         )
-        self.assertIn("activated", agent_message)
+        self.assertIn("WhatsApp", agent_message)
         state = await self.get_session_state(session_id)
         self.assertEqual(state.get("current_agent"), "PostCallAgent")
         self.assertTrue(state.get("offer_accepted"))

@@ -15,9 +15,9 @@ app = FastAPI(
 
 # Mock Data
 CUSTOMERS = {
-    "1": {"id": "1", "name": "Sanjog", "phone": "+1234567890", "base_language": "English", "preferred_category": "Fashion"},
-    "2": {"id": "2", "name": "Aarav", "phone": "+919876543210", "base_language": "Hindi", "preferred_category": "Beauty"},
-    "3": {"id": "3", "name": "Ananya", "phone": "+918888888888", "base_language": "English", "preferred_category": "Luxury Watches"}
+    "1": {"id": "1", "name": "Sanjog", "phone": "+1234567890", "base_language": "English", "preferred_category": "Fashion", "secondary_brand": "Puma"},
+    "2": {"id": "2", "name": "Aarav", "phone": "+919876543210", "base_language": "Hindi", "preferred_category": "Beauty", "secondary_brand": "MAC"},
+    "3": {"id": "3", "name": "Ananya", "phone": "+918888888888", "base_language": "English", "preferred_category": "Luxury Watches", "secondary_brand": "Bobbi Brown"}
 }
 
 EVENTS = {
@@ -53,6 +53,15 @@ OFFERS = {
         "valid_from": "2026-06-30",
         "valid_to": "2026-07-30",
         "offer_description": "Get 25% off on Michael Kors luxury watches and accessories."
+    },
+    "4": {
+        "offer_id": "off_4",
+        "offer_name": "PUMA15",
+        "offer_brand": "Puma",
+        "offer_category": "Activewear",
+        "valid_from": "2026-07-01",
+        "valid_to": "2026-08-01",
+        "offer_description": "Get 15% off all Puma running shoes and apparel."
     }
 }
 
@@ -63,6 +72,7 @@ class Customer(BaseModel):
     phone: str
     base_language: str
     preferred_category: str
+    secondary_brand: str = ""
 
 class Event(BaseModel):
     id: str
@@ -326,3 +336,21 @@ def serve_index():
         with open(index_path, "r", encoding="utf-8") as f:
             return f.read()
     return HTMLResponse(content="<h3>index.html not found</h3>", status_code=404)
+
+KNOWLEDGE_BASE = {
+    "mac": "Standard promotions exclude premium beauty brands like MAC and Jo Malone.",
+    "exclusion": "Our standard offers apply to most categories, but premium luxury brands and cosmetics are generally excluded.",
+    "tailor": "Shoppers Stop offers free basic alterations for our First Citizen loyalty members at all major outlets.",
+    "return": "You can exchange apparel within 14 days at any Shoppers Stop store, provided the tags are intact.",
+    "parking": "Most of our mall locations, including Inorbit Malad, offer valet parking and remain open until 9:30 PM."
+}
+
+@app.get("/api/knowledge")
+def query_knowledge(q: str = ""):
+    logger.info(f"Querying knowledge base for: {q}")
+    query = q.lower()
+    for key, answer in KNOWLEDGE_BASE.items():
+        if key in query:
+            return {"status": "success", "answer": answer}
+    return {"status": "success", "answer": "I don't have the exact details on that right now, but our store staff will be happy to help!"}
+
