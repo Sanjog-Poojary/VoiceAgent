@@ -36,10 +36,15 @@ def make_resume_message(interrupt_id: str, text: str) -> types.Content:
 
 
 def get_agent_message_text(event) -> str:
-    if event.author in ("orchestrator_llm", "orchestrator"):
+    if event.author in ("orchestrator_llm", "orchestrator", "orchestrator_node"):
         return ""
-    if event.output and isinstance(event.output, str):
-        return event.output
+    if event.output:
+        if isinstance(event.output, str):
+            return event.output
+        if isinstance(event.output, dict):
+            trans = event.output.get("raw_audio_transcription", [])
+            if trans and isinstance(trans[-1], str) and trans[-1].startswith("Agent: "):
+                return trans[-1][7:]
     if not event.content or not event.content.parts:
         return ""
     for part in event.content.parts:
@@ -173,7 +178,7 @@ class TestVoiceAgentOrchestrator(unittest.IsolatedAsyncioTestCase):
             make_resume_message(interrupt_id, "Yes, this is Sanjog"), invocation_id
         )
         state = await self.get_session_state(session_id)
-        self.assertEqual(state.get("current_agent"), "EventAgent")
+        self.assertEqual(state.get("current_agent"), "SalesPitchAgent")
 
         print(f"\n--- Turn 3: User thanks ---")
         await asyncio.sleep(INTER_TURN_SLEEP)
@@ -182,7 +187,7 @@ class TestVoiceAgentOrchestrator(unittest.IsolatedAsyncioTestCase):
             make_resume_message(interrupt_id, "Thank you"), invocation_id
         )
         state = await self.get_session_state(session_id)
-        self.assertEqual(state.get("current_agent"), "SpendingHistoryAgent")
+        self.assertEqual(state.get("current_agent"), "SalesPitchAgent")
 
         print(f"\n--- Turn 4: User wants offer ---")
         await asyncio.sleep(INTER_TURN_SLEEP)
@@ -192,7 +197,7 @@ class TestVoiceAgentOrchestrator(unittest.IsolatedAsyncioTestCase):
         )
         self.assertIn("BIRTHDAY20", agent_message)
         state = await self.get_session_state(session_id)
-        self.assertEqual(state.get("current_agent"), "OfferAgent")
+        self.assertEqual(state.get("current_agent"), "SalesPitchAgent")
         self.assertTrue(state.get("offer_pitched"))
 
         print(f"\n--- Turn 5: User accepts ---")
@@ -339,7 +344,7 @@ class TestVoiceAgentOrchestrator(unittest.IsolatedAsyncioTestCase):
     # SCENARIO E: Mid-Call Language Switch
     async def test_scenario_e_mid_call_language_switch(self):
         """
-        Scenario E: Customer starts in English, switches to Hindi after EventAgent.
+        Scenario E: Customer starts in English, switches to Hindi after SalesPitchAgent.
         ASSERT: detected_language updates to Hindi and offer response is in Hindi.
         """
         session_id = "code_switch_session"
@@ -360,7 +365,7 @@ class TestVoiceAgentOrchestrator(unittest.IsolatedAsyncioTestCase):
             make_resume_message(interrupt_id, "Yes, it is me, Sanjog."), invocation_id
         )
         state = await self.get_session_state(session_id)
-        self.assertEqual(state.get("current_agent"), "EventAgent")
+        self.assertEqual(state.get("current_agent"), "SalesPitchAgent")
 
         print(f"\n--- Turn 3: Thanks in English ---")
         await asyncio.sleep(INTER_TURN_SLEEP)
@@ -410,13 +415,13 @@ class TestVoiceAgentOrchestrator(unittest.IsolatedAsyncioTestCase):
         )
         state = await self.get_session_state(session_id)
         valid_agents = {
-            "GreetingAgent", "VerificationAgent", "EventAgent", "SpendingHistoryAgent",
-            "OfferAgent", "ApologyAgent", "EscalationAgent", "PostCallAgent", "Terminate"
+            "GreetingAgent", "VerificationAgent", "SalesPitchAgent",
+            "ApologyAgent", "EscalationAgent", "PostCallAgent", "Terminate"
         }
         self.assertIn(state.get("current_agent"), valid_agents,
             f"FAIL: Routed to invalid agent: {state.get('current_agent')}")
-        self.assertNotEqual(state.get("current_agent"), "OfferAgent",
-            "FAIL: Jumped to OfferAgent without verifying identity.")
+        self.assertNotEqual(state.get("current_agent"), "SalesPitchAgent",
+            "FAIL: Jumped to SalesPitchAgent without verifying identity.")
         self.assertFalse(state.get("offer_pitched"),
             "FAIL: Offer was pitched before identity verified.")
         print(f"\n[PASS] Slang handled safely. Agent: {state.get('current_agent')}")
@@ -434,7 +439,8 @@ class TestVoiceAgentOrchestrator(unittest.IsolatedAsyncioTestCase):
 
         # Seed state as if we are at OfferAgent with offer already pitched
         initial_state = self.make_initial_state("1")
-        initial_state["current_agent"] = "SpendingHistoryAgent"
+        initial_state["current_agent"] = "SalesPitchAgent"
+        initial_state["agent_memory"] = {"event_introduced": True}
         initial_state["offer_pitched"] = False
 
         await asyncio.sleep(INTER_TURN_SLEEP)
@@ -659,8 +665,8 @@ class TestVoiceAgentOrchestrator(unittest.IsolatedAsyncioTestCase):
             make_resume_message(interrupt_id, "Sure tell me the offer"), invocation_id
         )
         state = await self.get_session_state(session_id)
-        self.assertEqual(state.get("current_agent"), "OfferAgent",
-            f"Pre-condition failed: expected OfferAgent, got {state.get('current_agent')}")
+        self.assertEqual(state.get("current_agent"), "SalesPitchAgent",
+            f"Pre-condition failed: expected SalesPitchAgent, got {state.get('current_agent')}")
         self.assertTrue(state.get("offer_pitched"), "Pre-condition failed: offer_pitched should be True")
 
         print(f"\n--- Turn 5: Context break - asks about loyalty points ---")

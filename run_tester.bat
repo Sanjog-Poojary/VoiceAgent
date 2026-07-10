@@ -12,7 +12,7 @@ if not exist ".venv" (
 )
 
 echo [2/3] Scheduling browser launch to http://127.0.0.1:8001 ...
-start /b cmd /c "timeout /t 2 >nul && start http://127.0.0.1:8001"
+start /b cmd /c "ping 127.0.0.1 -n 3 >nul && start http://127.0.0.1:8001"
 
 echo [3/3] Launching API and ADK Workflow Server...
 echo.

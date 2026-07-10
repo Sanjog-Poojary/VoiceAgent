@@ -1,106 +1,140 @@
 [
-  {
-    "user_input": "nice",
-    "state": {
-      "current_agent": "GreetingAgent"
+    {
+        "user_input": "nice",
+        "state": {
+            "current_agent": "GreetingAgent"
+        },
+        "expected": {
+            "confidence_score_lt": 0.75
+        }
     },
-    "expected": {
-      "confidence_score_lt": 0.75
-    }
-  },
-  {
-    "user_input": "nice",
-    "state": {
-      "current_agent": "OfferAgent",
-      "offer_pitched": true
+    {
+        "user_input": "nice",
+        "state": {
+            "current_agent": "SalesPitchAgent",
+            "offer_pitched": true
+        },
+        "expected": {
+            "confidence_score_lt": 0.75
+        }
     },
-    "expected": {
-      "confidence_score_lt": 0.75
-    }
-  },
-  {
-    "user_input": "haa mai hu",
-    "state": {
-      "current_agent": "GreetingAgent"
+    {
+        "user_input": "haa mai hu",
+        "state": {
+            "current_agent": "GreetingAgent"
+        },
+        "expected": {
+            "detected_language": "Hindi",
+            "is_valid_answer": true,
+            "confidence_score_gte": 0.75
+        }
     },
-    "expected": {
-      "detected_language": "Hindi",
-      "is_valid_answer": true,
-      "confidence_score_gte": 0.75
-    }
-  },
-  {
-    "user_input": "Oh sure, expiring credits is AMAZING news, I'm SO happy about that!",
-    "state": {
-      "current_agent": "EventAgent"
+    {
+        "user_input": "Oh sure, expiring credits is AMAZING news, I'm SO happy about that!",
+        "state": {
+            "current_agent": "SalesPitchAgent"
+        },
+        "expected": {
+            "call_sentiment": "Agitated"
+        }
     },
-    "expected": {
-      "call_sentiment": "Agitated"
-    }
-  },
-  {
-    "user_input": "Zara has better deals but okay I'll take it",
-    "state": {
-      "current_agent": "OfferAgent",
-      "offer_pitched": true
+    {
+        "user_input": "Zara has better deals but okay I'll take it",
+        "state": {
+            "current_agent": "SalesPitchAgent",
+            "offer_pitched": true
+        },
+        "expected": {
+            "is_competitor_mention": true,
+            "is_acceptance": true,
+            "confidence_score_gte": 0.75
+        }
     },
-    "expected": {
-      "is_competitor_mention": true,
-      "is_acceptance": true,
-      "confidence_score_gte": 0.75
-    }
-  },
-  {
-    "user_input": "No thanks",
-    "state": {
-      "current_agent": "OfferAgent",
-      "offer_pitched": true
+    {
+        "user_input": "No thanks",
+        "state": {
+            "current_agent": "SalesPitchAgent",
+            "offer_pitched": true
+        },
+        "expected": {
+            "is_decline": true,
+            "confidence_score_gte": 0.75
+        }
     },
-    "expected": {
-      "is_decline": true,
-      "confidence_score_gte": 0.75
-    }
-  },
-  {
-    "user_input": "nice what is it",
-    "state": {
-      "current_agent": "SpendingHistoryAgent"
+    {
+        "user_input": "nice what is it",
+        "state": {
+            "current_agent": "SalesPitchAgent"
+        },
+        "expected": {
+            "is_acceptance": true,
+            "confidence_score_gte": 0.85
+        }
     },
-    "expected": {
-      "is_acceptance": true,
-      "confidence_score_gte": 0.85
-    }
-  },
-  {
-    "user_input": "what coupon",
-    "state": {
-      "current_agent": "SpendingHistoryAgent"
+    {
+        "user_input": "what coupon",
+        "state": {
+            "current_agent": "SalesPitchAgent"
+        },
+        "expected": {
+            "is_acceptance": true,
+            "confidence_score_gte": 0.85
+        }
     },
-    "expected": {
-      "is_acceptance": true,
-      "confidence_score_gte": 0.85
-    }
-  },
-  {
-    "user_input": "tell me",
-    "state": {
-      "current_agent": "SpendingHistoryAgent"
+    {
+        "user_input": "tell me",
+        "state": {
+            "current_agent": "SalesPitchAgent"
+        },
+        "expected": {
+            "is_acceptance": true,
+            "confidence_score_gte": 0.85
+        }
     },
-    "expected": {
-      "is_acceptance": true,
-      "confidence_score_gte": 0.85
-    }
-  },
-  {
-    "user_input": "I'm busy right now, can I book a personal shopper for later",
-    "state": {
-      "current_agent": "OfferAgent",
-      "offer_pitched": true
+    {
+        "user_input": "I'm busy right now, can I book a personal shopper for later",
+        "state": {
+            "current_agent": "SalesPitchAgent",
+            "offer_pitched": true
+        },
+        "expected": {
+            "is_decline": true,
+            "is_appointment_accept": true,
+            "confidence_score_gte": 0.85
+        }
     },
-    "expected": {
-      "is_decline": true,
-      "is_appointment_accept": true,
-      "confidence_score_gte": 0.85
+    {
+        "user_input": "how will it help?",
+        "state": {
+            "current_agent": "SalesPitchAgent",
+            "offer_pitched": true
+        },
+        "expected": {
+            "is_acceptance": false,
+            "is_offer_interest": true,
+            "confidence_score_gte": 0.85
+        }
+    },
+    {
+        "user_input": "how does the coupon work",
+        "state": {
+            "current_agent": "SalesPitchAgent",
+            "offer_pitched": true
+        },
+        "expected": {
+            "is_acceptance": false,
+            "is_offer_interest": true
+        }
+    },
+    {
+        "user_input": "tell me",
+        "state": {
+            "current_agent": "SalesPitchAgent",
+            "offer_pitched": false
+        },
+        "expected": {
+            "is_acceptance": true,
+            "is_offer_interest": false
+        }
     }
-  }
 ]

@@ -6,6 +6,7 @@ class AgentMemory(BaseModel):
     welcomed: bool = Field(default=False, description="Greeting welcomer status.")
     verified: bool = Field(default=False, description="Verification success status.")
     pitch_category: Literal["Fashion", "Beauty", "Luxury Watches", ""] = Field(default="", description="The retail category pitched.")
+    event_introduced: bool = Field(default=False, description="Whether the event intro (birthday/credit expiry) has been played.")
     offer_pitched: bool = Field(default=False, description="Personalized offer pitch status.")
     whatsapp_sent: bool = Field(default=False, description="WhatsApp notification status.")
     clarification_count: int = Field(default=0, description="Ambiguity clarification tracker.")
@@ -64,7 +65,7 @@ class SessionState(BaseModel):
     current_goal: str = Field(default="", description="The current conversational goal or target agent's objective.")
     goal_history: List[str] = Field(default_factory=list, description="A historical log of conversational goals (max 5).")
     last_agent: str = Field(default="", description="The name of the last active sub-agent.")
-    last_outcome: Literal["success", "failed", "accepted", "declined", "tangent", "silence", "pending", ""] = Field(default="", description="The outcome of the last agent's turn.")
+    last_outcome: Literal["success", "failed", "accepted", "declined", "tangent", "silence", "pending", "interest", ""] = Field(default="", description="The outcome of the last agent's turn.")
     agent_memory: AgentMemory = Field(default_factory=AgentMemory, description="Schema-enforced persistent agent memory.")
     bounded_plans: Dict[str, BoundedPlan] = Field(default_factory=dict, description="Active multi-step plans mapped by agent name.")
 

@@ -1,8 +1,8 @@
 from orchestrator import (
     GreetingAgentContract,
     VerificationAgentContract,
-    SpendingHistoryAgentContract,
-    OfferAgentContract,
+    SalesPitchAgentContract,
+    SalesPitchAgentContract,
     ClarifyingAgentContract,
     ApologyAgentContract,
     PersonalShopperAgentContract,
@@ -34,39 +34,47 @@ def test_verification_agent_goal_satisfied():
 import asyncio
 
 def test_spending_history_agent_goal_satisfied():
-    contract = SpendingHistoryAgentContract()
+    contract = SalesPitchAgentContract()
     # if offer not pitched yet, goal is satisfied on success/decline but not tangent/pending
-    assert contract.goal_satisfied(None, {}, {"offer_pitched": False, "last_outcome": "success"}) is True
-    assert contract.goal_satisfied(None, {}, {"offer_pitched": False, "last_outcome": "declined"}) is True
-    assert contract.goal_satisfied(None, {}, {"offer_pitched": False, "last_outcome": "tangent"}) is False
+    assert contract.goal_satisfied(None, {}, {"agent_memory": {"offer_pitched": False}, "last_outcome": "success"}) is True
+    assert contract.goal_satisfied(None, {}, {"agent_memory": {"offer_pitched": False}, "last_outcome": "declined"}) is True
+    assert contract.goal_satisfied(None, {}, {"agent_memory": {"offer_pitched": False}, "last_outcome": "tangent"}) is False
     # if offer pitched, requires accepted or declined resolution
-    assert contract.goal_satisfied(None, {}, {"offer_pitched": True, "last_outcome": "accepted"}) is True
-    assert contract.goal_satisfied(None, {}, {"offer_pitched": True, "last_outcome": "declined"}) is True
-    assert contract.goal_satisfied(None, {}, {"offer_pitched": True, "last_outcome": "pending"}) is False
+    assert contract.goal_satisfied(None, {}, {"agent_memory": {"offer_pitched": True}, "last_outcome": "accepted"}) is True
+    assert contract.goal_satisfied(None, {}, {"agent_memory": {"offer_pitched": True}, "last_outcome": "declined"}) is True
+    assert contract.goal_satisfied(None, {}, {"agent_memory": {"offer_pitched": True}, "last_outcome": "pending"}) is False
 
 def test_spending_history_post_process_decline():
-    contract = SpendingHistoryAgentContract()
+    contract = SalesPitchAgentContract()
     classification = TurnClassification(is_acceptance=False, is_decline=True, confidence_score=0.95)
-    memory = {"offer_pitched": True}
+    memory = {"event_introduced": True, "offer_pitched": True}
     outcome, updated_mem = asyncio.run(contract.post_process(classification, memory, {}))
     assert outcome == "declined"
 
 def test_spending_history_post_process_decline_no_pitch():
-    contract = SpendingHistoryAgentContract()
+    contract = SalesPitchAgentContract()
     classification = TurnClassification(is_acceptance=False, is_decline=True, confidence_score=0.95)
-    memory = {"offer_pitched": False}
+    memory = {"event_introduced": True, "offer_pitched": False}
     outcome, updated_mem = asyncio.run(contract.post_process(classification, memory, {}))
     assert outcome == "declined"
 
 def test_spending_history_post_process_tangent():
-    contract = SpendingHistoryAgentContract()
+    contract = SalesPitchAgentContract()
     classification = TurnClassification(is_loyalty_question=True, confidence_score=0.95)
-    memory = {}
+    memory = {"event_introduced": True}
     outcome, updated_mem = asyncio.run(contract.post_process(classification, memory, {}))
     assert outcome == "tangent"
 
+def test_sales_pitch_post_process_phase_0():
+    contract = SalesPitchAgentContract()
+    classification = TurnClassification(is_acceptance=False, is_decline=False, confidence_score=0.95)
+    memory = {"event_introduced": False}
+    outcome, updated_mem = asyncio.run(contract.post_process(classification, memory, {}))
+    assert outcome == "success"
+    assert updated_mem.get("event_introduced") is True
+
 def test_offer_agent_goal_satisfied():
-    contract = OfferAgentContract()
+    contract = SalesPitchAgentContract()
     assert contract.goal_satisfied(None, {}, {"last_outcome": "accepted"}) is True
     assert contract.goal_satisfied(None, {}, {"last_outcome": "declined"}) is True
     assert contract.goal_satisfied(None, {}, {"last_outcome": "pending"}) is False
@@ -83,7 +91,7 @@ def test_clarifying_agent_goal_satisfied():
     assert contract.goal_satisfied(classification_hi, {}, {"last_outcome": "pending"}) is False
 
 def test_offer_agent_branch_complete():
-    contract = OfferAgentContract()
+    contract = SalesPitchAgentContract()
     state = {"last_outcome": "accepted"}
     classification = TurnClassification(is_acceptance=True, confidence_score=0.9)
     
@@ -93,40 +101,40 @@ def test_offer_agent_branch_complete():
     assert updates == {"offer_accepted": True}
 
 def test_offer_agent_branch_incomplete_tangent():
-    contract = OfferAgentContract()
+    contract = SalesPitchAgentContract()
     state = {"last_outcome": "tangent"}
     classification = TurnClassification(is_loyalty_question=True, confidence_score=0.9)
     
     route, updates = contract.determine_next_agent(classification, state, "how many points do I have?")
-    assert route == "SpendingHistoryAgent"
+    assert route == "SalesPitchAgent"
     assert updates == {}
 
 def test_offer_agent_branch_incomplete_pending():
-    contract = OfferAgentContract()
+    contract = SalesPitchAgentContract()
     state = {"last_outcome": "pending"}
     classification = TurnClassification(confidence_score=0.6)
     
     route, updates = contract.determine_next_agent(classification, state, "nice")
     assert route == "ClarifyingAgent"
-    assert updates == {"previous_agent": "OfferAgent"}
+    assert updates == {"previous_agent": "SalesPitchAgent"}
 
 def test_spending_history_branch_incomplete_tangent():
-    contract = SpendingHistoryAgentContract()
-    state = {"offer_pitched": True, "last_outcome": "tangent"}
+    contract = SalesPitchAgentContract()
+    state = {"agent_memory": {"offer_pitched": True}, "last_outcome": "tangent"}
     classification = TurnClassification(is_loyalty_question=True, confidence_score=0.9)
     
     route, updates = contract.determine_next_agent(classification, state, "loyalty points")
-    assert route == "SpendingHistoryAgent"
+    assert route == "SalesPitchAgent"
     assert updates == {}
 
 def test_spending_history_branch_incomplete_pending():
-    contract = SpendingHistoryAgentContract()
-    state = {"offer_pitched": True, "last_outcome": "pending"}
+    contract = SalesPitchAgentContract()
+    state = {"agent_memory": {"offer_pitched": True}, "last_outcome": "pending"}
     classification = TurnClassification(confidence_score=0.6)
     
     route, updates = contract.determine_next_agent(classification, state, "nice")
     assert route == "ClarifyingAgent"
-    assert updates == {"previous_agent": "SpendingHistoryAgent"}
+    assert updates == {"previous_agent": "SalesPitchAgent"}
 
 def test_safety_precedence_guardrails():
     # Verify check_safety_guardrails intercepts hard markers before contract routing
@@ -145,25 +153,25 @@ def test_safety_precedence_guardrails():
 # ---------------------------------------------------------------------------
 
 def test_spending_history_critic_unstated_precondition():
-    """SpendingHistoryAgentContract catches decline routed to ApologyAgent before offer was pitched.
-    Architectural note: this critic lives on SpendingHistoryAgentContract (not ClarifyingAgentContract)
+    """SalesPitchAgentContract catches decline routed to ApologyAgent before offer was pitched.
+    Architectural note: this critic lives on SalesPitchAgentContract (not ClarifyingAgentContract)
     because when current_agent=ClarifyingAgent the orchestrator uses previous_agent's contract as the
     strategy contract, so ClarifyingAgentContract.criticize_decision would never be invoked."""
-    contract = SpendingHistoryAgentContract()
+    contract = SalesPitchAgentContract()
     classification = TurnClassification(is_decline=True, confidence_score=0.95)
-    state = {"offer_pitched": False, "last_outcome": "declined", "revision_count": 0, "revision_reason": ""}
+    state = {"agent_memory": {"offer_pitched": False}, "last_outcome": "declined", "revision_count": 0, "revision_reason": ""}
     critique = contract.criticize_decision(classification, state, "ApologyAgent", {}, "no")
     assert not critique.is_acceptable
-    assert critique.failure_reason == "unstated_precondition"
+    assert critique.failure_reason == "premature_termination"
     revised_agent, _ = contract.revise_decision(classification, state, critique, "ApologyAgent", {}, "no")
-    assert revised_agent == "OfferAgent"
+    assert revised_agent == "ClarifyingAgent"
 
 
 def test_spending_history_critic_acceptable_when_offer_pitched():
     """Genuine post-pitch decline is acceptable — critic passes through unchanged."""
-    contract = SpendingHistoryAgentContract()
+    contract = SalesPitchAgentContract()
     classification = TurnClassification(is_decline=True, confidence_score=0.95)
-    state = {"offer_pitched": True, "last_outcome": "declined", "revision_count": 0}
+    state = {"agent_memory": {"offer_pitched": True}, "last_outcome": "declined", "revision_count": 0}
     critique = contract.criticize_decision(classification, state, "ApologyAgent", {}, "no thanks")
     assert critique.is_acceptable
 
@@ -172,9 +180,9 @@ def test_offer_agent_critic_question_tagged_as_decline():
     """Real bug shape: classifier tags a question-like utterance as is_decline=True.
     'what is this coupon?' contains 'what is' — a phrase-level interest signal in
     _OFFER_INTEREST_PATTERNS that should trigger the critic."""
-    contract = OfferAgentContract()
+    contract = SalesPitchAgentContract()
     classification = TurnClassification(is_decline=True, is_acceptance=False, confidence_score=0.90)
-    state = {"last_outcome": "declined", "offer_pitched": True, "revision_count": 0}
+    state = {"last_outcome": "declined", "agent_memory": {"offer_pitched": True}, "revision_count": 0}
     critique = contract.criticize_decision(
         classification, state, "ApologyAgent", {}, "what is this coupon?"
     )
@@ -184,15 +192,15 @@ def test_offer_agent_critic_question_tagged_as_decline():
         classification, state, critique, "ApologyAgent", {}, "what is this coupon?"
     )
     assert revised_agent == "ClarifyingAgent"
-    assert updated.get("previous_agent") == "OfferAgent"
+    assert updated.get("previous_agent") == "SalesPitchAgent"
 
 
 def test_offer_agent_critic_genuine_decline_passes_through():
     """Genuine decline with no question/interest pattern — critic is a no-op.
     'no thanks not interested' contains no phrase from _OFFER_INTEREST_PATTERNS."""
-    contract = OfferAgentContract()
+    contract = SalesPitchAgentContract()
     classification = TurnClassification(is_decline=True, is_acceptance=False, confidence_score=0.95)
-    state = {"last_outcome": "declined", "offer_pitched": True, "revision_count": 0}
+    state = {"last_outcome": "declined", "agent_memory": {"offer_pitched": True}, "revision_count": 0}
     critique = contract.criticize_decision(
         classification, state, "ApologyAgent", {}, "no thanks not interested"
     )
@@ -219,7 +227,7 @@ def test_apply_critic_pass_bounded_revision():
     # Turn N: revision_count=0 → critique fires → revision applied (count becomes 1)
     state_n = {"revision_count": 0, "revision_reason": ""}
     agent_n, _, count_n, reason_n, refl_n, rev_app_n = _apply_critic_pass(
-        contract, classification, state_n, "OfferAgent", {}, "test input"
+        contract, classification, state_n, "SalesPitchAgent", {}, "test input"
     )
     assert count_n == 1
     assert reason_n == "route_context_mismatch"
@@ -230,10 +238,10 @@ def test_apply_critic_pass_bounded_revision():
     # Turn N+1: revision_count=1 → consecutive-turn cap → route accepted as-is, count NOT reset
     state_n1 = {"revision_count": 1, "revision_reason": "route_context_mismatch"}
     agent_n1, _, count_n1, reason_n1, refl_n1, rev_app_n1 = _apply_critic_pass(
-        contract, classification, state_n1, "OfferAgent", {}, "test input"
+        contract, classification, state_n1, "SalesPitchAgent", {}, "test input"
     )
     assert count_n1 == 1          # NOT reset to 0 — stays at cap
-    assert agent_n1 == "OfferAgent"    # route accepted as-is, no revision
+    assert agent_n1 == "SalesPitchAgent"    # route accepted as-is, no revision
     assert reason_n1 == "route_context_mismatch"  # reason preserved from prior turn
     assert refl_n1 == "cap_reached"
     assert rev_app_n1 is False
@@ -241,13 +249,13 @@ def test_apply_critic_pass_bounded_revision():
 
 def test_apply_critic_pass_resets_only_on_acceptable():
     """revision_count resets to 0 only when critique passes — not on cap-hit or between turns."""
-    contract = SpendingHistoryAgentContract()
+    contract = SalesPitchAgentContract()
     classification = TurnClassification(is_decline=True, is_acceptance=False, confidence_score=0.95)
     # Genuine post-pitch decline → critic is acceptable → count should reset
     state = {
-        "revision_count": 1, "revision_reason": "unstated_precondition",
-        "offer_pitched": True, "last_outcome": "declined"
-    }
+            "revision_count": 1, "revision_reason": "unstated_precondition",
+            "agent_memory": {"offer_pitched": True}, "last_outcome": "declined"
+        }
     agent, updates, count, reason, refl, rev_app = _apply_critic_pass(
         contract, classification, state, "ApologyAgent", {}, "no thanks"
     )
@@ -286,12 +294,12 @@ def test_default_critic_is_noop():
 def test_apply_critic_pass_does_not_mutate_inputs():
     """Purity guarantee: _apply_critic_pass does not mutate state or resolved_updates.
     All overrides return fresh dicts — this test prevents future overrides from violating that."""
-    contract = SpendingHistoryAgentContract()
+    contract = SalesPitchAgentContract()
     classification = TurnClassification(is_decline=True, confidence_score=0.95)
     # This state triggers criticize_decision (offer not pitched → unstated_precondition)
     original_state = {
         "revision_count": 0, "revision_reason": "",
-        "offer_pitched": False, "last_outcome": "declined"
+        "agent_memory": {"offer_pitched": False}, "last_outcome": "declined"
     }
     original_updates = {"offer_accepted": False}
     state_snapshot = dict(original_state)
@@ -315,9 +323,9 @@ def test_offer_agent_critic_defense_in_depth_contradictory_flags():
     because the check is utterance-based, not flag-contradiction-based. This is intentional:
     the critic catches real misrouted intent (question mis-tagged as decline), not theoretical
     classifier logic violations."""
-    contract = OfferAgentContract()
+    contract = SalesPitchAgentContract()
     classification = TurnClassification(is_acceptance=True, is_decline=True, confidence_score=0.95)
-    state = {"last_outcome": "declined", "offer_pitched": True, "revision_count": 0}
+    state = {"last_outcome": "declined", "agent_memory": {"offer_pitched": True}, "revision_count": 0}
     critique = contract.criticize_decision(classification, state, "ApologyAgent", {}, "no")
     # "no" has no interest pattern → critic passes — intentional, utterance-based check
     assert critique.is_acceptable
@@ -326,17 +334,17 @@ def test_offer_agent_critic_defense_in_depth_contradictory_flags():
 # Phase 1 & 2: Critic Expansion & Personal Shopper Tests
 # ---------------------------------------------------------------------------
 
-def test_identity_critic_low_confidence_to_event():
+def test_identity_critic_low_confidence_to_sales_pitch():
     contract = GreetingAgentContract()
     classification = TurnClassification(confidence_score=0.7)
-    critique = contract.criticize_decision(classification, {}, "EventAgent", {}, "idk")
+    critique = contract.criticize_decision(classification, {}, "SalesPitchAgent", {}, "idk")
     assert not critique.is_acceptable
     assert critique.failure_reason == "ambiguous_intent"
 
 def test_identity_critic_acceptable_high_confidence():
     contract = GreetingAgentContract()
     classification = TurnClassification(confidence_score=0.9)
-    critique = contract.criticize_decision(classification, {}, "EventAgent", {}, "yes")
+    critique = contract.criticize_decision(classification, {}, "SalesPitchAgent", {}, "yes")
     assert critique.is_acceptable
 
 def test_identity_critic_premature_termination():
@@ -376,7 +384,7 @@ def test_critique_preconditions_postcall_no_acceptance():
     assert critique.failure_reason == "unstated_precondition"
 
 def test_apply_critic_pass_reflection_disabled():
-    contract = SpendingHistoryAgentContract()
+    contract = SalesPitchAgentContract()
     classification = TurnClassification(confidence_score=0.5)
     state = {"reflection_enabled": False}
     # It would normally fail confidence check, but reflection is disabled.
@@ -386,7 +394,7 @@ def test_apply_critic_pass_reflection_disabled():
     assert rev_app is False
 
 def test_apply_critic_pass_returns_reflection_status():
-    contract = SpendingHistoryAgentContract()
+    contract = SalesPitchAgentContract()
     classification = TurnClassification(confidence_score=0.5)
     state = {"reflection_enabled": True}
     agent, _, count, reason, refl, rev_app = _apply_critic_pass(contract, classification, state, "ApologyAgent", {}, "test")
@@ -396,23 +404,23 @@ def test_apply_critic_pass_returns_reflection_status():
 
 def test_apology_trigger_personal_shopper():
     contract = ApologyAgentContract()
-    state = {"previous_agent": "OfferAgent", "user_declined_offer": True}
+    state = {"previous_agent": "SalesPitchAgent", "user_declined_offer": True}
     route, updates = contract._route_on_goal_complete(state)
     assert route == "PersonalShopperAgent"
     assert updates == {"personal_shopper_offered": True}
 
 def test_apology_personal_shopper_one_shot_guard():
     contract = ApologyAgentContract()
-    state = {"previous_agent": "OfferAgent", "user_declined_offer": True, "personal_shopper_offered": True}
+    state = {"previous_agent": "SalesPitchAgent", "user_declined_offer": True, "personal_shopper_offered": True}
     route, updates = contract._route_on_goal_complete(state)
     assert route == "Terminate"
     
 def test_apology_ignores_personal_shopper_on_injection():
     contract = ApologyAgentContract()
     # If injection triggered this, injection_attempts = 1
-    state = {"previous_agent": "OfferAgent", "user_declined_offer": True, "injection_attempts": 1}
+    state = {"previous_agent": "SalesPitchAgent", "user_declined_offer": True, "injection_attempts": 1}
     route, updates = contract._route_on_goal_complete(state)
-    assert route == "OfferAgent" # returns back to previous agent
+    assert route == "SalesPitchAgent" # returns back to previous agent
 
 def test_personal_shopper_agent_goal_satisfied():
     contract = PersonalShopperAgentContract()
@@ -433,7 +441,7 @@ def test_personal_shopper_agent_goal_satisfied():
     assert contract.goal_satisfied(None, {}, {"last_outcome": out}) is True
 
 def test_appointment_override_priority():
-    contract = OfferAgentContract()
+    contract = SalesPitchAgentContract()
     classification = TurnClassification(is_decline=True, is_appointment_accept=True, confidence_score=1.0)
     state = {"agent_memory": {}, "last_outcome": "pending"}
     next_agent, updates = contract.determine_next_agent(classification, state, "I'm busy right now, can I book a personal shopper for later")
@@ -441,13 +449,13 @@ def test_appointment_override_priority():
 
 def test_clarifying_agent_decline_intercepted_by_upstream_critic():
     """Proves that a decline routed through ClarifyingAgent when offer_pitched=False 
-    is intercepted by the original strategy agent's critic (SpendingHistoryAgent)."""
-    contract = SpendingHistoryAgentContract()  # The strategy agent when ClarifyingAgent is running
+    is intercepted by the original strategy agent's critic (SalesPitchAgent)."""
+    contract = SalesPitchAgentContract()  # The strategy agent when ClarifyingAgent is running
     classification = TurnClassification(is_decline=True, confidence_score=0.95)
     state = {
         "current_agent": "ClarifyingAgent",
-        "previous_agent": "SpendingHistoryAgent",
-        "offer_pitched": False,
+        "previous_agent": "SalesPitchAgent",
+        "agent_memory": {"offer_pitched": False},
         "last_outcome": "declined",  # ClarifyingAgent post_process sets this
         "revision_count": 0,
         "revision_reason": "",
@@ -464,7 +472,7 @@ def test_clarifying_agent_decline_intercepted_by_upstream_critic():
     )
     
     # 3. Assert the critic intercepted it!
-    assert final_agent == "OfferAgent"  # SpendingHistoryAgentContract.revise_decision returns OfferAgent on unstated_precondition
-    assert reason == "unstated_precondition"
+    assert final_agent == "ClarifyingAgent"
+    assert reason == "premature_termination"
     assert rev_app is True
 

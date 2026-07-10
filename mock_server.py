@@ -28,28 +28,31 @@ EVENTS = {
 
 OFFERS = {
     "1": {
-        "id": "off_1",
-        "customer_id": "1",
-        "category": "Fashion",
-        "discount_percentage": 20,
-        "coupon_code": "BIRTHDAY20",
-        "recommendations": ["Formal Shirt", "Jeans", "Sneakers"]
+        "offer_id": "off_1",
+        "offer_name": "BIRTHDAY20",
+        "offer_brand": "Stop",
+        "offer_category": "Fashion",
+        "valid_from": "2026-06-29",
+        "valid_to": "2026-07-29",
+        "offer_description": "Get 20% off on Stop everyday casuals and formal wear."
     },
     "2": {
-        "id": "off_2",
-        "customer_id": "2",
-        "category": "Beauty",
-        "discount_percentage": 15,
-        "coupon_code": "CREDIT15",
-        "recommendations": ["Calvin Klein One", "Bvlgari Man"]
+        "offer_id": "off_2",
+        "offer_name": "CREDIT15",
+        "offer_brand": "Arcelia",
+        "offer_category": "Beauty",
+        "valid_from": "2026-07-02",
+        "valid_to": "2026-08-02",
+        "offer_description": "Get 15% off on Arcelia fragrances and makeup products."
     },
     "3": {
-        "id": "off_3",
-        "customer_id": "3",
-        "category": "Luxury Watches",
-        "discount_percentage": 25,
-        "coupon_code": "LUX25",
-        "recommendations": ["Fossil Watch", "Seiko Automatic"]
+        "offer_id": "off_3",
+        "offer_name": "LUX25",
+        "offer_brand": "Michael Kors",
+        "offer_category": "Luxury Watches",
+        "valid_from": "2026-06-30",
+        "valid_to": "2026-07-30",
+        "offer_description": "Get 25% off on Michael Kors luxury watches and accessories."
     }
 }
 
@@ -67,13 +70,18 @@ class Event(BaseModel):
     event_type: str
     event_date: str
 
-class Offer(BaseModel):
-    id: str
-    customer_id: str
-    category: str
-    discount_percentage: int
-    coupon_code: str
-    recommendations: List[str]
+class OfferItem(BaseModel):
+    offer_id: str
+    offer_name: str
+    offer_brand: str
+    offer_category: str
+    valid_from: str
+    valid_to: str
+    offer_description: str
+
+class OffersResponse(BaseModel):
+    no_of_offers: int
+    offers: List[OfferItem]
 
 class WhatsAppNotification(BaseModel):
     customer_id: str
@@ -106,12 +114,12 @@ def get_event(customer_id: str):
         raise HTTPException(status_code=404, detail="No active events for customer")
     return event
 
-@app.get("/api/offers", response_model=List[Offer])
+@app.get("/api/offers", response_model=OffersResponse)
 def get_all_offers():
     logger.info("Fetching all active store offers")
-    return list(OFFERS.values())
+    return {"no_of_offers": len(OFFERS), "offers": list(OFFERS.values())}
 
-@app.get("/api/offers/{customer_id}", response_model=Offer)
+@app.get("/api/offers/{customer_id}", response_model=OfferItem)
 def get_offer(customer_id: str):
     logger.info(f"Fetching personalized offer for customer_id: {customer_id}")
     offer = OFFERS.get(customer_id)

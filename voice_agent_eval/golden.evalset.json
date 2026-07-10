@@ -210,7 +210,7 @@
       ],
       "creationTimestamp": 0.0,
       "finalSessionState": {
-        "current_agent": "OfferAgent",
+        "current_agent": "SalesPitchAgent",
         "detected_language": "Hindi",
         "escalation_triggered": false
       }
@@ -651,7 +651,7 @@
       "finalSessionState": {
         "current_agent": "ApologyAgent",
         "bounded_plans": {
-          "OfferAgent": {
+          "SalesPitchAgent": {
              "plan_status": "Abandoned"
           }
         }
