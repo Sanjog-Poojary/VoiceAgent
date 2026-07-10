@@ -69,7 +69,7 @@ class SessionState(BaseModel):
     current_goal: str = Field(default="", description="The current conversational goal or target agent's objective.")
     goal_history: List[str] = Field(default_factory=list, description="A historical log of conversational goals (max 5).")
     last_agent: str = Field(default="", description="The name of the last active sub-agent.")
-    last_outcome: Literal["success", "failed", "accepted", "declined", "tangent", "silence", "pending", "interest", "knowledge_q", "secondary_pitch", ""] = Field(default="", description="The outcome of the last agent's turn.")
+    last_outcome: Literal["success", "failed", "accepted", "declined", "tangent", "silence", "pending", "interest", "knowledge_q", "secondary_pitch", "slot_captured", ""] = Field(default="", description="The outcome of the last agent's turn.")
     agent_memory: AgentMemory = Field(default_factory=AgentMemory, description="Schema-enforced persistent agent memory.")
     bounded_plans: Dict[str, BoundedPlan] = Field(default_factory=dict, description="Active multi-step plans mapped by agent name.")
 
