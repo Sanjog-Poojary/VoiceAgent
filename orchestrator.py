@@ -1890,8 +1890,10 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
         if sec_offer:
             if isinstance(agent_memory, dict):
                 agent_memory["has_secondary_offer"] = True
+                _set_agent_memory(ctx, agent_memory)
             else:
                 agent_memory.has_secondary_offer = True
+                ctx.state["agent_memory"] = agent_memory
 
     matched_offer = next(
         (o for o in all_offers if (o.get("offer_category") or o.get("category")) == preferred_category),
@@ -2146,6 +2148,7 @@ async def post_call_agent(ctx: Context, node_input: Any):
     matched_offer = matched_offer or {}
 
     code = matched_offer.get("offer_name") or matched_offer.get("coupon_code", "")
+    brand = matched_offer.get("offer_brand", "Stop")
     
     discount = matched_offer.get("discount_percentage", "")
     if not discount and "offer_description" in matched_offer:
@@ -2155,11 +2158,55 @@ async def post_call_agent(ctx: Context, node_input: Any):
         if m:
             discount = m.group(1)
 
+    # Determine which offers were accepted
+    agent_memory = ctx.state.get("agent_memory", {})
+    primary_accepted = agent_memory.get("primary_offer_accepted", False) if isinstance(agent_memory, dict) else getattr(agent_memory, "primary_offer_accepted", False)
+    secondary_pitched = agent_memory.get("secondary_offer_pitched", False) if isinstance(agent_memory, dict) else getattr(agent_memory, "secondary_offer_pitched", False)
+    
+    # Raw transcript check for secondary acceptance on the last turn
+    secondary_accepted = False
+    if secondary_pitched:
+        # If they accepted overall, and either primary wasn't accepted or the last user response was positive/acceptance
+        raw_trans = ctx.state.get("raw_audio_transcription", [])
+        last_user = ""
+        for line in reversed(raw_trans):
+            if line.startswith("User:"):
+                last_user = line[5:].strip().lower()
+                break
+        if any(w in last_user for w in ("yes", "sure", "ok", "yep", "suresh", "activate", "send", "include", "both")):
+            secondary_accepted = True
+
+    # If the user directly accepted the primary offer in a 3-phase flow (no secondary offer exist/pitched)
+    if not secondary_pitched:
+        primary_accepted = True
+
+    secondary_brand = customer.get("secondary_brand", "")
+    sec_offer = next((o for o in all_offers if o.get("offer_brand") == secondary_brand), {}) if secondary_brand else {}
+    sec_code = sec_offer.get("offer_name") or sec_offer.get("coupon_code", "")
+    sec_discount = sec_offer.get("discount_percentage", "15")
+
+    offers_sent_en = []
+    offers_sent_hi = []
+
+    if primary_accepted:
+        offers_sent_en.append(f"{discount}% off on {brand} (Code: {code})")
+        offers_sent_hi.append(f"{brand} पर {discount}% छूट (कोड: {code})")
+    if secondary_accepted and sec_code:
+        offers_sent_en.append(f"{sec_discount}% off on {secondary_brand} (Code: {sec_code})")
+        offers_sent_hi.append(f"{secondary_brand} पर {sec_discount}% छूट (कोड: {sec_code})")
+
+    # Fallback to primary if list is empty
+    if not offers_sent_en:
+        offers_sent_en.append(f"{discount}% off on {brand} (Code: {code})")
+        offers_sent_hi.append(f"{brand} पर {discount}% छूट (कोड: {code})")
+
     if lang == "Hindi":
-        whatsapp_msg = f"नमस्ते {name}, आपका {discount}% छूट कूपन कोड '{code}' भेज दिया गया है। धन्यवाद!"
+        offers_str = ", ".join(offers_sent_hi)
+        whatsapp_msg = f"नमस्ते {name}, आपके ऑफ़र भेज दिए गए हैं: {offers_str}। धन्यवाद!"
         msg = "बहुत बढ़िया! मैंने सारे ऑफ़र विवरण आपके व्हाट्सएप पर भेज दिए हैं। धन्यवाद!"
     else:
-        whatsapp_msg = f"Hello {name}, your {discount}% off coupon code '{code}' has been sent to your WhatsApp. Thank you!"
+        offers_str = ", ".join(offers_sent_en)
+        whatsapp_msg = f"Hello {name}, your offers have been sent: {offers_str}. Thank you!"
         msg = "Awesome! I've sent all the offer details directly to your WhatsApp. Thank you!"
 
     await send_whatsapp_notification(customer_id, phone, whatsapp_msg)

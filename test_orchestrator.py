@@ -200,18 +200,28 @@ class TestVoiceAgentOrchestrator(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(state.get("current_agent"), "SalesPitchAgent")
         self.assertTrue(state.get("offer_pitched"))
 
-        print(f"\n--- Turn 5: User accepts ---")
+        print(f"\n--- Turn 5: User accepts primary offer ---")
         await asyncio.sleep(INTER_TURN_SLEEP)
         agent_message, interrupt_id, invocation_id = await run_turn(
             self.runner, self.user_id, session_id,
             make_resume_message(interrupt_id, "Yes please, send it to my WhatsApp"), invocation_id
+        )
+        self.assertIn("Puma", agent_message)
+        state = await self.get_session_state(session_id)
+        self.assertEqual(state.get("current_agent"), "SalesPitchAgent")
+
+        print(f"\n--- Turn 6: User accepts secondary offer ---")
+        await asyncio.sleep(INTER_TURN_SLEEP)
+        agent_message, interrupt_id, invocation_id = await run_turn(
+            self.runner, self.user_id, session_id,
+            make_resume_message(interrupt_id, "Yes please, include that as well"), invocation_id
         )
         self.assertIn("WhatsApp", agent_message)
         state = await self.get_session_state(session_id)
         self.assertEqual(state.get("current_agent"), "PostCallAgent")
         self.assertTrue(state.get("offer_accepted"))
 
-        print(f"\n--- Turn 6: User says bye ---")
+        print(f"\n--- Turn 7: User says bye ---")
         await asyncio.sleep(INTER_TURN_SLEEP)
         agent_message, _, _ = await run_turn(
             self.runner, self.user_id, session_id,
@@ -684,6 +694,14 @@ class TestVoiceAgentOrchestrator(unittest.IsolatedAsyncioTestCase):
         agent_message, interrupt_id, invocation_id = await run_turn(
             self.runner, self.user_id, session_id,
             make_resume_message(interrupt_id, "Okay I have heard enough, yes activate the offer"), invocation_id
+        )
+        self.assertEqual(state.get("current_agent"), "SalesPitchAgent")
+
+        print(f"\n--- Turn 7: User decides on secondary offer ---")
+        await asyncio.sleep(INTER_TURN_SLEEP)
+        agent_message, interrupt_id, invocation_id = await run_turn(
+            self.runner, self.user_id, session_id,
+            make_resume_message(interrupt_id, "Yes please, include that too"), invocation_id
         )
         state = await self.get_session_state(session_id)
 
