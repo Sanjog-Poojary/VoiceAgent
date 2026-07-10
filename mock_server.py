@@ -1,11 +1,45 @@
 import logging
+import os
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from pypdf import PdfReader
+from google import genai
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("mock_server")
+
+# Load PDF knowledge files
+PDF_FILES = [
+    "delivery_policy.pdf",
+    "first_citizen_policy.pdf",
+    "privacy_policy.pdf",
+    "returns_exchange_policy.pdf",
+    "shoppersstop_faq.pdf",
+    "terms_and_conditions.pdf"
+]
+
+pdf_text_parts = []
+for filename in PDF_FILES:
+    if os.path.exists(filename):
+        try:
+            reader = PdfReader(filename)
+            text = ""
+            for page in reader.pages:
+                text += page.extract_text() or ""
+            pdf_text_parts.append(f"--- DOCUMENT: {filename} ---\n{text}")
+            logger.info(f"Loaded knowledge document {filename} ({len(text)} chars)")
+        except Exception as e:
+            logger.error(f"Error reading PDF {filename}: {e}")
+
+PDF_KNOWLEDGE_TEXT = "\n\n".join(pdf_text_parts)
+
+_GENAI_CLIENT = genai.Client(
+    vertexai=True,
+    project=os.getenv("GOOGLE_CLOUD_PROJECT"),
+    location=os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+)
 
 app = FastAPI(
     title="Shoppers Stop Mock API Server",
@@ -385,9 +419,37 @@ KNOWLEDGE_BASE = {
 @app.get("/api/knowledge")
 def query_knowledge(q: str = ""):
     logger.info(f"Querying knowledge base for: {q}")
-    query = q.lower()
+    query = q.lower().strip()
+    
+    # 1. Local keyword matches (fast & guaranteed for E2E scenarios)
     for key, answer in KNOWLEDGE_BASE.items():
         if key in query:
+            logger.info(f"Found local match for '{key}': {answer}")
             return {"status": "success", "answer": answer}
+            
+    # 2. Dynamic PDF RAG query via Gemini fallback
+    if PDF_KNOWLEDGE_TEXT:
+        logger.info("Local key match not found. Querying Gemini with PDF policies context...")
+        prompt = (
+            "You are the expert Shoppers Stop virtual assistant answering customer questions on outbound calls.\n"
+            "Use the provided Shoppers Stop official policies text to answer the customer's question.\n"
+            "Keep your answer brief, friendly, conversational, and exactly 1-2 sentences. Do not mention section numbers or document names.\n"
+            "If the answer cannot be found in the provided text, reply with: "
+            "'I don't have the exact details on that right now, but our store staff will be happy to help!'\n\n"
+            f"Shoppers Stop Policies:\n{PDF_KNOWLEDGE_TEXT}\n\n"
+            f"Customer Question: {q}\n"
+            "Answer:"
+        )
+        try:
+            response = _GENAI_CLIENT.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt
+            )
+            ans = response.text.strip()
+            logger.info(f"Gemini RAG generated response: {ans}")
+            return {"status": "success", "answer": ans}
+        except Exception as e:
+            logger.error(f"Error querying Gemini RAG fallback: {e}")
+            
     return {"status": "success", "answer": "I don't have the exact details on that right now, but our store staff will be happy to help!"}
 
