@@ -3,6 +3,7 @@ import base64
 import copy
 import difflib
 import json
+import re
 import logging
 import os
 import time
@@ -395,10 +396,18 @@ class AudioBridge:
                     if storage_session:
                         storage_session.state = copy.deepcopy(snapshot_state)
 
+    @staticmethod
+    def _split_sentences(text: str) -> list[str]:
+        """Split text into sentences for pipelined TTS synthesis."""
+        # Split on sentence-ending punctuation followed by whitespace
+        parts = re.split(r'(?<=[.!?])\s+', text.strip())
+        return [p for p in parts if p.strip()]
+
     async def task_outbound_tts(self):
         """
-        Pops from outbound_tts_queue, calls Deepgram Aura, awaits release
-        of filler lock, streams mulaw chunks, starts silence timer.
+        Pops from outbound_tts_queue, splits text into sentences,
+        synthesizes each sentence independently via Deepgram Aura,
+        and streams mulaw chunks to Twilio.
         """
         while True:
             item = await self.outbound_tts_queue.get()
@@ -414,26 +423,41 @@ class AudioBridge:
             self.is_speaking = True
             self.active_tts_string = text
 
+            # Split into sentences so the first one plays while later ones synthesize
+            sentences = self._split_sentences(text)
+            if not sentences:
+                sentences = [text]
+
             start_time = time.time()
             first_chunk_sent = False
+            aborted = False
 
             try:
-                async for chunk in self.get_tts_audio_stream(text):
+                for idx, sentence in enumerate(sentences):
                     if turn_id != self.current_turn_id or self.call_ended:
+                        aborted = True
                         break
 
-                    if not first_chunk_sent:
-                        first_chunk_sent = True
-                        elapsed = time.time() - start_time
-                        logger.info(f"[TTS LATENCY] Time to first audio chunk: {elapsed:.3f} seconds (pure synthesis, no lock wait)")
+                    async for chunk in self.get_tts_audio_stream(sentence):
+                        if turn_id != self.current_turn_id or self.call_ended:
+                            aborted = True
+                            break
 
-                    payload = base64.b64encode(chunk).decode("utf-8")
-                    if self.stream_sid:
-                        await self.twilio_ws.send_json({
-                            "event": "media",
-                            "streamSid": self.stream_sid,
-                            "media": {"payload": payload}
-                        })
+                        if not first_chunk_sent:
+                            first_chunk_sent = True
+                            elapsed = time.time() - start_time
+                            logger.info(f"[TTS LATENCY] Time to first audio chunk: {elapsed:.3f}s (sentence {idx+1}/{len(sentences)})")
+
+                        payload = base64.b64encode(chunk).decode("utf-8")
+                        if self.stream_sid:
+                            await self.twilio_ws.send_json({
+                                "event": "media",
+                                "streamSid": self.stream_sid,
+                                "media": {"payload": payload}
+                            })
+
+                    if aborted:
+                        break
             except Exception as e:
                 logger.error(f"Error in streaming/sending TTS: {e}")
 
