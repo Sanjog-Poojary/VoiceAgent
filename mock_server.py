@@ -495,7 +495,7 @@ async def twilio_stream(websocket: WebSocket):
     customer = get_user(customer_id)
     initial_state = {
         "customer_id": customer_id,
-        "detected_language": customer.base_language or "English",
+        "detected_language": customer.get("base_language") or "English",
         "current_agent": "IdentityAgent",
         "verification_attempts": 0,
         "call_sentiment": "Neutral",
