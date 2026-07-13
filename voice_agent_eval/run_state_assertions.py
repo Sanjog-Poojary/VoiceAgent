@@ -104,7 +104,7 @@ async def test_golden_case_final_state(case: dict[str, Any]):
     initial_state = {
         "customer_id": customer_id,
         "detected_language": "English",
-        "current_agent": "GreetingAgent",
+        "current_agent": "IdentityAgent",
         "verification_attempts": 0,
         "call_sentiment": "Neutral",
         "offer_pitched": False,

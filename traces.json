@@ -1,0 +1,4053 @@
+[
+  {
+    "trace": 1,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 0.95,
+        "detected_language": "English",
+        "is_acceptance": false,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_offer_interest": true,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": true,
+          "pitch_category": "Fashion",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "bounded_plans": {
+          "OfferAgent": {
+            "active_step": "Answer Questions",
+            "current_objective": "Secure Coupon Activation",
+            "is_resuming": false,
+            "max_revisions": 3,
+            "plan_status": "In Progress",
+            "remaining_steps": [
+              "Present Offer",
+              "Answer Questions",
+              "Confirm Acceptance"
+            ],
+            "revision_count": 0,
+            "step_history": []
+          }
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "OfferAgent",
+        "current_goal": "pitch_personalized_offer",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event",
+          "retrieve_spending_history_and_pitch_interest"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "SpendingHistoryAgent",
+        "last_outcome": "interest",
+        "offer_accepted": false,
+        "offer_pitched": true,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: yes",
+          "Agent: We noticed you recently shopped in our Fashion category. We'd love to share an offer.",
+          "User: yes",
+          "Agent: We are offering you a special 20% off coupon code 'BIRTHDAY20' on your next purchase. Would you like to activate it?",
+          "User: what is it about?"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "what is it about?"
+    },
+    "outputs": {
+      "output": [
+        "OfferAgent",
+        {}
+      ]
+    }
+  },
+  {
+    "trace": 2,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": true,
+          "pitch_category": "Fashion",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Positive",
+        "clarification_attempts": 0,
+        "current_agent": "OfferAgent",
+        "current_goal": "pitch_personalized_offer",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event",
+          "retrieve_spending_history_and_pitch_interest"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "SpendingHistoryAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": true,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: yes",
+          "Agent: We noticed you recently shopped in our Fashion category. We'd love to share an offer.",
+          "User: yes",
+          "Agent: We are offering you a special 20% off coupon code 'BIRTHDAY20' on your next purchase. Would you like to activate it?",
+          "User: what is it about?"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "what is it about?"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": false,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_offer_interest": true,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 3,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Positive",
+        "confidence_score": 0.95,
+        "detected_language": "English",
+        "is_acceptance": true,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_offer_interest": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "Fashion",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Positive",
+        "clarification_attempts": 0,
+        "current_agent": "SpendingHistoryAgent",
+        "current_goal": "retrieve_spending_history_and_pitch_interest",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "EventAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: yes",
+          "Agent: We noticed you recently shopped in our Fashion category. We'd love to share an offer.",
+          "User: yes"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "yes"
+    },
+    "outputs": {
+      "output": [
+        "OfferAgent",
+        {}
+      ]
+    }
+  },
+  {
+    "trace": 4,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "Fashion",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Positive",
+        "clarification_attempts": 0,
+        "current_agent": "SpendingHistoryAgent",
+        "current_goal": "retrieve_spending_history_and_pitch_interest",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "EventAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: yes",
+          "Agent: We noticed you recently shopped in our Fashion category. We'd love to share an offer.",
+          "User: yes"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "yes"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Positive",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": true,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_offer_interest": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 5,
+    "name": "criticize_decision",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Positive",
+        "confidence_score": 1.0,
+        "detected_language": "English",
+        "is_acceptance": true,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_offer_interest": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "proposed_next_agent": "SpendingHistoryAgent",
+      "proposed_updates": {},
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Positive",
+        "clarification_attempts": 0,
+        "current_agent": "EventAgent",
+        "current_goal": "introduce_birthday_event",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "GreetingAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: yes"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "yes"
+    },
+    "outputs": {
+      "failure_reason": "",
+      "is_acceptable": true,
+      "note": ""
+    }
+  },
+  {
+    "trace": 6,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Positive",
+        "confidence_score": 1.0,
+        "detected_language": "English",
+        "is_acceptance": true,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_offer_interest": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Positive",
+        "clarification_attempts": 0,
+        "current_agent": "EventAgent",
+        "current_goal": "introduce_birthday_event",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "GreetingAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: yes"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "yes"
+    },
+    "outputs": {
+      "output": [
+        "SpendingHistoryAgent",
+        {}
+      ]
+    }
+  },
+  {
+    "trace": 7,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "EventAgent",
+        "current_goal": "introduce_birthday_event",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "GreetingAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: yes"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "yes"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Positive",
+      "confidence_score": 1.0,
+      "detected_language": "English",
+      "is_acceptance": true,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_offer_interest": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 8,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 0.95,
+        "detected_language": "English",
+        "is_acceptance": false,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_offer_interest": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": true
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "GreetingAgent",
+        "current_goal": "",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "yes it is"
+    },
+    "outputs": {
+      "output": [
+        "EventAgent",
+        {}
+      ]
+    }
+  },
+  {
+    "trace": 9,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {},
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "GreetingAgent",
+        "current_goal": "",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "",
+        "last_outcome": "",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "yes it is"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": false,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_offer_interest": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": true
+    }
+  },
+  {
+    "trace": 10,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 0.95,
+        "detected_language": "English",
+        "is_acceptance": true,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": true,
+          "pitch_category": "Fashion",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "bounded_plans": {
+          "OfferAgent": {
+            "active_step": "Confirm Acceptance",
+            "current_objective": "Secure Coupon Activation",
+            "is_resuming": false,
+            "max_revisions": 3,
+            "plan_status": "Completed",
+            "remaining_steps": [
+              "Present Offer",
+              "Answer Questions"
+            ],
+            "revision_count": 0,
+            "step_history": [
+              "Present Offer"
+            ]
+          }
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "OfferAgent",
+        "current_goal": "pitch_personalized_offer",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event",
+          "retrieve_spending_history_and_pitch_interest"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "SpendingHistoryAgent",
+        "last_outcome": "accepted",
+        "offer_accepted": false,
+        "offer_pitched": true,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: what is it",
+          "Agent: We noticed you recently shopped in our Fashion category. We'd love to share an offer.",
+          "User: then",
+          "Agent: We are offering you a special 20% off coupon code 'BIRTHDAY20' on your next purchase. Would you like to activate it?",
+          "User: what is it about?"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "what is it about?"
+    },
+    "outputs": {
+      "output": [
+        "PostCallAgent",
+        {
+          "offer_accepted": true
+        }
+      ]
+    }
+  },
+  {
+    "trace": 11,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": true,
+          "pitch_category": "Fashion",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "OfferAgent",
+        "current_goal": "pitch_personalized_offer",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event",
+          "retrieve_spending_history_and_pitch_interest"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "SpendingHistoryAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": true,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: what is it",
+          "Agent: We noticed you recently shopped in our Fashion category. We'd love to share an offer.",
+          "User: then",
+          "Agent: We are offering you a special 20% off coupon code 'BIRTHDAY20' on your next purchase. Would you like to activate it?",
+          "User: what is it about?"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "what is it about?"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": true,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 12,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 0.95,
+        "detected_language": "English",
+        "is_acceptance": true,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "Fashion",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "SpendingHistoryAgent",
+        "current_goal": "retrieve_spending_history_and_pitch_interest",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "EventAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: what is it",
+          "Agent: We noticed you recently shopped in our Fashion category. We'd love to share an offer.",
+          "User: then"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "then"
+    },
+    "outputs": {
+      "output": [
+        "OfferAgent",
+        {}
+      ]
+    }
+  },
+  {
+    "trace": 13,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "Fashion",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "SpendingHistoryAgent",
+        "current_goal": "retrieve_spending_history_and_pitch_interest",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "EventAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: what is it",
+          "Agent: We noticed you recently shopped in our Fashion category. We'd love to share an offer.",
+          "User: then"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "then"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": true,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 14,
+    "name": "criticize_decision",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 0.95,
+        "detected_language": "English",
+        "is_acceptance": true,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "proposed_next_agent": "SpendingHistoryAgent",
+      "proposed_updates": {},
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "EventAgent",
+        "current_goal": "introduce_birthday_event",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "GreetingAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: what is it"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "what is it"
+    },
+    "outputs": {
+      "failure_reason": "",
+      "is_acceptable": true,
+      "note": ""
+    }
+  },
+  {
+    "trace": 15,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 0.95,
+        "detected_language": "English",
+        "is_acceptance": true,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "EventAgent",
+        "current_goal": "introduce_birthday_event",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "GreetingAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: what is it"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "what is it"
+    },
+    "outputs": {
+      "output": [
+        "SpendingHistoryAgent",
+        {}
+      ]
+    }
+  },
+  {
+    "trace": 16,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "EventAgent",
+        "current_goal": "introduce_birthday_event",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "GreetingAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: what is it"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "what is it"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": true,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 17,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "current_agent": "SpendingHistoryAgent",
+        "offer_pitched": false
+      },
+      "user_input": "tell me"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": true,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_offer_interest": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 18,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 1.0,
+        "detected_language": "English",
+        "is_acceptance": false,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": true
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "GreetingAgent",
+        "current_goal": "",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "yes it is"
+    },
+    "outputs": {
+      "output": [
+        "EventAgent",
+        {}
+      ]
+    }
+  },
+  {
+    "trace": 19,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {},
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "GreetingAgent",
+        "current_goal": "",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "",
+        "last_outcome": "",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "yes it is"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 1.0,
+      "detected_language": "English",
+      "is_acceptance": false,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": true
+    }
+  },
+  {
+    "trace": 20,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "current_agent": "OfferAgent",
+        "offer_pitched": true
+      },
+      "user_input": "how does the coupon work"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": false,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_offer_interest": true,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 21,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "current_agent": "OfferAgent",
+        "offer_pitched": true
+      },
+      "user_input": "how will it help?"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": false,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_offer_interest": true,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 22,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "current_agent": "OfferAgent",
+        "offer_pitched": true
+      },
+      "user_input": "I'm busy right now, can I book a personal shopper for later"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": false,
+      "is_appointment_accept": true,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": true,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_offer_interest": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 23,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "current_agent": "SpendingHistoryAgent"
+      },
+      "user_input": "tell me"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": true,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_offer_interest": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 24,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "current_agent": "SpendingHistoryAgent"
+      },
+      "user_input": "what coupon"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": true,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_offer_interest": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 25,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "current_agent": "SpendingHistoryAgent"
+      },
+      "user_input": "nice what is it"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Positive",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": true,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_offer_interest": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 26,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "current_agent": "OfferAgent",
+        "offer_pitched": true
+      },
+      "user_input": "No thanks"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 1.0,
+      "detected_language": "English",
+      "is_acceptance": false,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": true,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_offer_interest": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 27,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "current_agent": "OfferAgent",
+        "offer_pitched": true
+      },
+      "user_input": "Zara has better deals but okay I'll take it"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": true,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": true,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_offer_interest": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 28,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "current_agent": "EventAgent"
+      },
+      "user_input": "Oh sure, expiring credits is AMAZING news, I'm SO happy about that!"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Agitated",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": false,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_offer_interest": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 29,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "current_agent": "GreetingAgent"
+      },
+      "user_input": "haa mai hu"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Positive",
+      "confidence_score": 0.95,
+      "detected_language": "Hindi",
+      "is_acceptance": false,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_offer_interest": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": true
+    }
+  },
+  {
+    "trace": 30,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "current_agent": "OfferAgent",
+        "offer_pitched": true
+      },
+      "user_input": "nice"
+    },
+    "outputs": {
+      "ambiguity_reason": "Single vague word 'nice' after offer was pitched, does not clearly indicate acceptance, decline, or interest.",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.6,
+      "detected_language": "English",
+      "is_acceptance": false,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_offer_interest": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 31,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "current_agent": "GreetingAgent"
+      },
+      "user_input": "nice"
+    },
+    "outputs": {
+      "ambiguity_reason": "Single vague word 'nice' provides no clear intent.",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.6,
+      "detected_language": "English",
+      "is_acceptance": false,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_offer_interest": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 32,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 0.95,
+        "detected_language": "English",
+        "is_acceptance": true,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": true,
+          "pitch_category": "Fashion",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "bounded_plans": {
+          "OfferAgent": {
+            "active_step": "Confirm Acceptance",
+            "current_objective": "Secure Coupon Activation",
+            "is_resuming": false,
+            "max_revisions": 3,
+            "plan_status": "Completed",
+            "remaining_steps": [
+              "Present Offer",
+              "Answer Questions"
+            ],
+            "revision_count": 0,
+            "step_history": [
+              "Present Offer"
+            ]
+          }
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "OfferAgent",
+        "current_goal": "pitch_personalized_offer",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event",
+          "retrieve_spending_history_and_pitch_interest"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "SpendingHistoryAgent",
+        "last_outcome": "accepted",
+        "offer_accepted": false,
+        "offer_pitched": true,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: what is it",
+          "Agent: We noticed you recently shopped in our Fashion category. We'd love to share an offer.",
+          "User: ohh nice",
+          "Agent: We are offering you a special 20% off coupon code 'BIRTHDAY20' on your next purchase. Would you like to activate it?",
+          "User: how will it help?"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "how will it help?"
+    },
+    "outputs": {
+      "output": [
+        "PostCallAgent",
+        {
+          "offer_accepted": true
+        }
+      ]
+    }
+  },
+  {
+    "trace": 33,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": true,
+          "pitch_category": "Fashion",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Positive",
+        "clarification_attempts": 0,
+        "current_agent": "OfferAgent",
+        "current_goal": "pitch_personalized_offer",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event",
+          "retrieve_spending_history_and_pitch_interest"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "SpendingHistoryAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": true,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: what is it",
+          "Agent: We noticed you recently shopped in our Fashion category. We'd love to share an offer.",
+          "User: ohh nice",
+          "Agent: We are offering you a special 20% off coupon code 'BIRTHDAY20' on your next purchase. Would you like to activate it?",
+          "User: how will it help?"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "how will it help?"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": true,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 34,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Positive",
+        "confidence_score": 0.95,
+        "detected_language": "English",
+        "is_acceptance": true,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "Fashion",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Positive",
+        "clarification_attempts": 0,
+        "current_agent": "SpendingHistoryAgent",
+        "current_goal": "retrieve_spending_history_and_pitch_interest",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "EventAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: what is it",
+          "Agent: We noticed you recently shopped in our Fashion category. We'd love to share an offer.",
+          "User: ohh nice"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "ohh nice"
+    },
+    "outputs": {
+      "output": [
+        "OfferAgent",
+        {}
+      ]
+    }
+  },
+  {
+    "trace": 35,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "Fashion",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "SpendingHistoryAgent",
+        "current_goal": "retrieve_spending_history_and_pitch_interest",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "EventAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: what is it",
+          "Agent: We noticed you recently shopped in our Fashion category. We'd love to share an offer.",
+          "User: ohh nice"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "ohh nice"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Positive",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": true,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 36,
+    "name": "criticize_decision",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 0.95,
+        "detected_language": "English",
+        "is_acceptance": true,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "proposed_next_agent": "SpendingHistoryAgent",
+      "proposed_updates": {},
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "EventAgent",
+        "current_goal": "introduce_birthday_event",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "GreetingAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: what is it"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "what is it"
+    },
+    "outputs": {
+      "failure_reason": "",
+      "is_acceptable": true,
+      "note": ""
+    }
+  },
+  {
+    "trace": 37,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 0.95,
+        "detected_language": "English",
+        "is_acceptance": true,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "EventAgent",
+        "current_goal": "introduce_birthday_event",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "GreetingAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: what is it"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "what is it"
+    },
+    "outputs": {
+      "output": [
+        "SpendingHistoryAgent",
+        {}
+      ]
+    }
+  },
+  {
+    "trace": 38,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "EventAgent",
+        "current_goal": "introduce_birthday_event",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "GreetingAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: what is it"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "what is it"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": true,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 39,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 1.0,
+        "detected_language": "English",
+        "is_acceptance": false,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": true
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "GreetingAgent",
+        "current_goal": "",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "yes it is"
+    },
+    "outputs": {
+      "output": [
+        "EventAgent",
+        {}
+      ]
+    }
+  },
+  {
+    "trace": 40,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {},
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "GreetingAgent",
+        "current_goal": "",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "",
+        "last_outcome": "",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "yes it is"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 1.0,
+      "detected_language": "English",
+      "is_acceptance": false,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": true
+    }
+  },
+  {
+    "trace": 41,
+    "name": "criticize_decision",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 1.0,
+        "detected_language": "English",
+        "is_acceptance": false,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "proposed_next_agent": "Terminate",
+      "proposed_updates": {},
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": true,
+          "pitch_category": "Fashion",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": true
+        },
+        "bounded_plans": {
+          "OfferAgent": {
+            "active_step": "Confirm Acceptance",
+            "current_objective": "Secure Coupon Activation",
+            "is_resuming": false,
+            "max_revisions": 3,
+            "plan_status": "Completed",
+            "remaining_steps": [
+              "Present Offer",
+              "Answer Questions"
+            ],
+            "revision_count": 0,
+            "step_history": [
+              "Present Offer"
+            ]
+          }
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "PostCallAgent",
+        "current_goal": "send_whatsapp_and_confirm",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event",
+          "retrieve_spending_history_and_pitch_interest",
+          "pitch_personalized_offer"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "OfferAgent",
+        "last_outcome": "success",
+        "offer_accepted": true,
+        "offer_pitched": true,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: ohh nice what is it?",
+          "Agent: We noticed you recently shopped in our Fashion category. We'd love to share an offer.",
+          "User: tell me",
+          "Agent: We are offering you a special 20% off coupon code 'BIRTHDAY20' on your next purchase. Would you like to activate it?",
+          "User: sure engage",
+          "Agent: Awesome! Your coupon code has been activated. We have sent you a WhatsApp confirmation. Thank you!",
+          "User: bye"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "bye"
+    },
+    "outputs": {
+      "failure_reason": "",
+      "is_acceptable": true,
+      "note": ""
+    }
+  },
+  {
+    "trace": 42,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 1.0,
+        "detected_language": "English",
+        "is_acceptance": false,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": true,
+          "pitch_category": "Fashion",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": true
+        },
+        "bounded_plans": {
+          "OfferAgent": {
+            "active_step": "Confirm Acceptance",
+            "current_objective": "Secure Coupon Activation",
+            "is_resuming": false,
+            "max_revisions": 3,
+            "plan_status": "Completed",
+            "remaining_steps": [
+              "Present Offer",
+              "Answer Questions"
+            ],
+            "revision_count": 0,
+            "step_history": [
+              "Present Offer"
+            ]
+          }
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "PostCallAgent",
+        "current_goal": "send_whatsapp_and_confirm",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event",
+          "retrieve_spending_history_and_pitch_interest",
+          "pitch_personalized_offer"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "OfferAgent",
+        "last_outcome": "success",
+        "offer_accepted": true,
+        "offer_pitched": true,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: ohh nice what is it?",
+          "Agent: We noticed you recently shopped in our Fashion category. We'd love to share an offer.",
+          "User: tell me",
+          "Agent: We are offering you a special 20% off coupon code 'BIRTHDAY20' on your next purchase. Would you like to activate it?",
+          "User: sure engage",
+          "Agent: Awesome! Your coupon code has been activated. We have sent you a WhatsApp confirmation. Thank you!",
+          "User: bye"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "bye"
+    },
+    "outputs": {
+      "output": [
+        "Terminate",
+        {}
+      ]
+    }
+  },
+  {
+    "trace": 43,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": true,
+          "pitch_category": "Fashion",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": true
+        },
+        "bounded_plans": {
+          "OfferAgent": {
+            "active_step": "Confirm Acceptance",
+            "current_objective": "Secure Coupon Activation",
+            "is_resuming": false,
+            "max_revisions": 3,
+            "plan_status": "Completed",
+            "remaining_steps": [
+              "Present Offer",
+              "Answer Questions"
+            ],
+            "revision_count": 0,
+            "step_history": [
+              "Present Offer"
+            ]
+          }
+        },
+        "call_sentiment": "Positive",
+        "clarification_attempts": 0,
+        "current_agent": "PostCallAgent",
+        "current_goal": "send_whatsapp_and_confirm",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event",
+          "retrieve_spending_history_and_pitch_interest",
+          "pitch_personalized_offer"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "OfferAgent",
+        "last_outcome": "accepted",
+        "offer_accepted": true,
+        "offer_pitched": true,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: ohh nice what is it?",
+          "Agent: We noticed you recently shopped in our Fashion category. We'd love to share an offer.",
+          "User: tell me",
+          "Agent: We are offering you a special 20% off coupon code 'BIRTHDAY20' on your next purchase. Would you like to activate it?",
+          "User: sure engage",
+          "Agent: Awesome! Your coupon code has been activated. We have sent you a WhatsApp confirmation. Thank you!",
+          "User: bye"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "bye"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 1.0,
+      "detected_language": "English",
+      "is_acceptance": false,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 44,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Positive",
+        "confidence_score": 0.95,
+        "detected_language": "English",
+        "is_acceptance": true,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": true,
+          "pitch_category": "Fashion",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "bounded_plans": {
+          "OfferAgent": {
+            "active_step": "Confirm Acceptance",
+            "current_objective": "Secure Coupon Activation",
+            "is_resuming": false,
+            "max_revisions": 3,
+            "plan_status": "Completed",
+            "remaining_steps": [
+              "Present Offer",
+              "Answer Questions"
+            ],
+            "revision_count": 0,
+            "step_history": [
+              "Present Offer"
+            ]
+          }
+        },
+        "call_sentiment": "Positive",
+        "clarification_attempts": 0,
+        "current_agent": "OfferAgent",
+        "current_goal": "pitch_personalized_offer",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event",
+          "retrieve_spending_history_and_pitch_interest"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "SpendingHistoryAgent",
+        "last_outcome": "accepted",
+        "offer_accepted": false,
+        "offer_pitched": true,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: ohh nice what is it?",
+          "Agent: We noticed you recently shopped in our Fashion category. We'd love to share an offer.",
+          "User: tell me",
+          "Agent: We are offering you a special 20% off coupon code 'BIRTHDAY20' on your next purchase. Would you like to activate it?",
+          "User: sure engage"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "sure engage"
+    },
+    "outputs": {
+      "output": [
+        "PostCallAgent",
+        {
+          "offer_accepted": true
+        }
+      ]
+    }
+  },
+  {
+    "trace": 45,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": true,
+          "pitch_category": "Fashion",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "OfferAgent",
+        "current_goal": "pitch_personalized_offer",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event",
+          "retrieve_spending_history_and_pitch_interest"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "SpendingHistoryAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": true,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: ohh nice what is it?",
+          "Agent: We noticed you recently shopped in our Fashion category. We'd love to share an offer.",
+          "User: tell me",
+          "Agent: We are offering you a special 20% off coupon code 'BIRTHDAY20' on your next purchase. Would you like to activate it?",
+          "User: sure engage"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "sure engage"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Positive",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": true,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 46,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 0.95,
+        "detected_language": "English",
+        "is_acceptance": true,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "Fashion",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "SpendingHistoryAgent",
+        "current_goal": "retrieve_spending_history_and_pitch_interest",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "EventAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: ohh nice what is it?",
+          "Agent: We noticed you recently shopped in our Fashion category. We'd love to share an offer.",
+          "User: tell me"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "tell me"
+    },
+    "outputs": {
+      "output": [
+        "OfferAgent",
+        {}
+      ]
+    }
+  },
+  {
+    "trace": 47,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "Fashion",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Positive",
+        "clarification_attempts": 0,
+        "current_agent": "SpendingHistoryAgent",
+        "current_goal": "retrieve_spending_history_and_pitch_interest",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "EventAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: ohh nice what is it?",
+          "Agent: We noticed you recently shopped in our Fashion category. We'd love to share an offer.",
+          "User: tell me"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "tell me"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": true,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 48,
+    "name": "criticize_decision",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Positive",
+        "confidence_score": 0.95,
+        "detected_language": "English",
+        "is_acceptance": true,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "proposed_next_agent": "SpendingHistoryAgent",
+      "proposed_updates": {},
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Positive",
+        "clarification_attempts": 0,
+        "current_agent": "EventAgent",
+        "current_goal": "introduce_birthday_event",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "GreetingAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: ohh nice what is it?"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "ohh nice what is it?"
+    },
+    "outputs": {
+      "failure_reason": "",
+      "is_acceptable": true,
+      "note": ""
+    }
+  },
+  {
+    "trace": 49,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Positive",
+        "confidence_score": 0.95,
+        "detected_language": "English",
+        "is_acceptance": true,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Positive",
+        "clarification_attempts": 0,
+        "current_agent": "EventAgent",
+        "current_goal": "introduce_birthday_event",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "GreetingAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: ohh nice what is it?"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "ohh nice what is it?"
+    },
+    "outputs": {
+      "output": [
+        "SpendingHistoryAgent",
+        {}
+      ]
+    }
+  },
+  {
+    "trace": 50,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "EventAgent",
+        "current_goal": "introduce_birthday_event",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "GreetingAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: ohh nice what is it?"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "ohh nice what is it?"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Positive",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": true,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 51,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 1.0,
+        "detected_language": "English",
+        "is_acceptance": false,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": true
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "GreetingAgent",
+        "current_goal": "",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "yes"
+    },
+    "outputs": {
+      "output": [
+        "EventAgent",
+        {}
+      ]
+    }
+  },
+  {
+    "trace": 52,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {},
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "GreetingAgent",
+        "current_goal": "",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "",
+        "last_outcome": "",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "yes"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 1.0,
+      "detected_language": "English",
+      "is_acceptance": false,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": true
+    }
+  },
+  {
+    "trace": 53,
+    "name": "criticize_decision",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 0.95,
+        "detected_language": "English",
+        "is_acceptance": false,
+        "is_appointment_accept": true,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "proposed_next_agent": "Terminate",
+      "proposed_updates": {},
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "PersonalShopperAgent",
+        "current_goal": "offer_personal_shopper",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "EventAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": true,
+        "personal_shopper_offered": true,
+        "preferred_appointment_slot": "on 9 july 12 in the morning",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: can book a appointment for later i was busy right now",
+          "Agent: Great! Please let me know what day and time works best for you.",
+          "User: on 9 july 12 in the morning"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "on 9 july 12 in the morning"
+    },
+    "outputs": {
+      "failure_reason": "",
+      "is_acceptable": true,
+      "note": ""
+    }
+  },
+  {
+    "trace": 54,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 0.95,
+        "detected_language": "English",
+        "is_acceptance": false,
+        "is_appointment_accept": true,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "PersonalShopperAgent",
+        "current_goal": "offer_personal_shopper",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "EventAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": true,
+        "personal_shopper_offered": true,
+        "preferred_appointment_slot": "on 9 july 12 in the morning",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: can book a appointment for later i was busy right now",
+          "Agent: Great! Please let me know what day and time works best for you.",
+          "User: on 9 july 12 in the morning"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "on 9 july 12 in the morning"
+    },
+    "outputs": {
+      "output": [
+        "Terminate",
+        {}
+      ]
+    }
+  },
+  {
+    "trace": 55,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "PersonalShopperAgent",
+        "current_goal": "offer_personal_shopper",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [
+          "introduce_birthday_event"
+        ],
+        "injection_attempts": 0,
+        "last_agent": "EventAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": true,
+        "personal_shopper_offered": true,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: can book a appointment for later i was busy right now",
+          "Agent: Great! Please let me know what day and time works best for you.",
+          "User: on 9 july 12 in the morning"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "on 9 july 12 in the morning"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": false,
+      "is_appointment_accept": true,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 56,
+    "name": "criticize_decision",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 0.95,
+        "detected_language": "English",
+        "is_acceptance": false,
+        "is_appointment_accept": true,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "proposed_next_agent": "PersonalShopperAgent",
+      "proposed_updates": {
+        "personal_shopper_accepted": true,
+        "personal_shopper_offered": true
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "EventAgent",
+        "current_goal": "introduce_birthday_event",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "GreetingAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: can book a appointment for later i was busy right now"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "can book a appointment for later i was busy right now"
+    },
+    "outputs": {
+      "failure_reason": "",
+      "is_acceptable": true,
+      "note": ""
+    }
+  },
+  {
+    "trace": 57,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 0.95,
+        "detected_language": "English",
+        "is_acceptance": false,
+        "is_appointment_accept": true,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "EventAgent",
+        "current_goal": "introduce_birthday_event",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "GreetingAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: can book a appointment for later i was busy right now"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "can book a appointment for later i was busy right now"
+    },
+    "outputs": {
+      "output": [
+        "PersonalShopperAgent",
+        {
+          "personal_shopper_accepted": true,
+          "personal_shopper_offered": true
+        }
+      ]
+    }
+  },
+  {
+    "trace": 58,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "EventAgent",
+        "current_goal": "introduce_birthday_event",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "GreetingAgent",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is",
+          "Agent: Great! Shoppers Stop wishes you a very Happy Birthday! We have a special gift for you.",
+          "User: can book a appointment for later i was busy right now"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "can book a appointment for later i was busy right now"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.95,
+      "detected_language": "English",
+      "is_acceptance": false,
+      "is_appointment_accept": true,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 59,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 1.0,
+        "detected_language": "English",
+        "is_acceptance": false,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": true
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "GreetingAgent",
+        "current_goal": "",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "",
+        "last_outcome": "success",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input_str": "yes it is"
+    },
+    "outputs": {
+      "output": [
+        "EventAgent",
+        {}
+      ]
+    }
+  },
+  {
+    "trace": 60,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {},
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "GreetingAgent",
+        "current_goal": "",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "",
+        "last_outcome": "",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "yes it is"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 1.0,
+      "detected_language": "English",
+      "is_acceptance": false,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": true
+    }
+  },
+  {
+    "trace": 61,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "classifier_unavailable",
+        "call_sentiment": "Neutral",
+        "confidence_score": 0.0,
+        "detected_language": "English",
+        "is_acceptance": false,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "GreetingAgent",
+        "current_goal": "",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "",
+        "last_outcome": "pending",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 1
+      },
+      "user_input_str": "yes it is"
+    },
+    "outputs": {
+      "output": [
+        "ClarifyingAgent",
+        {
+          "previous_agent": "GreetingAgent"
+        }
+      ]
+    }
+  },
+  {
+    "trace": 62,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {},
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "GreetingAgent",
+        "current_goal": "",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "",
+        "last_outcome": "",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "yes it is"
+    },
+    "outputs": {
+      "ambiguity_reason": "classifier_unavailable",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.0,
+      "detected_language": "English",
+      "is_acceptance": false,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 63,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "classifier_unavailable",
+        "call_sentiment": "Neutral",
+        "confidence_score": 0.0,
+        "detected_language": "English",
+        "is_acceptance": false,
+        "is_appointment_accept": false,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "state": {
+        "agent_memory": {
+          "clarification_count": 0,
+          "offer_pitched": false,
+          "pitch_category": "",
+          "verified": false,
+          "welcomed": true,
+          "whatsapp_sent": false
+        },
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "GreetingAgent",
+        "current_goal": "",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "",
+        "last_outcome": "pending",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 1
+      },
+      "user_input_str": "yes it is"
+    },
+    "outputs": {
+      "output": [
+        "ClarifyingAgent",
+        {
+          "previous_agent": "GreetingAgent"
+        }
+      ]
+    }
+  },
+  {
+    "trace": 64,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "agent_memory": {},
+        "call_sentiment": "Neutral",
+        "clarification_attempts": 0,
+        "current_agent": "GreetingAgent",
+        "current_goal": "",
+        "customer_id": "1",
+        "detected_language": "English",
+        "escalation_reason": "agitated",
+        "escalation_triggered": false,
+        "goal_history": [],
+        "injection_attempts": 0,
+        "last_agent": "",
+        "last_outcome": "",
+        "offer_accepted": false,
+        "offer_pitched": false,
+        "personal_shopper_accepted": false,
+        "personal_shopper_offered": false,
+        "preferred_appointment_slot": "",
+        "previous_agent": "",
+        "raw_audio_transcription": [
+          "Agent: Hello, am I speaking with Sanjog?",
+          "User: yes it is"
+        ],
+        "reflection_enabled": true,
+        "revision_count": 0,
+        "revision_reason": "",
+        "silent_turns": 0,
+        "user_declined_offer": false,
+        "verification_attempts": 0
+      },
+      "user_input": "yes it is"
+    },
+    "outputs": {
+      "ambiguity_reason": "classifier_unavailable",
+      "call_sentiment": "Neutral",
+      "confidence_score": 0.0,
+      "detected_language": "English",
+      "is_acceptance": false,
+      "is_appointment_accept": false,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  },
+  {
+    "trace": 65,
+    "name": "criticize_decision",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 1.0,
+        "detected_language": "English",
+        "is_acceptance": true,
+        "is_appointment_accept": true,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "proposed_next_agent": "PersonalShopperAgent",
+      "proposed_updates": {
+        "personal_shopper_accepted": true,
+        "personal_shopper_offered": true
+      },
+      "state": {
+        "bounded_plans": {},
+        "current_agent": "SpendingHistoryAgent",
+        "offer_pitched": true
+      },
+      "user_input_str": "I'm busy right now, can I book a personal shopper for later"
+    },
+    "outputs": {
+      "failure_reason": "",
+      "is_acceptable": true,
+      "note": ""
+    }
+  },
+  {
+    "trace": 66,
+    "name": "determine_next_agent",
+    "inputs": {
+      "classification": {
+        "ambiguity_reason": "",
+        "call_sentiment": "Neutral",
+        "confidence_score": 1.0,
+        "detected_language": "English",
+        "is_acceptance": true,
+        "is_appointment_accept": true,
+        "is_appointment_decline": false,
+        "is_competitor_mention": false,
+        "is_decline": false,
+        "is_injection_attempt": false,
+        "is_loyalty_question": false,
+        "is_silent_turn": false,
+        "is_third_party": false,
+        "is_valid_answer": false
+      },
+      "state": {
+        "bounded_plans": {},
+        "current_agent": "SpendingHistoryAgent",
+        "offer_pitched": true
+      },
+      "user_input_str": "I'm busy right now, can I book a personal shopper for later"
+    },
+    "outputs": {
+      "output": [
+        "PersonalShopperAgent",
+        {
+          "personal_shopper_accepted": true,
+          "personal_shopper_offered": true
+        }
+      ]
+    }
+  },
+  {
+    "trace": 67,
+    "name": "classify_turn",
+    "inputs": {
+      "state": {
+        "bounded_plans": {},
+        "current_agent": "SpendingHistoryAgent",
+        "offer_pitched": true
+      },
+      "user_input": "I'm busy right now, can I book a personal shopper for later"
+    },
+    "outputs": {
+      "ambiguity_reason": "",
+      "call_sentiment": "Neutral",
+      "confidence_score": 1.0,
+      "detected_language": "English",
+      "is_acceptance": true,
+      "is_appointment_accept": true,
+      "is_appointment_decline": false,
+      "is_competitor_mention": false,
+      "is_decline": false,
+      "is_injection_attempt": false,
+      "is_loyalty_question": false,
+      "is_silent_turn": false,
+      "is_third_party": false,
+      "is_valid_answer": false
+    }
+  }
+]

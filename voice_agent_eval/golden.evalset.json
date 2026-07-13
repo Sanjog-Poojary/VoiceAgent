@@ -233,7 +233,7 @@
       ],
       "creationTimestamp": 0.0,
       "finalSessionState": {
-        "current_agent": "VerificationAgent",
+        "current_agent": "IdentityAgent",
         "escalation_triggered": false
       }
     },

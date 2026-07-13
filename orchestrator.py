@@ -827,7 +827,7 @@ class IdentityConfirmationContract(AgentContract):
         return "ClarifyingAgent", {"previous_agent": self.name}
 
 
-class IdentityAgentContract(AgentContract):
+class IdentityAgentContract(IdentityConfirmationContract):
     def __init__(self):
         super().__init__(
             name="IdentityAgent",
@@ -836,6 +836,9 @@ class IdentityAgentContract(AgentContract):
             success_criteria="Identity successfully verified or declined",
             possible_next_actions=["IdentityAgent", "SalesPitchAgent", "ClarifyingAgent", "PostCallAgent"]
         )
+
+    def goal_satisfied(self, classification, memory, state):
+        return state.get("last_outcome") in ("success", "third_party", "decline")
 
     async def post_process(self, classification, memory, state, user_input_str=""):
         plans = state.setdefault("bounded_plans", {})
@@ -1314,7 +1317,7 @@ def check_safety_guardrails(
 
     # 4. Consecutive Silence
     if classification.is_silent_turn:
-        silent_turns = state.get("silent_turns", 0) + 1
+        silent_turns = state.get("silent_turns", 0)
         if silent_turns >= 3:
             return "Terminate", {
                 "offer_accepted": False,
@@ -1331,14 +1334,7 @@ def check_safety_guardrails(
                 "escalation_triggered": False
             }
 
-    # 5. Third Party Gatekeeper
-    if classification.is_third_party and current_agent in ("IdentityAgent"):
-        return "EscalationAgent", {
-            "offer_accepted": False,
-            "escalation_triggered": True
-        }
-
-    # 6. Verification Limit Exceeded
+    # 5. Verification Limit Exceeded
     if state.get("verification_attempts", 0) >= 3 and current_agent in ("IdentityAgent"):
         return "ApologyAgent", {
             "offer_accepted": False,
@@ -1898,10 +1894,10 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
         # Phase 2: Deliver unified direct action pitch (Birthday vs Credit Expiry)
         if event_type == "Birthday":
             _HOOK_EN = "Happy Birthday, {name}! To celebrate, we have an exclusive {discount}% off {brand} with code {code}. Would you like me to send these details to your WhatsApp?"
-            _HOOK_HI = "जन्मदिन की शुभकामनाएँ, {name}! जश्न मनाने के लिए, हमारे पास आपके लिए {brand} पर {discount}% की विशेष छूट है, कोड {code} के साथ। क्या मैं ये विवरण आपके व्हाट्सएप पर भेज दूँ?"
+            _HOOK_HI = "जन्मदिन की शुभकामनाएँ, {name}! जश्न मनाने के लिए, हमारे पास आपके लिए {brand} पर {discount}% की विशेष छूट का ऑफ़र है, कोड {code} के साथ। क्या मैं ये विवरण आपके व्हाट्सएप पर भेज दूँ?"
         else:
             _HOOK_EN = "Hi {name}, we noticed your First Citizen points are expiring soon! To help you use them, we have a special {discount}% off {brand} with code {code}. Shall I forward this to your WhatsApp?"
-            _HOOK_HI = "नमस्ते {name}, हमने देखा कि आपके फर्स्ट सिटीजन पॉइंट जल्द ही समाप्त हो रहे हैं! इनका उपयोग करने में आपकी मदद के लिए, हमारे पास {brand} पर {discount}% की विशेष छूट है, कोड {code} के साथ। क्या मैं इसे आपके व्हाट्सएप पर फॉरवर्ड कर दूँ?"
+            _HOOK_HI = "नमस्ते {name}, हमने देखा कि आपके फर्स्ट सिटीजन पॉइंट जल्द ही समाप्त हो रहे हैं! इनका उपयोग करने में आपकी मदद के लिए, हमारे पास {brand} पर {discount}% की विशेष छूट का ऑफ़र है, कोड {code} के साथ। क्या मैं इसे आपके व्हाट्सएप पर फॉरवर्ड कर दूँ?"
 
         template = _HOOK_HI if lang == "Hindi" else _HOOK_EN
         msg = template.format(name=customer_data.get("name", ""), discount=discount, brand=brand, code=code)
