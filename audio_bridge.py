@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import time
+import httpx
 from typing import Optional
 import websockets
 from google.genai import types
@@ -140,6 +141,7 @@ class AudioBridge:
         self.reasoning_task = None
         self.tts_task = None
         self.silence_timer_task = None
+        self.http_client = httpx.AsyncClient()
 
     def software_squelch(self, transcript: str, confidence: float) -> bool:
         """
@@ -188,14 +190,13 @@ class AudioBridge:
             "Content-Type": "application/json"
         }
         try:
-            async with httpx.AsyncClient() as client:
-                async with client.stream("POST", url, headers=headers, json={"text": tts_text}, timeout=10.0) as response:
-                    if response.status_code == 200:
-                        async for chunk in response.aiter_bytes(chunk_size=640):
-                            yield chunk
-                    else:
-                        error_body = await response.aread()
-                        logger.error(f"TTS API error status {response.status_code}: {error_body}")
+            async with self.http_client.stream("POST", url, headers=headers, json={"text": tts_text}, timeout=10.0) as response:
+                if response.status_code == 200:
+                    async for chunk in response.aiter_bytes(chunk_size=640):
+                        yield chunk
+                else:
+                    error_body = await response.aread()
+                    logger.error(f"TTS API error status {response.status_code}: {error_body}")
         except Exception as e:
             logger.error(f"TTS network/streaming error: {e}")
 
@@ -431,8 +432,6 @@ class AudioBridge:
                             "streamSid": self.stream_sid,
                             "media": {"payload": payload}
                         })
-                    # Sleep slightly less than 80ms (e.g. 70ms) to ensure Twilio's buffer is never starved
-                    await asyncio.sleep(0.07)
             except Exception as e:
                 logger.error(f"Error in streaming/sending TTS: {e}")
 
@@ -491,6 +490,10 @@ class AudioBridge:
         for t in (self.stt_task, self.reasoning_task, self.tts_task, self.silence_timer_task):
             if t and not t.done():
                 t.cancel()
+        try:
+            await self.http_client.aclose()
+        except Exception:
+            pass
 
     async def hangup_twilio_call(self):
         if self.call_ended:
