@@ -155,7 +155,7 @@ class AudioBridge:
             try:
                 # 2.0 seconds of mulaw silence/filler (8000 samples/sec = 16000 bytes)
                 dummy_filler = b"\xff" * 16000
-                chunk_size = 320  # 40ms
+                chunk_size = 640  # 80ms
                 for i in range(0, len(dummy_filler), chunk_size):
                     if not self.stream_sid:
                         break
@@ -166,7 +166,7 @@ class AudioBridge:
                         "streamSid": self.stream_sid,
                         "media": {"payload": payload}
                     })
-                    await asyncio.sleep(0.04)
+                    await asyncio.sleep(0.07)
             finally:
                 if self.filler_lock.locked():
                     self.filler_lock.release()
@@ -354,8 +354,8 @@ class AudioBridge:
                 self.is_speaking = True
                 self.active_tts_string = text
 
-                # Stream to Twilio in 320 byte (40ms) chunks
-                chunk_size = 320
+                # Stream to Twilio in 640 byte (80ms) chunks
+                chunk_size = 640
                 for i in range(0, len(audio_bytes), chunk_size):
                     if turn_id != self.current_turn_id:
                         break
@@ -367,7 +367,8 @@ class AudioBridge:
                             "streamSid": self.stream_sid,
                             "media": {"payload": payload}
                         })
-                    await asyncio.sleep(0.04)
+                    # Sleep slightly less than 80ms (e.g. 70ms) to ensure Twilio's buffer is never starved
+                    await asyncio.sleep(0.07)
 
                 self.is_speaking = False
                 self.active_tts_string = ""
