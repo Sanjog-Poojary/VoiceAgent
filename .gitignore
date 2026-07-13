@@ -35,3 +35,7 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Call scripts (contain credentials)
+make_call.py
+
