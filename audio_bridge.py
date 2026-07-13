@@ -121,7 +121,8 @@ class AudioBridge:
 
         # Shared synchronization
         self.session_lock = asyncio.Lock()
-        self.filler_lock = asyncio.Lock()
+        self.filler_active = False
+        self.call_ended = False
 
         # State tracking
         self.current_turn_id = 0
@@ -203,21 +204,20 @@ class AudioBridge:
             # Spawns a background timer: if execution exceeds 1.5s, trigger filler audio
             await asyncio.sleep(1.5)
             logger.info("Reasoning exceeded 1.5s; playing filler audio.")
-            
-            # Bound lock acquisition to 5.0 seconds (covers classify_turn retry + LLM latency)
-            try:
-                await asyncio.wait_for(self.filler_lock.acquire(), timeout=5.0)
-            except asyncio.TimeoutError:
-                logger.warning("Timeout acquiring filler_lock for filler audio")
-                return
+
+            filler_turn_id = self.current_turn_id
+            self.filler_active = True
 
             try:
                 # 2.0 seconds of mulaw silence/filler (8000 samples/sec = 16000 bytes)
                 dummy_filler = b"\xff" * 16000
                 chunk_size = 640  # 80ms
-                filler_turn_id = self.current_turn_id
                 for i in range(0, len(dummy_filler), chunk_size):
-                    if not self.stream_sid or filler_turn_id != self.current_turn_id:
+                    if (
+                        not self.stream_sid
+                        or filler_turn_id != self.current_turn_id
+                        or not self.filler_active
+                    ):
                         break
                     chunk = dummy_filler[i:i+chunk_size]
                     payload = base64.b64encode(chunk).decode("utf-8")
@@ -228,10 +228,9 @@ class AudioBridge:
                     })
                     await asyncio.sleep(0.07)
             finally:
-                if self.filler_lock.locked():
-                    self.filler_lock.release()
+                self.filler_active = False
         except asyncio.CancelledError:
-            pass
+            self.filler_active = False
 
     async def run_silence_timer(self, turn_id: int):
         try:
@@ -327,6 +326,8 @@ class AudioBridge:
         """
         while True:
             turn = await self.turn_queue.get()
+            if self.call_ended:
+                continue
             session_id = turn["session_id"]
             turn_id = turn["turn_id"]
             text = turn["text"]
@@ -401,62 +402,61 @@ class AudioBridge:
             text = item["text"]
             turn_id = item["turn_id"]
 
-            if turn_id != self.current_turn_id:
+            if turn_id != self.current_turn_id or self.call_ended:
                 continue
-            # Await release of filler lock if held
-            async with self.filler_lock:
-                if turn_id != self.current_turn_id:
-                    continue
 
-                self.is_speaking = True
-                self.active_tts_string = text
+            # Stop the filler IMMEDIATELY — do not wait for it, do not lock against it.
+            self.filler_active = False
 
-                start_time = time.time()
-                first_chunk_sent = False
+            self.is_speaking = True
+            self.active_tts_string = text
 
-                try:
-                    async for chunk in self.get_tts_audio_stream(text):
-                        if turn_id != self.current_turn_id:
-                            break
+            start_time = time.time()
+            first_chunk_sent = False
 
-                        if not first_chunk_sent:
-                            first_chunk_sent = True
-                            elapsed = time.time() - start_time
-                            logger.info(f"[TTS LATENCY] Time to first audio chunk: {elapsed:.3f} seconds (includes synthesis + queue/lock wait)")
+            try:
+                async for chunk in self.get_tts_audio_stream(text):
+                    if turn_id != self.current_turn_id or self.call_ended:
+                        break
 
-                        payload = base64.b64encode(chunk).decode("utf-8")
-                        if self.stream_sid:
-                            await self.twilio_ws.send_json({
-                                "event": "media",
-                                "streamSid": self.stream_sid,
-                                "media": {"payload": payload}
-                            })
-                        # Sleep slightly less than 80ms (e.g. 70ms) to ensure Twilio's buffer is never starved
-                        await asyncio.sleep(0.07)
-                except Exception as e:
-                    logger.error(f"Error in streaming/sending TTS: {e}")
+                    if not first_chunk_sent:
+                        first_chunk_sent = True
+                        elapsed = time.time() - start_time
+                        logger.info(f"[TTS LATENCY] Time to first audio chunk: {elapsed:.3f} seconds (pure synthesis, no lock wait)")
 
-                self.is_speaking = False
-                self.active_tts_string = ""
+                    payload = base64.b64encode(chunk).decode("utf-8")
+                    if self.stream_sid:
+                        await self.twilio_ws.send_json({
+                            "event": "media",
+                            "streamSid": self.stream_sid,
+                            "media": {"payload": payload}
+                        })
+                    # Sleep slightly less than 80ms (e.g. 70ms) to ensure Twilio's buffer is never starved
+                    await asyncio.sleep(0.07)
+            except Exception as e:
+                logger.error(f"Error in streaming/sending TTS: {e}")
 
-                # Start/restart silence timer
-                if turn_id == self.current_turn_id:
-                    if self.silence_timer_task and not self.silence_timer_task.done():
-                        self.silence_timer_task.cancel()
-                    self.silence_timer_task = asyncio.create_task(self.run_silence_timer(turn_id))
+            self.is_speaking = False
+            self.active_tts_string = ""
 
-                # If the next agent is Terminate, hang up the call after speaking!
-                if turn_id == self.current_turn_id:
-                    session = await self.session_service.get_session(
-                        app_name="VoiceAgent",
-                        user_id=self.user_id,
-                        session_id=self.session_id
-                    )
-                    if session and session.state.get("current_agent") == "Terminate":
-                        logger.info("Termination agent reached. Hanging up Twilio call.")
-                        # Wait a brief moment for Twilio buffer to play the goodbye audio fully
-                        await asyncio.sleep(1.0)
-                        await self.hangup_twilio_call()
+            # Start/restart silence timer
+            if turn_id == self.current_turn_id:
+                if self.silence_timer_task and not self.silence_timer_task.done():
+                    self.silence_timer_task.cancel()
+                self.silence_timer_task = asyncio.create_task(self.run_silence_timer(turn_id))
+
+            # If the next agent is Terminate, hang up the call after speaking!
+            if turn_id == self.current_turn_id:
+                session = await self.session_service.get_session(
+                    app_name="VoiceAgent",
+                    user_id=self.user_id,
+                    session_id=self.session_id
+                )
+                if session and session.state.get("current_agent") == "Terminate":
+                    logger.info("Termination agent reached. Hanging up Twilio call.")
+                    # Wait a brief moment for Twilio buffer to play the goodbye audio fully
+                    await asyncio.sleep(1.0)
+                    await self.hangup_twilio_call()
 
     async def start(self):
         customer_id = self.user_id.replace("customer_", "")
@@ -493,6 +493,12 @@ class AudioBridge:
                 t.cancel()
 
     async def hangup_twilio_call(self):
+        if self.call_ended:
+            return
+        self.call_ended = True
+        if self.silence_timer_task and not self.silence_timer_task.done():
+            self.silence_timer_task.cancel()
+
         if not self.call_sid or not self.twilio_ws:
             return
             
