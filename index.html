@@ -537,6 +537,49 @@
             0%, 80%, 100% { transform: scale(0); }
             40% { transform: scale(1.0); }
         }
+
+        /* Voice Mode Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .4s;
+            border-radius: 34px;
+            border: 1px solid var(--border-color);
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--text-muted);
+            transition: .4s;
+            border-radius: 50%;
+        }
+        .switch input:checked + .slider {
+            background-color: var(--accent-green);
+        }
+        .switch input:checked + .slider:before {
+            transform: translateX(18px);
+            background-color: white;
+        }
     </style>
 </head>
 <body>
@@ -565,6 +608,13 @@
                         <option value="3">Customer 3: Ananya (English, Birthday)</option>
                     </select>
                 </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: auto; margin-right: 1.5rem;">
+                    <label class="switch">
+                        <input type="checkbox" id="voiceToggle">
+                        <span class="slider"></span>
+                    </label>
+                    <span style="font-size: 0.9rem; color: var(--text-muted); font-weight: 500;">Voice Mode</span>
+                </div>
                 <button id="callBtn" class="btn-call">
                     <i class="fa-solid fa-phone"></i>
                     <span id="callBtnText">Start Outbound Call</span>
@@ -583,6 +633,9 @@
             <!-- Text Input Area -->
             <div class="chat-input-area">
                 <input type="text" id="chatInput" placeholder="Type user speech response here..." disabled autocomplete="off">
+                <button id="micBtn" disabled style="background: rgba(255,255,255,0.08); color: var(--text-muted); width: 50px; border: none; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
+                    <i class="fa-solid fa-microphone"></i>
+                </button>
                 <button id="sendBtn" disabled>
                     <i class="fa-solid fa-paper-plane"></i>
                 </button>
@@ -661,6 +714,8 @@
         const sendBtn = document.getElementById('sendBtn');
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
+        const voiceToggle = document.getElementById('voiceToggle');
+        const micBtn = document.getElementById('micBtn');
         
         const stateAgent = document.getElementById('stateAgent');
         const stateLang = document.getElementById('stateLang');
@@ -676,6 +731,135 @@
         let sessionId = null;
         let interruptId = null;
         let invocationId = null;
+        let recognition = null;
+        let isSpeakingAgent = false;
+        let activeUtterance = null;
+        let detectedLanguage = "English";
+
+        // Initialize Speech Recognition
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onstart = () => {
+                micBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                micBtn.style.color = 'white';
+                chatInput.placeholder = 'Listening... Speak now.';
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                chatInput.value = transcript;
+                sendSpeech();
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech recognition error:", event.error);
+                stopListening();
+            };
+
+            recognition.onend = () => {
+                stopListening();
+            };
+        }
+
+        function startListening() {
+            if (recognition && isCallActive && voiceToggle.checked && !isSpeakingAgent) {
+                try {
+                    recognition.start();
+                } catch (e) {}
+            }
+        }
+
+        function stopListening() {
+            if (recognition) {
+                try {
+                    recognition.stop();
+                } catch (e) {}
+            }
+            micBtn.style.background = 'rgba(255,255,255,0.08)';
+            micBtn.style.color = 'var(--text-muted)';
+            chatInput.placeholder = 'Type user speech response here...';
+        }
+
+        // Speech Synthesis speaking helper
+        function speakAgent(text) {
+            if (!voiceToggle.checked) return;
+            
+            // Cancel current speech if any
+            cancelSpeech();
+
+            isSpeakingAgent = true;
+            stopListening();
+
+            // Strip out markdown or placeholders (like brackets)
+            const cleanText = text.replace(/\[.*?\]/g, '').trim();
+
+            activeUtterance = new SpeechSynthesisUtterance(cleanText);
+
+            // Configure language & voice
+            const voices = window.speechSynthesis.getVoices();
+            if (detectedLanguage === 'Hindi') {
+                activeUtterance.lang = 'hi-IN';
+                const hindiVoice = voices.find(v => v.lang.startsWith('hi-'));
+                if (hindiVoice) activeUtterance.voice = hindiVoice;
+            } else {
+                activeUtterance.lang = 'en-US';
+                const englishVoice = voices.find(v => v.lang.startsWith('en-'));
+                if (englishVoice) activeUtterance.voice = englishVoice;
+            }
+
+            activeUtterance.onend = () => {
+                isSpeakingAgent = false;
+                activeUtterance = null;
+                // Automatically listen after agent finishes speaking
+                if (isCallActive && voiceToggle.checked) {
+                    startListening();
+                }
+            };
+
+            activeUtterance.onerror = (e) => {
+                console.error("SpeechSynthesis error:", e);
+                isSpeakingAgent = false;
+                activeUtterance = null;
+            };
+
+            window.speechSynthesis.speak(activeUtterance);
+        }
+
+        function cancelSpeech() {
+            window.speechSynthesis.cancel();
+            isSpeakingAgent = false;
+            activeUtterance = null;
+        }
+
+        // Trigger voice synthesis load voices
+        window.speechSynthesis.getVoices();
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+        }
+
+        // Mic Button Click event
+        micBtn.addEventListener('click', () => {
+            if (!isCallActive) return;
+            // Toggle manual speech recognition
+            if (micBtn.style.background.includes('10b981')) {
+                stopListening();
+            } else {
+                cancelSpeech();
+                startListening();
+            }
+        });
+
+        // Cancel speech on typing input (barge-in)
+        chatInput.addEventListener('input', () => {
+            if (isSpeakingAgent) {
+                cancelSpeech();
+            }
+        });
 
         // Start/End Call Event
         callBtn.addEventListener('click', async () => {
@@ -720,6 +904,7 @@
                 interruptId = data.interrupt_id;
                 invocationId = data.invocation_id;
                 isCallActive = true;
+                detectedLanguage = data.state?.detected_language || "English";
 
                 // Update Outbound Call Button state
                 callBtn.disabled = false;
@@ -734,12 +919,16 @@
                 // Enable Input
                 chatInput.disabled = false;
                 sendBtn.disabled = false;
+                micBtn.disabled = false;
                 chatInput.focus();
 
                 // Append initial greeting message
                 appendMessage('agent', data.message);
                 updateStateDashboard(data.state);
                 
+                // Speak out loud in Voice Mode
+                speakAgent(data.message);
+
                 // Poll/check mock server logs by inspecting actions inside sub-agents
                 checkMockWebhookLogs(data.state);
 
@@ -751,6 +940,9 @@
 
         // Function to disconnect call
         function endCall() {
+            cancelSpeech();
+            stopListening();
+
             isCallActive = false;
             sessionId = null;
             interruptId = null;
@@ -765,6 +957,7 @@
 
             chatInput.disabled = true;
             sendBtn.disabled = true;
+            micBtn.disabled = true;
             chatInput.value = '';
 
             // Clean stats
@@ -793,6 +986,9 @@
         async function sendSpeech() {
             const text = chatInput.value.trim();
             if (!text || !isCallActive) return;
+
+            cancelSpeech();
+            stopListening();
 
             // Clear Input
             chatInput.value = '';
@@ -824,10 +1020,12 @@
                 const data = await response.json();
 
                 interruptId = data.interrupt_id;
+                detectedLanguage = data.state?.detected_language || "English";
 
                 // Append response message
                 if (data.message) {
                     appendMessage('agent', data.message);
+                    speakAgent(data.message);
                 }
 
                 updateStateDashboard(data.state);
@@ -838,6 +1036,7 @@
                     // Show a notification and hang up after 3 seconds
                     setTimeout(() => {
                         appendMessage('agent', '[Call Disconnected by Remote Host]');
+                        speakAgent('Call disconnected.');
                         setTimeout(endCall, 1500);
                     }, 1000);
                 } else {
@@ -847,7 +1046,7 @@
                 }
 
             } catch (err) {
-                loader.remove();
+                if (loader) loader.remove();
                 appendMessage('agent', '[Error: Failed to process conversation response. Terminating call.]');
                 setTimeout(endCall, 2000);
             }
