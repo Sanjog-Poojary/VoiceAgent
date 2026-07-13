@@ -205,7 +205,7 @@ class AudioBridge:
             return
 
         try:
-            async with websockets.connect(url, extra_headers=headers) as dg_ws:
+            async with websockets.connect(url, additional_headers=headers) as dg_ws:
                 # Helper to send inbound queue audio to Deepgram
                 async def send_audio():
                     while True:
