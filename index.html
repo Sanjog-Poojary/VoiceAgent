@@ -758,6 +758,15 @@
 
             recognition.onerror = (event) => {
                 console.error("Speech recognition error:", event.error);
+                if (event.error === 'not-allowed') {
+                    alert("Microphone permission denied. Please allow microphone access in your browser settings.");
+                } else if (event.error === 'service-not-allowed') {
+                    alert("Speech recognition service is disabled. If you are using Brave, please go to Settings -> search 'speech recognition' and enable 'Use Google Speech Services'.");
+                } else if (event.error === 'no-speech') {
+                    // Ignore silent timeout, just stop listening silently
+                } else {
+                    alert("Speech recognition error: " + event.error);
+                }
                 stopListening();
             };
 
