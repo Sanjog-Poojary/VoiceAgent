@@ -90,6 +90,7 @@ class AudioBridge:
         self.is_speaking = False
         self.active_tts_string = ""
         self.stream_sid = None
+        self.call_sid = None
         self.last_interrupt_id = None
         self.last_invocation_id = None
 
@@ -379,6 +380,19 @@ class AudioBridge:
                         self.silence_timer_task.cancel()
                     self.silence_timer_task = asyncio.create_task(self.run_silence_timer(turn_id))
 
+                # If the next agent is Terminate, hang up the call after speaking!
+                if turn_id == self.current_turn_id:
+                    session = await self.session_service.get_session(
+                        app_name="VoiceAgent",
+                        user_id=self.user_id,
+                        session_id=self.session_id
+                    )
+                    if session and session.state.get("current_agent") == "Terminate":
+                        logger.info("Termination agent reached. Hanging up Twilio call.")
+                        # Wait a brief moment for Twilio buffer to play the goodbye audio fully
+                        await asyncio.sleep(1.0)
+                        await self.hangup_twilio_call()
+
     async def start(self):
         self.stt_task = asyncio.create_task(self.task_inbound_stt())
         self.reasoning_task = asyncio.create_task(self.task_reasoning_adk())
@@ -388,3 +402,40 @@ class AudioBridge:
         for t in (self.stt_task, self.reasoning_task, self.tts_task, self.silence_timer_task):
             if t and not t.done():
                 t.cancel()
+
+    async def hangup_twilio_call(self):
+        if not self.call_sid or not self.twilio_ws:
+            return
+            
+        account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+        auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+        if not account_sid or not auth_token or account_sid.startswith("dummy"):
+            logger.warning("Twilio credentials missing. Closing websocket only.")
+            try:
+                await self.twilio_ws.close()
+            except Exception:
+                pass
+            return
+            
+        import httpx
+        url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Calls/{self.call_sid}.json"
+        try:
+            # We must use Basic Auth for Twilio REST API
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    url,
+                    auth=(account_sid, auth_token),
+                    data={"Status": "completed"},
+                    timeout=5.0
+                )
+                if resp.status_code == 200:
+                    logger.info(f"Successfully hung up Twilio call {self.call_sid}")
+                else:
+                    logger.error(f"Failed to hang up Twilio call: {resp.text}")
+        except Exception as e:
+            logger.error(f"Error hanging up Twilio call: {e}")
+        finally:
+            try:
+                await self.twilio_ws.close()
+            except Exception:
+                pass
