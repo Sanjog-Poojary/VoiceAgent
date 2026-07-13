@@ -662,7 +662,7 @@ async def twilio_stream(websocket: WebSocket):
             elif event == "stop":
                 logger.info("Twilio stream stop event received.")
                 break
-    except WebSocketDisconnect:
+    except (WebSocketDisconnect, RuntimeError):
         logger.info("Twilio stream WebSocket disconnected.")
     except Exception as e:
         logger.error(f"Error in Twilio WebSocket handler: {e}", exc_info=True)

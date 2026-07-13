@@ -183,7 +183,6 @@ class AudioBridge:
                 yield dummy_bytes[i:i+chunk_size]
             return
 
-        import httpx
         url = "https://api.deepgram.com/v1/speak?model=aura-2-amalthea-en&encoding=mulaw&sample_rate=8000&speed=1.15"
         headers = {
             "Authorization": f"Token {self.deepgram_api_key}",
