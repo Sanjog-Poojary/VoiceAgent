@@ -215,8 +215,9 @@ class AudioBridge:
                 # 2.0 seconds of mulaw silence/filler (8000 samples/sec = 16000 bytes)
                 dummy_filler = b"\xff" * 16000
                 chunk_size = 640  # 80ms
+                filler_turn_id = self.current_turn_id
                 for i in range(0, len(dummy_filler), chunk_size):
-                    if not self.stream_sid:
+                    if not self.stream_sid or filler_turn_id != self.current_turn_id:
                         break
                     chunk = dummy_filler[i:i+chunk_size]
                     payload = base64.b64encode(chunk).decode("utf-8")
@@ -369,6 +370,10 @@ class AudioBridge:
                     logger.error(f"Error in reasoning ADK run: {e}", exc_info=True)
                 finally:
                     filler_timer.cancel()
+                    try:
+                        await filler_timer
+                    except asyncio.CancelledError:
+                        pass
 
                 # Handle rollbacks if barge-in occurred
                 if turn_id == self.current_turn_id:

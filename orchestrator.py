@@ -1983,15 +1983,25 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
             msg = offer_answer + repitch
         else:
             # Fall back to RAG for general policy/non-offer questions
+            fallback_ans = (
+                "I don't have the exact details on that right now, but our store staff will be happy to help!"
+                if lang != "Hindi" else
+                "मेरे पास अभी इसके बारे में पूरी जानकारी नहीं है, लेकिन हमारे स्टोर कर्मचारी आपकी मदद करने में प्रसन्न होंगे!"
+            )
             try:
-                async with httpx.AsyncClient(timeout=60.0) as client:
+                async with httpx.AsyncClient(timeout=4.0) as client:
                     rag_resp = await client.get(f"{MOCK_SERVER_URL}/api/knowledge?q={q}")
                     if rag_resp.status_code == 200:
                         answer = rag_resp.json().get("answer", "")
                         if answer:
                             msg = f"{answer} Now, as I was saying... {msg}"
+                        else:
+                            msg = f"{fallback_ans} Now, as I was saying... {msg}"
+                    else:
+                        msg = f"{fallback_ans} Now, as I was saying... {msg}"
             except Exception as rag_err:
-                logger.warning(f"RAG knowledge lookup failed (skipping): {rag_err}")
+                logger.warning(f"RAG knowledge lookup failed/timed out: {rag_err}")
+                msg = f"{fallback_ans} Now, as I was saying... {msg}"
 
     trans = list(ctx.state.get("raw_audio_transcription", []))
     trans.append(f"Agent: {msg}")
