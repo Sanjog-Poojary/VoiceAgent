@@ -399,6 +399,35 @@ async def chat_message(payload: ChatMessageRequest):
         "state": state
     }
 
+@app.get("/api/tts")
+async def get_tts_audio(text: str):
+    logger.info(f"Generating Deepgram TTS for text: {text}")
+    deepgram_key = os.getenv("DEEPGRAM_API_KEY")
+    if not deepgram_key or deepgram_key.startswith("dummy"):
+        return Response(content=b"", media_type="audio/mp3")
+        
+    import httpx
+    try:
+        url = "https://api.deepgram.com/v1/speak?model=aura-2-asteria-en&encoding=mp3"
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                url,
+                headers={
+                    "Authorization": f"Token {deepgram_key}",
+                    "Content-Type": "application/json"
+                },
+                json={"text": text},
+                timeout=10.0
+            )
+            if response.status_code == 200:
+                return Response(content=response.content, media_type="audio/mp3")
+            else:
+                logger.error(f"Deepgram TTS API error: {response.text}")
+    except Exception as e:
+        logger.error(f"Failed to fetch Deepgram TTS: {e}")
+        
+    return Response(content=b"", media_type="audio/mp3")
+
 @app.get("/", response_class=HTMLResponse)
 def serve_index():
     index_path = os.path.join(os.path.dirname(__file__), "index.html")

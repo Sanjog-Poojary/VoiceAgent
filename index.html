@@ -867,7 +867,9 @@
             chatInput.placeholder = 'Type user speech response here...';
         }
 
-        // Speech Synthesis speaking helper
+        let activeAudio = null;
+
+        // Speech Synthesis / Deepgram speaking helper
         function speakAgent(text) {
             if (!voiceToggle.checked) return;
             
@@ -880,45 +882,62 @@
             // Strip out markdown or placeholders (like brackets)
             const cleanText = text.replace(/\[.*?\]/g, '').trim();
 
-            activeUtterance = new SpeechSynthesisUtterance(cleanText);
-
-            // Configure language & voice
-            const voices = window.speechSynthesis.getVoices();
             if (detectedLanguage === 'Hindi') {
+                // Deepgram Aura does not support Hindi; fall back to browser's native SpeechSynthesis
+                activeUtterance = new SpeechSynthesisUtterance(cleanText);
                 activeUtterance.lang = 'hi-IN';
-                // Prioritize Google Cloud Hindi voice over generic offline ones
+                const voices = window.speechSynthesis.getVoices();
                 const googleHindi = voices.find(v => v.name.includes('Google') && v.lang.startsWith('hi-'));
                 const hindiVoice = googleHindi || voices.find(v => v.lang.startsWith('hi-'));
                 if (hindiVoice) activeUtterance.voice = hindiVoice;
+
+                activeUtterance.onend = () => {
+                    isSpeakingAgent = false;
+                    activeUtterance = null;
+                    if (isCallActive && voiceToggle.checked) {
+                        startListening();
+                    }
+                };
+
+                activeUtterance.onerror = (e) => {
+                    console.error("SpeechSynthesis error:", e);
+                    isSpeakingAgent = false;
+                    activeUtterance = null;
+                };
+
+                window.speechSynthesis.speak(activeUtterance);
             } else {
-                activeUtterance.lang = 'en-US';
-                // Prioritize Google/Microsoft Natural voices over generic offline ones
-                const googleEnglish = voices.find(v => v.name.includes('Google') && v.lang.startsWith('en-'));
-                const naturalEnglish = voices.find(v => v.name.includes('Natural') && v.lang.startsWith('en-'));
-                const englishVoice = googleEnglish || naturalEnglish || voices.find(v => v.lang.startsWith('en-'));
-                if (englishVoice) activeUtterance.voice = englishVoice;
+                // For English, use Deepgram Aura-2 via our API endpoint!
+                const ttsUrl = `/api/tts?text=${encodeURIComponent(cleanText)}`;
+                activeAudio = new Audio(ttsUrl);
+
+                activeAudio.onended = () => {
+                    isSpeakingAgent = false;
+                    activeAudio = null;
+                    if (isCallActive && voiceToggle.checked) {
+                        startListening();
+                    }
+                };
+
+                activeAudio.onerror = (e) => {
+                    console.error("Deepgram TTS play error:", e);
+                    isSpeakingAgent = false;
+                    activeAudio = null;
+                };
+
+                activeAudio.play().catch(err => {
+                    console.error("Failed to play Deepgram audio (interaction required):", err);
+                    isSpeakingAgent = false;
+                });
             }
-
-            activeUtterance.onend = () => {
-                isSpeakingAgent = false;
-                activeUtterance = null;
-                // Automatically listen after agent finishes speaking
-                if (isCallActive && voiceToggle.checked) {
-                    startListening();
-                }
-            };
-
-            activeUtterance.onerror = (e) => {
-                console.error("SpeechSynthesis error:", e);
-                isSpeakingAgent = false;
-                activeUtterance = null;
-            };
-
-            window.speechSynthesis.speak(activeUtterance);
         }
 
         function cancelSpeech() {
             window.speechSynthesis.cancel();
+            if (activeAudio) {
+                activeAudio.pause();
+                activeAudio = null;
+            }
             isSpeakingAgent = false;
             activeUtterance = null;
         }
