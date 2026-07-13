@@ -522,6 +522,7 @@ IMPORTANT: You MUST analyze the entire latest user utterance. Do not truncate it
 
 Key rules:
 - detected_language: "English" or "Hindi". Set to "Hindi" ONLY if the user explicitly speaks Hindi words (e.g. "haan", "boliye", "kya", "naam", "baat"). If the user speaks English (e.g. "yes", "this is", "hello", "speaking", "activate", "sure"), MUST set to "English".
+- call_sentiment: "Positive", "Neutral", or "Agitated". Defensive, evasive, or cautious questions/responses (e.g. "Who is asking?", "Depends who's asking", "Why do you need to know", "What is this about") are normal cautious behaviors; you MUST classify their sentiment as "Neutral", NOT "Agitated". Set to "Agitated" ONLY for clear hostility, anger, shouting, or extreme irritation.
 - is_valid_answer: true for any affirmative identity confirmation.
   Examples of valid confirmations: "Yes", "yes", "That's me", "Speaking", "Haan", "haa mai hu", "yeah", "yep", "correct", "mm-hmm", "yup", "speaking".
   These are standard/casual identity confirmations and MUST yield is_valid_answer=true and confidence_score >= 0.60.
