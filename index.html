@@ -907,28 +907,56 @@
 
                 window.speechSynthesis.speak(activeUtterance);
             } else {
-                // For English, use Deepgram Aura-2 via our API endpoint!
-                const ttsUrl = `/api/tts?text=${encodeURIComponent(cleanText)}`;
-                activeAudio = new Audio(ttsUrl);
+                // Check if browser has an Indian English voice to use for a more natural Indian English accent
+                const voices = window.speechSynthesis.getVoices();
+                const googleIndianEnglish = voices.find(v => v.name.includes('Google') && v.lang.startsWith('en-IN'));
+                const microsoftIndianEnglish = voices.find(v => (v.name.includes('Neerja') || v.name.includes('Heera') || v.name.includes('Ravi') || v.name.includes('Hemant') || v.name.includes('India')) && v.lang.startsWith('en-IN'));
+                const indianVoice = googleIndianEnglish || microsoftIndianEnglish;
 
-                activeAudio.onended = () => {
-                    isSpeakingAgent = false;
-                    activeAudio = null;
-                    if (isCallActive && voiceToggle.checked) {
-                        startListening();
-                    }
-                };
+                if (indianVoice) {
+                    activeUtterance = new SpeechSynthesisUtterance(cleanText);
+                    activeUtterance.lang = 'en-IN';
+                    activeUtterance.voice = indianVoice;
 
-                activeAudio.onerror = (e) => {
-                    console.error("Deepgram TTS play error:", e);
-                    isSpeakingAgent = false;
-                    activeAudio = null;
-                };
+                    activeUtterance.onend = () => {
+                        isSpeakingAgent = false;
+                        activeUtterance = null;
+                        if (isCallActive && voiceToggle.checked) {
+                            startListening();
+                        }
+                    };
 
-                activeAudio.play().catch(err => {
-                    console.error("Failed to play Deepgram audio (interaction required):", err);
-                    isSpeakingAgent = false;
-                });
+                    activeUtterance.onerror = (e) => {
+                        console.error("SpeechSynthesis error:", e);
+                        isSpeakingAgent = false;
+                        activeUtterance = null;
+                    };
+
+                    window.speechSynthesis.speak(activeUtterance);
+                } else {
+                    // For English fallback, use Deepgram Aura-2 via our API endpoint!
+                    const ttsUrl = `/api/tts?text=${encodeURIComponent(cleanText)}`;
+                    activeAudio = new Audio(ttsUrl);
+
+                    activeAudio.onended = () => {
+                        isSpeakingAgent = false;
+                        activeAudio = null;
+                        if (isCallActive && voiceToggle.checked) {
+                            startListening();
+                        }
+                    };
+
+                    activeAudio.onerror = (e) => {
+                        console.error("Deepgram TTS play error:", e);
+                        isSpeakingAgent = false;
+                        activeAudio = null;
+                    };
+
+                    activeAudio.play().catch(err => {
+                        console.error("Failed to play Deepgram audio:", err);
+                        isSpeakingAgent = false;
+                    });
+                }
             }
         }
 
