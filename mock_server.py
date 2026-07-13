@@ -399,6 +399,20 @@ async def chat_message(payload: ChatMessageRequest):
         "state": state
     }
 
+def apply_phonetic_replacements(text: str) -> str:
+    import re
+    replacements = {
+        "Sanjog": "Sun-joag",
+        "Aarav": "Ah-ruhv",
+        "Ananya": "Ah-nuhn-yah",
+        "Arcelia": "Ar-sell-ee-ah"
+    }
+    cleaned_text = text
+    for word, phonetic in replacements.items():
+        pattern = re.compile(r'\b' + re.escape(word) + r'\b', re.IGNORECASE)
+        cleaned_text = pattern.sub(phonetic, cleaned_text)
+    return cleaned_text
+
 @app.get("/api/tts")
 async def get_tts_audio(text: str):
     logger.info(f"Generating Deepgram TTS for text: {text}")
@@ -406,9 +420,10 @@ async def get_tts_audio(text: str):
     if not deepgram_key or deepgram_key.startswith("dummy"):
         return Response(content=b"", media_type="audio/mp3")
         
+    tts_text = apply_phonetic_replacements(text)
     import httpx
     try:
-        url = "https://api.deepgram.com/v1/speak?model=aura-2-amalthea-en&encoding=mp3"
+        url = "https://api.deepgram.com/v1/speak?model=aura-2-amalthea-en&encoding=mp3&speed=1.15"
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 url,
@@ -416,7 +431,7 @@ async def get_tts_audio(text: str):
                     "Authorization": f"Token {deepgram_key}",
                     "Content-Type": "application/json"
                 },
-                json={"text": text},
+                json={"text": tts_text},
                 timeout=10.0
             )
             if response.status_code == 200:

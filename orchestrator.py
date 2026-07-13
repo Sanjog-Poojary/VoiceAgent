@@ -28,9 +28,7 @@ from google.genai.errors import ClientError, ServerError
 
 _CLASSIFIER_MODEL = os.getenv("CLASSIFIER_MODEL", "gemini-2.5-flash")
 _GENAI_CLIENT = genai.Client(
-    vertexai=True,
-    project=os.getenv("GOOGLE_CLOUD_PROJECT"),
-    location=os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1"),
+    api_key=os.getenv("GEMINI_API_KEY"),
 )
 _QUOTA_EXHAUSTED_UNTIL: float = 0.0
 
@@ -85,28 +83,46 @@ _INTEREST_HI = [
 # API Client Helpers
 # ---------------------------------------------------------------------------
 
+_CUSTOMER_CACHE = {}
+_EVENT_CACHE = {}
+_OFFERS_CACHE = None
+
 async def fetch_customer_details(customer_id: str) -> dict:
+    if customer_id in _CUSTOMER_CACHE:
+        return _CUSTOMER_CACHE[customer_id]
     async with httpx.AsyncClient() as client:
         resp = await client.get(f"{MOCK_SERVER_URL}/api/users/{customer_id}")
         if resp.status_code == 200:
-            return resp.json()
+            data = resp.json()
+            _CUSTOMER_CACHE[customer_id] = data
+            return data
         raise ValueError(f"Customer {customer_id} not found")
 
 async def fetch_event_triggers(customer_id: str) -> dict:
+    if customer_id in _EVENT_CACHE:
+        return _EVENT_CACHE[customer_id]
     async with httpx.AsyncClient() as client:
         resp = await client.get(f"{MOCK_SERVER_URL}/api/events/{customer_id}")
         if resp.status_code == 200:
-            return resp.json()
+            data = resp.json()
+            _EVENT_CACHE[customer_id] = data
+            return data
         raise ValueError(f"Event triggers for customer {customer_id} not found")
 
 async def fetch_all_offers() -> list:
+    global _OFFERS_CACHE
+    if _OFFERS_CACHE is not None:
+        return _OFFERS_CACHE
     async with httpx.AsyncClient() as client:
         resp = await client.get(f"{MOCK_SERVER_URL}/api/offers")
         if resp.status_code == 200:
             data = resp.json()
             if isinstance(data, dict) and "offers" in data:
-                return data["offers"]
-            return data
+                offers_list = data["offers"]
+            else:
+                offers_list = data
+            _OFFERS_CACHE = offers_list
+            return offers_list
         raise ValueError("Failed to fetch store offers list")
 
 async def send_whatsapp_notification(customer_id: str, phone: str, message: str) -> dict:

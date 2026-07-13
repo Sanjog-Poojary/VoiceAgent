@@ -12,6 +12,20 @@ from google.genai import types
 
 logger = logging.getLogger("audio_bridge")
 
+def apply_phonetic_replacements(text: str) -> str:
+    import re
+    replacements = {
+        "Sanjog": "Sun-joag",
+        "Aarav": "Ah-ruhv",
+        "Ananya": "Ah-nuhn-yah",
+        "Arcelia": "Ar-sell-ee-ah"
+    }
+    cleaned_text = text
+    for word, phonetic in replacements.items():
+        pattern = re.compile(r'\b' + re.escape(word) + r'\b', re.IGNORECASE)
+        cleaned_text = pattern.sub(phonetic, cleaned_text)
+    return cleaned_text
+
 def make_user_message(text: str) -> types.Content:
     return types.Content(
         role="user",
@@ -119,19 +133,20 @@ class AudioBridge:
         return False
 
     async def get_tts_audio(self, text: str) -> bytes:
+        tts_text = apply_phonetic_replacements(text)
         if not self.deepgram_api_key or self.deepgram_api_key.startswith("dummy"):
             # Dummy mode: return mocked mulaw sound chunks (0xff bytes) proportional to string length
-            return b"\xff" * (len(text) * 80)
+            return b"\xff" * (len(tts_text) * 80)
 
         import httpx
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                "https://api.deepgram.com/v1/speak?model=aura-2-amalthea-en&encoding=mulaw&sample_rate=8000",
+                "https://api.deepgram.com/v1/speak?model=aura-2-amalthea-en&encoding=mulaw&sample_rate=8000&speed=1.15",
                 headers={
                     "Authorization": f"Token {self.deepgram_api_key}",
                     "Content-Type": "application/json"
                 },
-                json={"text": text},
+                json={"text": tts_text},
                 timeout=10.0
             )
             if response.status_code == 200:
