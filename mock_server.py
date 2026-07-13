@@ -399,28 +399,71 @@ async def chat_message(payload: ChatMessageRequest):
         "state": state
     }
 
-def apply_phonetic_replacements(text: str) -> str:
-    import re
-    replacements = {
+async def resolve_phonetic_name(name: str) -> str:
+    common_names = {
         "Sanjog": "Sun-joag",
         "Aarav": "Ah-ruhv",
         "Ananya": "Ah-nuhn-yah",
-        "Arcelia": "Ar-sell-ee-ah"
     }
-    cleaned_text = text
-    for word, phonetic in replacements.items():
-        pattern = re.compile(r'\b' + re.escape(word) + r'\b', re.IGNORECASE)
-        cleaned_text = pattern.sub(phonetic, cleaned_text)
-    return cleaned_text
+    if name in common_names:
+        return common_names[name]
+
+    # Ask Gemini to generate the phonetic spelling
+    try:
+        from google import genai
+        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        prompt = (
+            f"You are a text-to-speech pronunciation helper.\n"
+            f"Convert the Indian name '{name}' into a phonetic spelling with hyphens "
+            f"so that an American English Text-to-Speech voice (like Deepgram Aura) "
+            f"will pronounce it correctly with a natural Indian accent.\n"
+            f"Examples:\n"
+            f"- Sanjog -> Sun-joag\n"
+            f"- Aarav -> Ah-ruhv\n"
+            f"- Ananya -> Ah-nuhn-yah\n\n"
+            f"Return ONLY the phonetic spelling, no other text."
+        )
+        response = await client.aio.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+        resolved = response.text.strip()
+        if resolved:
+            return resolved
+    except Exception as e:
+        logger.error(f"Failed to resolve phonetic name for {name}: {e}")
+        
+    return name
 
 @app.get("/api/tts")
-async def get_tts_audio(text: str):
+async def get_tts_audio(text: str, customer_id: Optional[str] = None):
     logger.info(f"Generating Deepgram TTS for text: {text}")
     deepgram_key = os.getenv("DEEPGRAM_API_KEY")
     if not deepgram_key or deepgram_key.startswith("dummy"):
         return Response(content=b"", media_type="audio/mp3")
         
-    tts_text = apply_phonetic_replacements(text)
+    # Resolve customer name dynamically if customer_id is provided
+    customer_name = ""
+    phonetic_name = ""
+    if customer_id:
+        try:
+            customer = CUSTOMERS.get(customer_id)
+            if customer:
+                customer_name = customer.get("name", "")
+                phonetic_name = await resolve_phonetic_name(customer_name)
+        except Exception:
+            pass
+
+    tts_text = text
+    if customer_name and phonetic_name:
+        import re
+        pattern = re.compile(r'\b' + re.escape(customer_name) + r'\b', re.IGNORECASE)
+        tts_text = pattern.sub(phonetic_name, tts_text)
+
+    import re
+    pattern = re.compile(r'\bArcelia\b', re.IGNORECASE)
+    tts_text = pattern.sub("Ar-sell-ee-ah", tts_text)
+
     import httpx
     try:
         url = "https://api.deepgram.com/v1/speak?model=aura-2-amalthea-en&encoding=mp3&speed=1.15"

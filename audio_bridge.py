@@ -12,19 +12,41 @@ from google.genai import types
 
 logger = logging.getLogger("audio_bridge")
 
-def apply_phonetic_replacements(text: str) -> str:
-    import re
-    replacements = {
+async def resolve_phonetic_name(name: str) -> str:
+    common_names = {
         "Sanjog": "Sun-joag",
         "Aarav": "Ah-ruhv",
         "Ananya": "Ah-nuhn-yah",
-        "Arcelia": "Ar-sell-ee-ah"
     }
-    cleaned_text = text
-    for word, phonetic in replacements.items():
-        pattern = re.compile(r'\b' + re.escape(word) + r'\b', re.IGNORECASE)
-        cleaned_text = pattern.sub(phonetic, cleaned_text)
-    return cleaned_text
+    if name in common_names:
+        return common_names[name]
+
+    # Ask Gemini to generate the phonetic spelling
+    try:
+        from google import genai
+        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        prompt = (
+            f"You are a text-to-speech pronunciation helper.\n"
+            f"Convert the Indian name '{name}' into a phonetic spelling with hyphens "
+            f"so that an American English Text-to-Speech voice (like Deepgram Aura) "
+            f"will pronounce it correctly with a natural Indian accent.\n"
+            f"Examples:\n"
+            f"- Sanjog -> Sun-joag\n"
+            f"- Aarav -> Ah-ruhv\n"
+            f"- Ananya -> Ah-nuhn-yah\n\n"
+            f"Return ONLY the phonetic spelling, no other text."
+        )
+        response = await client.aio.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+        resolved = response.text.strip()
+        if resolved:
+            return resolved
+    except Exception as e:
+        logger.error(f"Failed to resolve phonetic name for {name}: {e}")
+        
+    return name
 
 def make_user_message(text: str) -> types.Content:
     return types.Content(
@@ -107,6 +129,8 @@ class AudioBridge:
         self.call_sid = None
         self.last_interrupt_id = None
         self.last_invocation_id = None
+        self.customer_name = ""
+        self.phonetic_name = ""
 
         # Task references
         self.stt_task = None
@@ -132,8 +156,20 @@ class AudioBridge:
 
         return False
 
+    def apply_phonetic_replacements(self, text: str) -> str:
+        cleaned_text = text
+        if self.customer_name and self.phonetic_name:
+            import re
+            pattern = re.compile(r'\b' + re.escape(self.customer_name) + r'\b', re.IGNORECASE)
+            cleaned_text = pattern.sub(self.phonetic_name, cleaned_text)
+            
+        import re
+        pattern = re.compile(r'\bArcelia\b', re.IGNORECASE)
+        cleaned_text = pattern.sub("Ar-sell-ee-ah", cleaned_text)
+        return cleaned_text
+
     async def get_tts_audio(self, text: str) -> bytes:
-        tts_text = apply_phonetic_replacements(text)
+        tts_text = self.apply_phonetic_replacements(text)
         if not self.deepgram_api_key or self.deepgram_api_key.startswith("dummy"):
             # Dummy mode: return mocked mulaw sound chunks (0xff bytes) proportional to string length
             return b"\xff" * (len(tts_text) * 80)
@@ -409,6 +445,17 @@ class AudioBridge:
                         await self.hangup_twilio_call()
 
     async def start(self):
+        customer_id = self.user_id.replace("customer_", "")
+        try:
+            from orchestrator import fetch_customer_details
+            customer_data = await fetch_customer_details(customer_id)
+            self.customer_name = customer_data.get("name", "")
+            if self.customer_name:
+                self.phonetic_name = await resolve_phonetic_name(self.customer_name)
+                logger.info(f"Resolved name {self.customer_name} to phonetic spelling: {self.phonetic_name}")
+        except Exception as e:
+            logger.error(f"Failed to fetch customer name for phonetic resolution: {e}")
+
         self.stt_task = asyncio.create_task(self.task_inbound_stt())
         self.reasoning_task = asyncio.create_task(self.task_reasoning_adk())
         self.tts_task = asyncio.create_task(self.task_outbound_tts())
