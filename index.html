@@ -886,11 +886,16 @@
             const voices = window.speechSynthesis.getVoices();
             if (detectedLanguage === 'Hindi') {
                 activeUtterance.lang = 'hi-IN';
-                const hindiVoice = voices.find(v => v.lang.startsWith('hi-'));
+                // Prioritize Google Cloud Hindi voice over generic offline ones
+                const googleHindi = voices.find(v => v.name.includes('Google') && v.lang.startsWith('hi-'));
+                const hindiVoice = googleHindi || voices.find(v => v.lang.startsWith('hi-'));
                 if (hindiVoice) activeUtterance.voice = hindiVoice;
             } else {
                 activeUtterance.lang = 'en-US';
-                const englishVoice = voices.find(v => v.lang.startsWith('en-'));
+                // Prioritize Google/Microsoft Natural voices over generic offline ones
+                const googleEnglish = voices.find(v => v.name.includes('Google') && v.lang.startsWith('en-'));
+                const naturalEnglish = voices.find(v => v.name.includes('Natural') && v.lang.startsWith('en-'));
+                const englishVoice = googleEnglish || naturalEnglish || voices.find(v => v.lang.startsWith('en-'));
                 if (englishVoice) activeUtterance.voice = englishVoice;
             }
 

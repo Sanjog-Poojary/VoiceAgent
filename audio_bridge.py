@@ -125,7 +125,7 @@ class AudioBridge:
         import httpx
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                "https://api.deepgram.com/v1/speak?model=aura-asteria-en&encoding=mulaw&sample_rate=8000",
+                "https://api.deepgram.com/v1/speak?model=aura-2-asteria-en&encoding=mulaw&sample_rate=8000",
                 headers={
                     "Authorization": f"Token {self.deepgram_api_key}",
                     "Content-Type": "application/json"
