@@ -408,7 +408,7 @@ async def get_tts_audio(text: str):
         
     import httpx
     try:
-        url = "https://api.deepgram.com/v1/speak?model=aura-2-asteria-en&encoding=mp3"
+        url = "https://api.deepgram.com/v1/speak?model=aura-2-amalthea-en&encoding=mp3"
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 url,
@@ -565,7 +565,8 @@ async def twilio_stream(websocket: WebSocket):
                 logger.info("Twilio stream connected event received.")
             elif event == "start":
                 bridge.stream_sid = data.get("start", {}).get("streamSid")
-                logger.info(f"Twilio stream started. StreamSid: {bridge.stream_sid}")
+                bridge.call_sid = data.get("start", {}).get("callSid")
+                logger.info(f"Twilio stream started. StreamSid: {bridge.stream_sid}, CallSid: {bridge.call_sid}")
                 
                 # Push the initial [Call Connected] turn to orchestrator
                 await bridge.turn_queue.put({
