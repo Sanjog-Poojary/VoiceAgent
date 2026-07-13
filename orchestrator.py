@@ -1,4 +1,5 @@
 import os
+import asyncio
 import json
 import hashlib
 import dotenv
@@ -1822,11 +1823,13 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
             break
     user_input_str = last_user_message.lower()
 
-    # Fetch customer details and offers
-    customer_data = await fetch_customer_details(customer_id)
+    # Fetch customer details and offers in parallel
+    customer_data, all_offers = await asyncio.gather(
+        fetch_customer_details(customer_id),
+        fetch_all_offers()
+    )
     preferred_category = customer_data.get("preferred_category", "Fashion")
     secondary_brand = customer_data.get("secondary_brand", "")
-    all_offers = await fetch_all_offers()
     
     # Phase 1: Set secondary flag if data exists
     sec_offer = next((o for o in all_offers if o.get("offer_brand") == secondary_brand), None) if secondary_brand else None
@@ -2088,12 +2091,14 @@ async def post_call_agent(ctx: Context, node_input: Any):
     customer_id = ctx.state.get("customer_id", "1")
     lang = ctx.state.get("detected_language", "English")
 
-    customer = await fetch_customer_details(customer_id)
+    # Fetch customer details and offers in parallel
+    customer, all_offers = await asyncio.gather(
+        fetch_customer_details(customer_id),
+        fetch_all_offers()
+    )
     phone = customer.get("phone", "")
     name = customer.get("name", "")
     preferred_category = customer.get("preferred_category", "Fashion")
-
-    all_offers = await fetch_all_offers()
     matched_offer = next(
         (o for o in all_offers if (o.get("offer_category") or o.get("category")) == preferred_category),
         None

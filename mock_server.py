@@ -1,7 +1,7 @@
 import logging
 import os
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel
 from pypdf import PdfReader
@@ -550,8 +550,28 @@ def query_knowledge(q: str = ""):
             
     return {"status": "success", "answer": "I don't have the exact details on that right now, but our store staff will be happy to help!"}
 
+async def pre_resolve_phonetic_name(customer_id: str):
+    logger.info(f"Background pre-resolving phonetic name for customer: {customer_id}")
+    try:
+        customer = CUSTOMERS.get(customer_id)
+        if customer:
+            name = customer.get("name", "")
+            if name:
+                from audio_bridge import resolve_phonetic_name, PHONETIC_CACHE
+                phonetic = await resolve_phonetic_name(name)
+                PHONETIC_CACHE[customer_id] = {
+                    "name": name,
+                    "phonetic": phonetic
+                }
+                logger.info(f"Successfully pre-resolved phonetic name cache for customer {customer_id}: '{name}' -> '{phonetic}'")
+    except Exception as e:
+        logger.error(f"Error pre-resolving phonetic name: {e}")
+
 @app.post("/api/twilio/voice")
-async def twilio_voice(request: Request, customer_id: str = "1"):
+async def twilio_voice(request: Request, background_tasks: BackgroundTasks, customer_id: str = "1"):
+    # Trigger phonetic name resolution in background while phone is ringing
+    background_tasks.add_task(pre_resolve_phonetic_name, customer_id)
+    
     host = request.headers.get("host")
     # Determine the websocket protocol (ws or wss). If the host has ngrok/public domain, it's typically secure wss.
     protocol = "wss" if "localhost" not in host and "127.0.0.1" not in host else "ws"

@@ -12,6 +12,8 @@ from google.genai import types
 
 logger = logging.getLogger("audio_bridge")
 
+PHONETIC_CACHE = {}
+
 async def resolve_phonetic_name(name: str) -> str:
     common_names = {
         "Sanjog": "Sun-joag",
@@ -168,28 +170,33 @@ class AudioBridge:
         cleaned_text = pattern.sub("Ar-sell-ee-ah", cleaned_text)
         return cleaned_text
 
-    async def get_tts_audio(self, text: str) -> bytes:
+    async def get_tts_audio_stream(self, text: str):
         tts_text = self.apply_phonetic_replacements(text)
         if not self.deepgram_api_key or self.deepgram_api_key.startswith("dummy"):
             # Dummy mode: return mocked mulaw sound chunks (0xff bytes) proportional to string length
-            return b"\xff" * (len(tts_text) * 80)
+            dummy_bytes = b"\xff" * (len(tts_text) * 80)
+            chunk_size = 640
+            for i in range(0, len(dummy_bytes), chunk_size):
+                yield dummy_bytes[i:i+chunk_size]
+            return
 
         import httpx
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://api.deepgram.com/v1/speak?model=aura-2-amalthea-en&encoding=mulaw&sample_rate=8000&speed=1.15",
-                headers={
-                    "Authorization": f"Token {self.deepgram_api_key}",
-                    "Content-Type": "application/json"
-                },
-                json={"text": tts_text},
-                timeout=10.0
-            )
-            if response.status_code == 200:
-                return response.content
-            else:
-                logger.error(f"TTS API error status {response.status_code}: {response.text}")
-                return b""
+        url = "https://api.deepgram.com/v1/speak?model=aura-2-amalthea-en&encoding=mulaw&sample_rate=8000&speed=1.15"
+        headers = {
+            "Authorization": f"Token {self.deepgram_api_key}",
+            "Content-Type": "application/json"
+        }
+        try:
+            async with httpx.AsyncClient() as client:
+                async with client.stream("POST", url, headers=headers, json={"text": tts_text}, timeout=10.0) as response:
+                    if response.status_code == 200:
+                        async for chunk in response.aiter_bytes(chunk_size=640):
+                            yield chunk
+                    else:
+                        error_body = await response.aread()
+                        logger.error(f"TTS API error status {response.status_code}: {error_body}")
+        except Exception as e:
+            logger.error(f"TTS network/streaming error: {e}")
 
     async def trigger_filler_timer(self):
         try:
@@ -391,13 +398,6 @@ class AudioBridge:
 
             if turn_id != self.current_turn_id:
                 continue
-
-            try:
-                audio_bytes = await self.get_tts_audio(text)
-            except Exception as e:
-                logger.error(f"Error generating TTS: {e}")
-                audio_bytes = b""
-
             # Await release of filler lock if held
             async with self.filler_lock:
                 if turn_id != self.current_turn_id:
@@ -406,21 +406,30 @@ class AudioBridge:
                 self.is_speaking = True
                 self.active_tts_string = text
 
-                # Stream to Twilio in 640 byte (80ms) chunks
-                chunk_size = 640
-                for i in range(0, len(audio_bytes), chunk_size):
-                    if turn_id != self.current_turn_id:
-                        break
-                    chunk = audio_bytes[i:i+chunk_size]
-                    payload = base64.b64encode(chunk).decode("utf-8")
-                    if self.stream_sid:
-                        await self.twilio_ws.send_json({
-                            "event": "media",
-                            "streamSid": self.stream_sid,
-                            "media": {"payload": payload}
-                        })
-                    # Sleep slightly less than 80ms (e.g. 70ms) to ensure Twilio's buffer is never starved
-                    await asyncio.sleep(0.07)
+                start_time = time.time()
+                first_chunk_sent = False
+
+                try:
+                    async for chunk in self.get_tts_audio_stream(text):
+                        if turn_id != self.current_turn_id:
+                            break
+
+                        if not first_chunk_sent:
+                            first_chunk_sent = True
+                            elapsed = time.time() - start_time
+                            logger.info(f"[TTS LATENCY] Time to first audio chunk: {elapsed:.3f} seconds (includes synthesis + queue/lock wait)")
+
+                        payload = base64.b64encode(chunk).decode("utf-8")
+                        if self.stream_sid:
+                            await self.twilio_ws.send_json({
+                                "event": "media",
+                                "streamSid": self.stream_sid,
+                                "media": {"payload": payload}
+                            })
+                        # Sleep slightly less than 80ms (e.g. 70ms) to ensure Twilio's buffer is never starved
+                        await asyncio.sleep(0.07)
+                except Exception as e:
+                    logger.error(f"Error in streaming/sending TTS: {e}")
 
                 self.is_speaking = False
                 self.active_tts_string = ""
@@ -446,15 +455,28 @@ class AudioBridge:
 
     async def start(self):
         customer_id = self.user_id.replace("customer_", "")
-        try:
-            from orchestrator import fetch_customer_details
-            customer_data = await fetch_customer_details(customer_id)
-            self.customer_name = customer_data.get("name", "")
-            if self.customer_name:
-                self.phonetic_name = await resolve_phonetic_name(self.customer_name)
-                logger.info(f"Resolved name {self.customer_name} to phonetic spelling: {self.phonetic_name}")
-        except Exception as e:
-            logger.error(f"Failed to fetch customer name for phonetic resolution: {e}")
+        
+        # Check cache first
+        if customer_id in PHONETIC_CACHE:
+            cached_data = PHONETIC_CACHE[customer_id]
+            self.customer_name = cached_data.get("name", "")
+            self.phonetic_name = cached_data.get("phonetic", "")
+            logger.info(f"Phonetic cache hit for customer {customer_id}: name='{self.customer_name}', phonetic='{self.phonetic_name}'")
+        else:
+            # Fallback synchronous connection-start lookup
+            try:
+                from orchestrator import fetch_customer_details
+                customer_data = await fetch_customer_details(customer_id)
+                self.customer_name = customer_data.get("name", "")
+                if self.customer_name:
+                    self.phonetic_name = await resolve_phonetic_name(self.customer_name)
+                    PHONETIC_CACHE[customer_id] = {
+                        "name": self.customer_name,
+                        "phonetic": self.phonetic_name
+                    }
+                    logger.info(f"Resolved name {self.customer_name} to phonetic spelling (fallback): {self.phonetic_name}")
+            except Exception as e:
+                logger.error(f"Failed to fetch customer name for phonetic resolution: {e}")
 
         self.stt_task = asyncio.create_task(self.task_inbound_stt())
         self.reasoning_task = asyncio.create_task(self.task_reasoning_adk())
