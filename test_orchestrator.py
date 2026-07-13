@@ -235,7 +235,7 @@ class TestVoiceAgentOrchestrator(unittest.IsolatedAsyncioTestCase):
             make_resume_message(interrupt_id, "No, he's not available. I am his husband speaking."), invocation_id
         )
         state = await self.get_session_state(session_id)
-        self.assertEqual(state.get("current_agent"), "PostCallAgent")
+        self.assertEqual(state.get("current_agent"), "ApologyAgent")
         self.assertFalse(state.get("offer_pitched"), "FAIL: Offer was pitched to a third party.")
         print(f"\n[PASS] Third party gatekeeper handled safely. Agent: {state.get('current_agent')}")
 

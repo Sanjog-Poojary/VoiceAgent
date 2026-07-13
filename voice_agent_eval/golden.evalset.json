@@ -116,8 +116,8 @@
       ],
       "creationTimestamp": 0.0,
       "finalSessionState": {
-        "current_agent": "EscalationAgent",
-        "escalation_triggered": true,
+        "current_agent": "ApologyAgent",
+        "escalation_triggered": false,
         "offer_accepted": false
       }
     },
@@ -652,7 +652,7 @@
         "current_agent": "ApologyAgent",
         "bounded_plans": {
           "SalesPitchAgent": {
-             "plan_status": "Abandoned"
+            "plan_status": "Abandoned"
           }
         }
       }

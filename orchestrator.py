@@ -834,7 +834,7 @@ class IdentityAgentContract(IdentityConfirmationContract):
             goal="verify_identity",
             expected_input="Customer identity confirmation (yes/no or casual affirmation)",
             success_criteria="Identity successfully verified or declined",
-            possible_next_actions=["IdentityAgent", "SalesPitchAgent", "ClarifyingAgent", "PostCallAgent"]
+            possible_next_actions=["IdentityAgent", "SalesPitchAgent", "ClarifyingAgent", "ApologyAgent"]
         )
 
     def goal_satisfied(self, classification, memory, state):
@@ -877,10 +877,8 @@ class IdentityAgentContract(IdentityConfirmationContract):
 
     def _route_on_goal_complete(self, state, user_input_str=""):
         outcome = state.get("last_outcome")
-        if outcome == "third_party":
-            return "PostCallAgent", {"transition_reason": "Third party detected. Must end call."}
-        if outcome == "decline":
-            return "PostCallAgent", {"transition_reason": "User declined identity. Must end call."}
+        if outcome in ("third_party", "decline"):
+            return "ApologyAgent", {"previous_agent": self.name}
         return "SalesPitchAgent", {}
 
     def _route_on_goal_incomplete(self, classification, state, user_input_str):
@@ -1372,7 +1370,7 @@ def _critique_premature_termination(
     if (
         proposed_next_agent in _TERMINAL_ROUTES
         and not state.get("offer_pitched", False)
-        and state.get("last_outcome") not in ("silence", "declined")
+        and state.get("last_outcome") not in ("silence", "declined", "decline", "third_party")
         and state.get("current_agent") not in ("EscalationAgent", "ApologyAgent")
     ):
         return Critique(
@@ -1403,7 +1401,7 @@ def _critique_preconditions(
     # ApologyAgent on decline before offer was pitched
     if (
         proposed_next_agent == "ApologyAgent"
-        and state.get("last_outcome") == "declined"
+        and state.get("last_outcome") not in ("declined", "decline", "third_party")
         and not effective_offer_pitched
     ):
         return Critique(
@@ -1985,12 +1983,18 @@ async def apology_agent(ctx: Context, node_input: Any):
     init_state_defaults(ctx)
     lang = ctx.state.get("detected_language", "English")
     attempts = ctx.state.get("injection_attempts", 0)
+    outcome = ctx.state.get("last_outcome")
 
     if attempts == 1:
         if lang == "Hindi":
             msg = "क्षमा करें, मैं शॉपर्स स्टॉप के लिए एक सहायक हूँ। मैं केवल रिटेल श्रेणियों और ऑफ़र में आपकी सहायता कर सकता हूँ। आइए अपनी बातचीत पर वापस चलें।"
         else:
             msg = "I'm sorry, I am a virtual assistant for Shoppers Stop. I can only assist you with our retail categories and offers. Let's get back to our conversation."
+    elif outcome == "third_party":
+        if lang == "Hindi":
+            msg = "कोई बात नहीं। मैं बाद में उनसे संपर्क करने की कोशिश करूँगा। आपका दिन शुभ हो!"
+        else:
+            msg = "No problem at all. I'll try reaching them another time. Have a wonderful day!"
     else:
         if lang == "Hindi":
             msg = "कोई बात नहीं। किसी भी असुविधा के लिए हम क्षमा चाहते हैं। आपका दिन शुभ हो!"
