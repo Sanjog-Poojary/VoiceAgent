@@ -1,10 +1,13 @@
 import logging
 import os
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request
+from fastapi.responses import HTMLResponse, Response
 from pydantic import BaseModel
 from pypdf import PdfReader
 from google import genai
+import base64
+from audio_bridge import AudioBridge
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -459,4 +462,103 @@ def query_knowledge(q: str = ""):
             logger.error(f"Error querying Gemini RAG fallback: {e}")
             
     return {"status": "success", "answer": "I don't have the exact details on that right now, but our store staff will be happy to help!"}
+
+@app.post("/api/twilio/voice")
+async def twilio_voice(request: Request, customer_id: str = "1"):
+    host = request.headers.get("host")
+    # Determine the websocket protocol (ws or wss). If the host has ngrok/public domain, it's typically secure wss.
+    protocol = "wss" if "localhost" not in host and "127.0.0.1" not in host else "ws"
+    
+    twiml_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Connect>
+        <Stream url="{protocol}://{host}/api/twilio/stream?customer_id={customer_id}" />
+    </Connect>
+</Response>"""
+    logger.info(f"Twilio voice call received. Returning TwiML: {twiml_response}")
+    return Response(content=twiml_response, media_type="application/xml")
+
+@app.websocket("/api/twilio/stream")
+async def twilio_stream(websocket: WebSocket):
+    await websocket.accept()
+    logger.info("Twilio media stream connection accepted.")
+    
+    # Retrieve customer_id from query params, default to 1
+    query_params = websocket.query_params
+    customer_id = query_params.get("customer_id", "1")
+    
+    # Generate identifiers for this phone call session
+    session_id = f"twilio_{uuid.uuid4().hex[:8]}"
+    user_id = f"phone_{customer_id}"
+    
+    # Fetch customer details to seed language defaults
+    customer = get_user(customer_id)
+    initial_state = {
+        "customer_id": customer_id,
+        "detected_language": customer.base_language or "English",
+        "current_agent": "IdentityAgent",
+        "verification_attempts": 0,
+        "call_sentiment": "Neutral",
+        "offer_pitched": False,
+        "offer_accepted": False,
+        "escalation_triggered": False,
+        "raw_audio_transcription": [],
+        "silent_turns": 0
+    }
+    
+    await session_service.create_session(
+        app_name="VoiceAgent",
+        user_id=user_id,
+        session_id=session_id,
+        state=initial_state
+    )
+    
+    # Instantiate AudioBridge
+    bridge = AudioBridge(
+        twilio_ws=websocket,
+        runner=runner,
+        session_service=session_service,
+        user_id=user_id,
+        session_id=session_id
+    )
+    
+    # Start AudioBridge background pipelines
+    await bridge.start()
+    
+    import json
+    try:
+        while True:
+            message_text = await websocket.receive_text()
+            data = json.loads(message_text)
+            
+            event = data.get("event")
+            if event == "connected":
+                logger.info("Twilio stream connected event received.")
+            elif event == "start":
+                bridge.stream_sid = data.get("start", {}).get("streamSid")
+                logger.info(f"Twilio stream started. StreamSid: {bridge.stream_sid}")
+                
+                # Push the initial [Call Connected] turn to orchestrator
+                await bridge.turn_queue.put({
+                    "session_id": session_id,
+                    "turn_id": 0,
+                    "text": "[Call Connected]"
+                })
+                
+            elif event == "media":
+                payload = data.get("media", {}).get("payload")
+                if payload:
+                    audio_bytes = base64.b64decode(payload)
+                    await bridge.inbound_audio_queue.put(audio_bytes)
+                    
+            elif event == "stop":
+                logger.info("Twilio stream stop event received.")
+                break
+    except WebSocketDisconnect:
+        logger.info("Twilio stream WebSocket disconnected.")
+    except Exception as e:
+        logger.error(f"Error in Twilio WebSocket handler: {e}", exc_info=True)
+    finally:
+        await bridge.close()
+
 
