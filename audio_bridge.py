@@ -223,20 +223,7 @@ class AudioBridge:
                             # Cancel silence timer immediately
                             if self.silence_timer_task and not self.silence_timer_task.done():
                                 self.silence_timer_task.cancel()
-
-                            if self.is_speaking:
-                                self.current_turn_id += 1
-                                logger.info(f"Barge-in detected: speech started while speaking. Incremented current_turn_id to {self.current_turn_id}")
-                                
-                                # Send Clear to Twilio to stop playback
-                                if self.stream_sid:
-                                    await self.twilio_ws.send_json({
-                                        "event": "clear",
-                                        "streamSid": self.stream_sid
-                                    })
-                                self.is_speaking = False
-                            else:
-                                logger.info("User speech started while agent was silent. No barge-in.")
+                            logger.info("SpeechStarted event received. Cancelled silence timer.")
 
                         elif msg_type == "Results":
                             is_final = data.get("is_final", False)
@@ -249,6 +236,20 @@ class AudioBridge:
                                     if transcript:
                                         logger.info(f"STT Transcript: {transcript!r} (confidence {confidence:.2f})")
                                         if not self.software_squelch(transcript, confidence):
+                                            # If agent is actively speaking, this is a valid user barge-in!
+                                            if self.is_speaking:
+                                                self.current_turn_id += 1
+                                                logger.info(f"Barge-in detected via valid transcript. Incremented current_turn_id to {self.current_turn_id}")
+                                                
+                                                # Send Clear to Twilio to stop playback immediately
+                                                if self.stream_sid:
+                                                    await self.twilio_ws.send_json({
+                                                        "event": "clear",
+                                                        "streamSid": self.stream_sid
+                                                    })
+                                                self.is_speaking = False
+                                            
+                                            # Push transcript to reasoning queue
                                             await self.turn_queue.put({
                                                 "session_id": self.session_id,
                                                 "turn_id": self.current_turn_id,
