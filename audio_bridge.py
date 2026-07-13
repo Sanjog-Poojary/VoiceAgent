@@ -141,7 +141,10 @@ class AudioBridge:
         self.reasoning_task = None
         self.tts_task = None
         self.silence_timer_task = None
-        self.http_client = httpx.AsyncClient()
+        self.http_client = httpx.AsyncClient(
+            timeout=httpx.Timeout(10.0, connect=5.0),
+            limits=httpx.Limits(max_keepalive_connections=5, keepalive_expiry=30.0),
+        )
 
     def software_squelch(self, transcript: str, confidence: float) -> bool:
         """
