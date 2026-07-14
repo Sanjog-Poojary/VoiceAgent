@@ -144,6 +144,15 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Endpoints
 @app.get("/api/users/{customer_id}", response_model=Customer)
 def get_user(customer_id: str):
@@ -707,10 +716,32 @@ async def trigger_outbound_call(payload: OutboundCallPayload, request: Request):
     if not to_number.startswith("+"):
         raise HTTPException(status_code=400, detail="Phone number must be in E.164 format (starting with +)")
 
-    host = request.headers.get("host")
-    protocol = "wss" if "localhost" not in host and "127.0.0.1" not in host else "ws"
-    http_protocol = "https" if protocol == "wss" else "http"
-    webhook_http_url = f"{http_protocol}://{host}/api/twilio/voice?customer_id={payload.customer_id}"
+    # 1. First check if NGROK_URL is configured in environment variables
+    ngrok_url = os.getenv("NGROK_URL")
+
+    # 2. Dynamically query local ngrok API as fallback
+    if not ngrok_url:
+        try:
+            import httpx
+            resp = httpx.get("http://127.0.0.1:4040/api/tunnels", timeout=0.5)
+            if resp.status_code == 200:
+                tunnels = resp.json().get("tunnels", [])
+                for t in tunnels:
+                    if t.get("proto") == "https":
+                        ngrok_url = t.get("public_url")
+                        break
+        except Exception:
+            pass
+
+    if ngrok_url:
+        webhook_http_url = f"{ngrok_url}/api/twilio/voice?customer_id={payload.customer_id}"
+        logger.info(f"Resolved public webhook via local ngrok API: {webhook_http_url}")
+    else:
+        host = request.headers.get("host")
+        protocol = "wss" if "localhost" not in host and "127.0.0.1" not in host else "ws"
+        http_protocol = "https" if protocol == "wss" else "http"
+        webhook_http_url = f"{http_protocol}://{host}/api/twilio/voice?customer_id={payload.customer_id}"
+        logger.info(f"Resolved webhook via host header: {webhook_http_url}")
 
     twilio_url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Calls.json"
     data = {
