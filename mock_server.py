@@ -52,9 +52,9 @@ app = FastAPI(
 
 # Mock Data
 CUSTOMERS = {
-    "1": {"id": "1", "name": "Sanjog", "phone": "+1234567890", "base_language": "English", "preferred_category": "Fashion", "secondary_brand": "Puma"},
-    "2": {"id": "2", "name": "Aarav", "phone": "+919876543210", "base_language": "Hindi", "preferred_category": "Beauty", "secondary_brand": "MAC"},
-    "3": {"id": "3", "name": "Ananya", "phone": "+918888888888", "base_language": "English", "preferred_category": "Luxury Watches", "secondary_brand": "Bobbi Brown"}
+    "1": {"id": "1", "name": "Sanjog", "phone": "+1234567890", "email": "sanjog@example.com", "base_language": "English", "preferred_category": "Fashion", "secondary_brand": "Puma"},
+    "2": {"id": "2", "name": "Aarav", "phone": "+919876543210", "email": "aarav@example.com", "base_language": "Hindi", "preferred_category": "Beauty", "secondary_brand": "MAC"},
+    "3": {"id": "3", "name": "Ananya", "phone": "+918888888888", "email": "ananya@example.com", "base_language": "English", "preferred_category": "Luxury Watches", "secondary_brand": "Bobbi Brown"}
 }
 
 EVENTS = {
@@ -107,6 +107,7 @@ class Customer(BaseModel):
     id: str
     name: str
     phone: str
+    email: str = ""
     base_language: str
     preferred_category: str
     secondary_brand: str = ""
@@ -133,6 +134,11 @@ class OffersResponse(BaseModel):
 class WhatsAppNotification(BaseModel):
     customer_id: str
     phone: str
+    message: str
+
+class EmailNotification(BaseModel):
+    customer_id: str
+    email: str
     message: str
 
 class CRMTicket(BaseModel):
@@ -175,6 +181,7 @@ def get_offer(customer_id: str):
     return offer
 
 WHATSAPP_LOGS = []
+EMAIL_LOGS = []
 CRM_LOGS = []
 APPOINTMENT_LOGS = []
 
@@ -188,6 +195,17 @@ def send_whatsapp(payload: WhatsAppNotification):
 @app.get("/api/notify/whatsapp/logs")
 def get_whatsapp_logs():
     return WHATSAPP_LOGS
+
+@app.post("/api/notify/email")
+def send_email(payload: EmailNotification):
+    logger.info(f"Simulating Email to customer {payload.customer_id} ({payload.email}): {payload.message}")
+    entry = {"customer_id": payload.customer_id, "email": payload.email, "message": payload.message, "status": "success"}
+    EMAIL_LOGS.append(entry)
+    return {"status": "success", "message": f"Email successfully sent to {payload.email}"}
+
+@app.get("/api/notify/email/logs")
+def get_email_logs():
+    return EMAIL_LOGS
 
 @app.post("/api/tickets/crm")
 def create_crm_ticket(payload: CRMTicket):

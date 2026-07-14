@@ -77,7 +77,9 @@ class TestAudioBridge(unittest.IsolatedAsyncioTestCase):
     @patch("orchestrator.fetch_customer_details")
     @patch("orchestrator.fetch_all_offers")
     @patch("orchestrator.classify_turn")
-    async def test_successful_reasoning_and_commit(self, mock_classify, mock_offers, mock_customer):
+    @patch("orchestrator.fetch_event_triggers")
+    async def test_successful_reasoning_and_commit(self, mock_event, mock_classify, mock_offers, mock_customer):
+        mock_event.return_value = {"id": "ev_1", "customer_id": "1", "event_type": "Birthday", "event_date": "2026-06-29"}
         mock_customer.return_value = {
             "id": "1", "name": "Sanjog", "phone": "+1234567890",
             "base_language": "English", "preferred_category": "Fashion",
@@ -159,7 +161,9 @@ class TestAudioBridge(unittest.IsolatedAsyncioTestCase):
     @patch("orchestrator.fetch_customer_details")
     @patch("orchestrator.fetch_all_offers")
     @patch("orchestrator.classify_turn")
-    async def test_barge_in_rollbacks_state(self, mock_classify, mock_offers, mock_customer):
+    @patch("orchestrator.fetch_event_triggers")
+    async def test_barge_in_rollbacks_state(self, mock_event, mock_classify, mock_offers, mock_customer):
+        mock_event.return_value = {"id": "ev_1", "customer_id": "1", "event_type": "Birthday", "event_date": "2026-06-29"}
         mock_customer.return_value = {
             "id": "1", "name": "Sanjog", "phone": "+1234567890",
             "base_language": "English", "preferred_category": "Fashion",

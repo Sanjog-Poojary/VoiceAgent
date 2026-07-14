@@ -1399,6 +1399,31 @@
                 }
             }
 
+            // Fetch Email Logs
+            if (state.offer_accepted && !document.getElementById('email_logged_' + sessionId)) {
+                try {
+                    const resp = await fetch('/api/notify/email/logs');
+                    if (resp.ok) {
+                        const logs = await resp.json();
+                        const myLog = logs.find(l => l.customer_id === state.customer_id);
+                        if (myLog) {
+                            const log = document.createElement('div');
+                            log.id = 'email_logged_' + sessionId;
+                            log.classList.add('log-entry');
+                            log.innerHTML = `
+                                <div class="log-time">[${timeStr}] POST /api/notify/email</div>
+                                <div class="log-title"><i class="fa-solid fa-envelope" style="color:var(--accent-blue);"></i> Email Confirmation Triggered</div>
+                                <pre class="log-json">${JSON.stringify(myLog, null, 2)}</pre>
+                            `;
+                            consoleOutput.appendChild(log);
+                            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to load Email logs", e);
+                }
+            }
+
             // Fetch Appointment Logs
             if (state.preferred_appointment_slot && !document.getElementById('appt_logged_' + sessionId)) {
                 try {

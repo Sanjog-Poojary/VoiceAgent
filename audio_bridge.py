@@ -394,7 +394,22 @@ class AudioBridge:
                     logger.info(f"Barge-in detected (turn {turn_id} vs current {self.current_turn_id}). Rolling back state.")
                     storage_session = self.session_service.sessions["VoiceAgent"][self.user_id].get(session_id)
                     if storage_session:
-                        storage_session.state = copy.deepcopy(snapshot_state)
+                        new_session_state = {}
+                        new_user_state = {}
+                        new_app_state = {}
+                        for k, v in snapshot_state.items():
+                            if k.startswith("user:"):
+                                new_user_state[k[5:]] = v
+                            elif k.startswith("app:"):
+                                new_app_state[k[4:]] = v
+                            else:
+                                new_session_state[k] = v
+                        
+                        storage_session.state = new_session_state
+                        if hasattr(self.session_service, "user_state"):
+                            self.session_service.user_state.setdefault("VoiceAgent", {})[self.user_id] = new_user_state
+                        if hasattr(self.session_service, "app_state"):
+                            self.session_service.app_state["VoiceAgent"] = new_app_state
 
     @staticmethod
     def _split_sentences(text: str) -> list[str]:

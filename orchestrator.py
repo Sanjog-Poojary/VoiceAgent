@@ -136,6 +136,16 @@ async def send_whatsapp_notification(customer_id: str, phone: str, message: str)
             return resp.json()
         raise ValueError(f"Failed to send WhatsApp alert: {resp.text}")
 
+async def send_email_notification(customer_id: str, email: str, message: str) -> dict:
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{MOCK_SERVER_URL}/api/notify/email",
+            json={"customer_id": customer_id, "email": email, "message": message}
+        )
+        if resp.status_code == 200:
+            return resp.json()
+        raise ValueError(f"Failed to send Email alert: {resp.text}")
+
 async def create_crm_ticket(customer_id: str, issue_description: str, priority: str = "medium") -> dict:
     async with httpx.AsyncClient() as client:
         resp = await client.post(
@@ -2170,16 +2180,34 @@ async def post_call_agent(ctx: Context, node_input: Any):
         offers_sent_en.append(f"{discount}% off on {brand} (Code: {code})")
         offers_sent_hi.append(f"{brand} पर {discount}% छूट (कोड: {code})")
 
+    email = customer.get("email", "")
+    use_email = False
+    raw_trans = ctx.state.get("raw_audio_transcription", [])
+    for line in raw_trans:
+        if line.startswith("User:"):
+            usr_text = line[5:].strip().lower()
+            if any(w in usr_text for w in ("email", "mail", "e-mail", "inbox")):
+                use_email = True
+
     if lang == "Hindi":
         offers_str = ", ".join(offers_sent_hi)
-        whatsapp_msg = f"नमस्ते {name}, आपके ऑफ़र भेज दिए गए हैं: {offers_str}। धन्यवाद!"
-        msg = "बहुत बढ़िया! मैंने सारे ऑफ़र विवरण आपके व्हाट्सएप पर भेज दिए हैं। धन्यवाद!"
+        notification_msg = f"नमस्ते {name}, आपके ऑफ़र भेज दिए गए हैं: {offers_str}। धन्यवाद!"
+        if use_email and email:
+            msg = "बहुत बढ़िया! मैंने सारे ऑफ़र विवरण आपके ईमेल पर भेज दिए हैं। धन्यवाद!"
+            await send_email_notification(customer_id, email, notification_msg)
+        else:
+            msg = "बहुत बढ़िया! मैंने सारे ऑफ़र विवरण आपके व्हाट्सएप पर भेज दिए हैं। धन्यवाद!"
+            await send_whatsapp_notification(customer_id, phone, notification_msg)
     else:
         offers_str = ", ".join(offers_sent_en)
-        whatsapp_msg = f"Hello {name}, your offers have been sent: {offers_str}. Thank you!"
-        msg = "Awesome! I've sent all the offer details directly to your WhatsApp. Thank you!"
+        notification_msg = f"Hello {name}, your offers have been sent: {offers_str}. Thank you!"
+        if use_email and email:
+            msg = "Awesome! I've sent all the offer details directly to your email. Thank you!"
+            await send_email_notification(customer_id, email, notification_msg)
+        else:
+            msg = "Awesome! I've sent all the offer details directly to your WhatsApp. Thank you!"
+            await send_whatsapp_notification(customer_id, phone, notification_msg)
 
-    await send_whatsapp_notification(customer_id, phone, whatsapp_msg)
     trans = list(ctx.state.get("raw_audio_transcription", []))
     trans.append(f"Agent: {msg}")
     ctx.state["raw_audio_transcription"] = trans
