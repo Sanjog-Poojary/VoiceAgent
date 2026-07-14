@@ -2,60 +2,32 @@ name: CI
 
 on:
   push:
-    branches: ["main", "dev"]
+    branches: [ main ]
   pull_request:
-    branches: ["main"]
+    branches: [ main ]
 
 jobs:
-  lint-and-validate:
-    name: Lint & Validate
+  test:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "pip"
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Validate Python syntax (all .py files)
-        run: |
-          python -m compileall -q orchestrator.py mock_server.py session_state.py agent.py
-
-      - name: Import check — orchestrator
-        env:
-          GROQ_API_KEY: "placeholder-for-ci"
-        run: python -c "from orchestrator import VoiceAgentWorkflow; print('Orchestrator import OK')"
-
-      - name: Import check — session_state schema
-        run: python -c "from session_state import SessionState; s = SessionState(); print('SessionState OK:', s.model_fields.keys())"
-
-      - name: Import check — mock_server (no startup)
-        run: python -c "import ast; ast.parse(open('mock_server.py').read()); print('mock_server syntax OK')"
-
-  unit-tests:
-    name: Unit Tests (session state)
-    runs-on: ubuntu-latest
-    needs: lint-and-validate
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: "pip"
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run session state unit tests
-        run: python -m pytest test_session_state.py -v 2>/dev/null || python -m unittest test_session_state -v
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'pip'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Compile Syntax Check
+      run: |
+        python -m compileall -q orchestrator.py mock_server.py session_state.py agent.py audio_bridge.py
+        
+    - name: Run Fast Unit Tests
+      run: |
+        # Run tests that do not require external API keys
+        pytest test_session_state.py test_audio_bridge.py voice_agent_eval/test_goal_satisfaction.py -v
