@@ -2153,7 +2153,7 @@ async def post_call_agent(ctx: Context, node_input: Any):
             if line.startswith("User:"):
                 last_user = line[5:].strip().lower()
                 break
-        if any(w in last_user for w in ("yes", "sure", "ok", "yep", "suresh", "activate", "send", "include", "both")):
+        if any(w in last_user for w in ("yes", "sure", "ok", "yep", "suresh", "activate", "send", "include", "both", "email", "mail", "e-mail", "inbox")):
             secondary_accepted = True
 
     # If the user directly accepted the primary offer in a 3-phase flow (no secondary offer exist/pitched)
