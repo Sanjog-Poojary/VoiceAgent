@@ -30,4 +30,4 @@ jobs:
     - name: Run Fast Unit Tests
       run: |
         # Run tests that do not require external API keys
-        pytest test_session_state.py test_audio_bridge.py voice_agent_eval/test_goal_satisfaction.py -v
+        python -m pytest test_session_state.py test_audio_bridge.py voice_agent_eval/test_goal_satisfaction.py -v

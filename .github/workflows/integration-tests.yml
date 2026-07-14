@@ -28,4 +28,4 @@ jobs:
         
     - name: Run E2E Orchestrator Scenarios
       run: |
-        pytest test_orchestrator.py -v
+        python -m pytest test_orchestrator.py -v
