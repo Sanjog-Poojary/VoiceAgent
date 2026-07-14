@@ -607,8 +607,23 @@ class AudioBridge:
             os.makedirs(temp_dir, exist_ok=True)
 
             state_path = os.path.join(temp_dir, "orchestrator_state.json")
-            with open(state_path, "w", encoding="utf-8") as f:
-                json.dump(state_dict, f, indent=2)
+            if hasattr(session, "model_dump_json"):
+                try:
+                    with open(state_path, "w", encoding="utf-8") as f:
+                        f.write(session.model_dump_json(indent=2))
+                except Exception as e:
+                    logger.error(f"Error calling model_dump_json: {e}")
+            else:
+                def json_default(obj):
+                    if isinstance(obj, set):
+                        return list(obj)
+                    if hasattr(obj, "model_dump"):
+                        return obj.model_dump()
+                    if hasattr(obj, "dict"):
+                        return obj.dict()
+                    return str(obj)
+                with open(state_path, "w", encoding="utf-8") as f:
+                    json.dump(state_dict, f, default=json_default, indent=2)
 
             trans = state_dict.get("raw_audio_transcription", [])
             transcript_path = os.path.join(temp_dir, "transcript.txt")
