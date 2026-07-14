@@ -957,17 +957,17 @@ class SalesPitchAgentContract(PlanningAgentContract):
         is_accept = classification.is_acceptance
         is_dec = classification.is_decline
 
-        # PRIORITY: knowledge questions always freeze the phase — never advance to secondary pitch
-        if getattr(classification, "is_knowledge_question", False) or classification.is_loyalty_question:
-            last_outcome = "knowledge_q" if getattr(classification, "is_knowledge_question", False) else "tangent"
-        elif classification.confidence_score < 0.75:
-            last_outcome = "pending"
-        elif getattr(classification, "is_competitor_mention", False) and not (is_accept or is_dec):
+        if getattr(classification, "is_competitor_mention", False) and not (is_accept or is_dec):
             current_mentions = state.get("competitor_mentions", 0)
             if current_mentions + 1 >= 2:
                 last_outcome = "competitor_bail"
             else:
                 last_outcome = "competitor_deflect"
+        # PRIORITY: knowledge questions always freeze the phase — never advance to secondary pitch
+        elif getattr(classification, "is_knowledge_question", False) or classification.is_loyalty_question:
+            last_outcome = "knowledge_q" if getattr(classification, "is_knowledge_question", False) else "tangent"
+        elif classification.confidence_score < 0.75:
+            last_outcome = "pending"
         elif not secondary_offer_pitched and has_secondary_offer:
             # Phase 2 -> Phase 3 (Secondary Pitch) — only on clear acceptance/decline
             if classification.is_acceptance:
