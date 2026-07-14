@@ -162,6 +162,77 @@ class TestAudioBridge(unittest.IsolatedAsyncioTestCase):
     @patch("orchestrator.fetch_all_offers")
     @patch("orchestrator.classify_turn")
     @patch("orchestrator.fetch_event_triggers")
+    @patch("orchestrator.send_email_notification")
+    async def test_email_notification_preference(self, mock_send_email, mock_event, mock_classify, mock_offers, mock_customer):
+        mock_send_email.return_value = {"status": "success"}
+        mock_event.return_value = {"id": "ev_1", "customer_id": "1", "event_type": "Birthday", "event_date": "2026-06-29"}
+        mock_customer.return_value = {
+            "id": "1", "name": "Sanjog", "phone": "+1234567890", "email": "sanjog@example.com",
+            "base_language": "English", "preferred_category": "Fashion",
+            "secondary_brand": "Puma"
+        }
+        mock_offers.return_value = [
+            {
+                "offer_id": "off_1",
+                "offer_name": "BIRTHDAY20",
+                "offer_brand": "Stop",
+                "offer_category": "Fashion",
+                "valid_from": "2026-06-29",
+                "valid_to": "2026-07-29",
+                "offer_description": "Get 20% off on Stop everyday casuals."
+            }
+        ]
+
+        self.bridge.reasoning_task = asyncio.create_task(self.bridge.task_reasoning_adk())
+
+        # 1. Greeting
+        await self.bridge.turn_queue.put({
+            "session_id": self.session_id,
+            "turn_id": 0,
+            "text": "[Call Connected]"
+        })
+        await asyncio.sleep(0.5)
+        await self.bridge.outbound_tts_queue.get()
+
+        # 2. Confirmation (user wants email instead of WhatsApp)
+        mock_classify.return_value = TurnClassification(
+            detected_language="English", call_sentiment="Neutral",
+            is_valid_answer=True, is_acceptance=True, is_decline=False,
+            is_third_party=False, is_competitor_mention=False, is_loyalty_question=False,
+            is_appointment_accept=False, is_appointment_decline=False, is_injection_attempt=False,
+            preferred_slot="", is_silent_turn=False, is_knowledge_question=False,
+            knowledge_query="", ambiguity_reason="", confidence_score=0.95
+        )
+        self.bridge.current_turn_id = 1
+        await self.bridge.turn_queue.put({
+            "session_id": self.session_id,
+            "turn_id": 1,
+            "text": "send it to my email"
+        })
+        await asyncio.sleep(0.5)
+        
+        # Flush the secondary Puma pitch (since they have a secondary brand)
+        await self.bridge.outbound_tts_queue.get()
+
+        # 3. User accepts Puma offer
+        self.bridge.current_turn_id = 2
+        await self.bridge.turn_queue.put({
+            "session_id": self.session_id,
+            "turn_id": 2,
+            "text": "ok"
+        })
+        await asyncio.sleep(0.5)
+
+        # Check final TTS output
+        self.assertEqual(self.bridge.outbound_tts_queue.qsize(), 1)
+        final_msg = await self.bridge.outbound_tts_queue.get()
+        self.assertIn("directly to your email", final_msg["text"])
+        mock_send_email.assert_called_once()
+
+    @patch("orchestrator.fetch_customer_details")
+    @patch("orchestrator.fetch_all_offers")
+    @patch("orchestrator.classify_turn")
+    @patch("orchestrator.fetch_event_triggers")
     async def test_barge_in_rollbacks_state(self, mock_event, mock_classify, mock_offers, mock_customer):
         mock_event.return_value = {"id": "ev_1", "customer_id": "1", "event_type": "Birthday", "event_date": "2026-06-29"}
         mock_customer.return_value = {
