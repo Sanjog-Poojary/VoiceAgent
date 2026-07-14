@@ -54,7 +54,7 @@ class SessionState(BaseModel):
     # Edge-case tracking
     silent_turns: int = Field(default=0, description="Consecutive turns where user produced no meaningful input (silence, ambient noise).")
     injection_attempts: int = Field(default=0, description="The number of prompt injection / adversarial override attempts.")
-    escalation_reason: str = Field(default="agitated", description="The reason for escalation: 'agitated' or 'malicious'.")
+    escalation_reason: str = Field(default="", description="The reason for escalation: 'agitated' or 'malicious'.")
     previous_agent: str = Field(default="", description="The previous agent active before an injection warning deflection occurred.")
     clarification_attempts: int = Field(default=0, description="The number of clarification attempts during ambiguous turns.")
     competitor_mentions: int = Field(default=0, description="Counter for competitor mentions.")
