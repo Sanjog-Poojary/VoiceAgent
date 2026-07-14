@@ -748,12 +748,20 @@
                     </select>
                 </div>
                 <div class="voice-mode-container"
-                    style="display: flex; align-items: center; gap: 0.5rem; margin-left: auto; margin-right: 1.5rem;">
+                    style="display: flex; align-items: center; gap: 0.5rem; margin-left: 1.5rem; margin-right: 1.5rem;">
                     <label class="switch">
                         <input type="checkbox" id="voiceToggle">
                         <span class="slider"></span>
                     </label>
                     <span style="font-size: 0.9rem; color: var(--text-muted); font-weight: 500;">Voice Mode</span>
+                </div>
+                <div class="real-phone-dialer" style="display: flex; align-items: center; gap: 0.5rem; margin-left: auto; margin-right: 1rem;">
+                    <input type="text" id="realPhoneInput" placeholder="Real Phone: +919356168767" value="+919356168767"
+                           style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); color: white; padding: 0.5rem; border-radius: 8px; font-size: 0.85rem; width: 150px; outline: none; transition: border-color 0.2s;">
+                    <button id="ringPhoneBtn" class="btn-call" style="background: linear-gradient(135deg, #10b981, #059669); border: none; padding: 0.5rem 1rem; border-radius: 8px; color: white; font-weight: 500; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: transform 0.2s;">
+                        <i class="fa-solid fa-phone-volume"></i>
+                        <span id="ringPhoneBtnText">Ring Phone</span>
+                    </button>
                 </div>
                 <button id="callBtn" class="btn-call">
                     <i class="fa-solid fa-phone"></i>
@@ -865,6 +873,9 @@
         const statusText = document.getElementById('statusText');
         const voiceToggle = document.getElementById('voiceToggle');
         const micBtn = document.getElementById('micBtn');
+        const realPhoneInput = document.getElementById('realPhoneInput');
+        const ringPhoneBtn = document.getElementById('ringPhoneBtn');
+        const ringPhoneBtnText = document.getElementById('ringPhoneBtnText');
 
         const stateAgent = document.getElementById('stateAgent');
         const stateLang = document.getElementById('stateLang');
@@ -1449,6 +1460,73 @@
                 }
             }
         }
+
+        // Ring Real Phone Event Listener
+        ringPhoneBtn.addEventListener('click', async () => {
+            const phone = realPhoneInput.value.trim();
+            if (!phone) {
+                alert("Please enter a valid phone number!");
+                return;
+            }
+            
+            ringPhoneBtn.disabled = true;
+            ringPhoneBtnText.innerText = "Calling...";
+            ringPhoneBtn.style.background = "linear-gradient(135deg, var(--text-muted), var(--text-muted))";
+
+            const timeStr = new Date().toLocaleTimeString();
+            const startLog = document.createElement('div');
+            startLog.classList.add('log-entry');
+            startLog.innerHTML = `
+                <div class="log-time">[${timeStr}] API Trigger</div>
+                <div class="log-title"><i class="fa-solid fa-phone-flip" style="color:var(--accent-green);"></i> Outbound Call Requested</div>
+                <div class="log-json">Triggering call to ${phone} for Customer ${profileSelect.value}...</div>
+            `;
+            consoleOutput.appendChild(startLog);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+
+            try {
+                const response = await fetch('/api/twilio/call', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        to_number: phone,
+                        customer_id: profileSelect.value
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Call trigger failed');
+                }
+
+                const successLog = document.createElement('div');
+                successLog.classList.add('log-entry');
+                successLog.innerHTML = `
+                    <div class="log-time">[${timeStr}] POST /api/twilio/call (200 OK)</div>
+                    <div class="log-title"><i class="fa-solid fa-circle-check" style="color:var(--accent-green);"></i> Call Successfully Triggered!</div>
+                    <pre class="log-json">${JSON.stringify(data, null, 2)}</pre>
+                `;
+                consoleOutput.appendChild(successLog);
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+
+            } catch (err) {
+                console.error("Error triggering real phone call:", err);
+                const errorLog = document.createElement('div');
+                errorLog.classList.add('log-entry');
+                errorLog.style.borderLeft = "2px solid var(--accent-red)";
+                errorLog.innerHTML = `
+                    <div class="log-time">[${timeStr}] POST /api/twilio/call (Error)</div>
+                    <div class="log-title" style="color:var(--accent-red);"><i class="fa-solid fa-circle-xmark"></i> Call Trigger Failed</div>
+                    <div class="log-json">Error: ${err.message}</div>
+                `;
+                consoleOutput.appendChild(errorLog);
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+            } finally {
+                ringPhoneBtn.disabled = false;
+                ringPhoneBtnText.innerText = "Ring Phone";
+                ringPhoneBtn.style.background = "linear-gradient(135deg, #10b981, #059669)";
+            }
+        });
     </script>
 </body>
 

@@ -592,7 +592,12 @@ class AudioBridge:
                 user_id=self.user_id,
                 session_id=self.session_id
             )
-            state_dict = session.state if session else {}
+            state_dict = (
+                session.model_dump() if hasattr(session, "model_dump")
+                else session.dict() if hasattr(session, "dict")
+                else session.state if session and hasattr(session, "state")
+                else {}
+            )
 
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             folder_name = f"{timestamp}_{self.session_id}"

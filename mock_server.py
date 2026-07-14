@@ -683,3 +683,79 @@ async def twilio_stream(websocket: WebSocket):
         await bridge.close()
 
 
+class OutboundCallPayload(BaseModel):
+    to_number: str
+    customer_id: str = "1"
+
+@app.post("/api/twilio/call")
+async def trigger_outbound_call(payload: OutboundCallPayload, request: Request):
+    import asyncio
+    import urllib.parse
+    import urllib.request
+    import base64
+    import ssl
+    import json
+
+    account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+    auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+    from_number = os.getenv("TWILIO_FROM_NUMBER", "+19898432840")
+
+    if not account_sid or not auth_token or account_sid.startswith("dummy"):
+        raise HTTPException(status_code=400, detail="Twilio credentials not configured in server .env")
+
+    to_number = payload.to_number.replace(" ", "").replace("-", "")
+    if not to_number.startswith("+"):
+        raise HTTPException(status_code=400, detail="Phone number must be in E.164 format (starting with +)")
+
+    host = request.headers.get("host")
+    protocol = "wss" if "localhost" not in host and "127.0.0.1" not in host else "ws"
+    http_protocol = "https" if protocol == "wss" else "http"
+    webhook_http_url = f"{http_protocol}://{host}/api/twilio/voice?customer_id={payload.customer_id}"
+
+    twilio_url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Calls.json"
+    data = {
+        "To": to_number,
+        "From": from_number,
+        "Url": webhook_http_url
+    }
+
+    encoded_data = urllib.parse.urlencode(data).encode("utf-8")
+    auth_str = f"{account_sid}:{auth_token}"
+    auth_b64 = base64.b64encode(auth_str.encode("utf-8")).decode("utf-8")
+
+    headers = {
+        "Authorization": f"Basic {auth_b64}",
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+
+    req = urllib.request.Request(twilio_url, data=encoded_data, headers=headers, method="POST")
+
+    try:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        
+        loop = asyncio.get_running_loop()
+        def _urlopen():
+            with urllib.request.urlopen(req, context=ctx) as response:
+                return response.read().decode("utf-8")
+                
+        res_data = await loop.run_in_executor(None, _urlopen)
+        res_json = json.loads(res_data)
+        return {
+            "status": "success",
+            "sid": res_json.get("sid"),
+            "call_status": res_json.get("status")
+        }
+    except Exception as e:
+        error_msg = str(e)
+        if hasattr(e, 'read'):
+            try:
+                error_msg = e.read().decode('utf-8')
+            except Exception:
+                pass
+        logger.error(f"Failed to trigger Twilio outbound call: {error_msg}")
+        raise HTTPException(status_code=500, detail=f"Twilio call failed: {error_msg}")
+
+
+
