@@ -120,6 +120,8 @@ class AudioBridge:
         self.inbound_audio_queue = asyncio.Queue()
         self.turn_queue = asyncio.Queue()
         self.outbound_tts_queue = asyncio.Queue()
+        self.inbound_audio_chunks = []
+        self.outbound_audio_chunks = []
 
         # Shared synchronization
         self.session_lock = asyncio.Lock()
@@ -263,6 +265,7 @@ class AudioBridge:
             # Run offline loop just waiting for queue
             while True:
                 data = await self.inbound_audio_queue.get()
+                self.inbound_audio_chunks.append(data)
                 # Mock STT does not process audio bytes directly
                 await asyncio.sleep(0.01)
             return
@@ -273,6 +276,7 @@ class AudioBridge:
                 async def send_audio():
                     while True:
                         audio = await self.inbound_audio_queue.get()
+                        self.inbound_audio_chunks.append(audio)
                         await dg_ws.send(audio)
 
                 send_task = asyncio.create_task(send_audio())
@@ -458,6 +462,8 @@ class AudioBridge:
                             aborted = True
                             break
 
+                        self.outbound_audio_chunks.append(chunk)
+
                         if not first_chunk_sent:
                             first_chunk_sent = True
                             elapsed = time.time() - start_time
@@ -578,3 +584,69 @@ class AudioBridge:
                 await self.twilio_ws.close()
             except Exception:
                 pass
+
+    async def save_session_artifacts(self):
+        try:
+            session = await self.session_service.get_session(
+                app_name="VoiceAgent",
+                user_id=self.user_id,
+                session_id=self.session_id
+            )
+            state_dict = session.state if session else {}
+
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            folder_name = f"{timestamp}_{self.session_id}"
+            
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            temp_dir = os.path.join(base_dir, "temp_sessions", folder_name)
+            os.makedirs(temp_dir, exist_ok=True)
+
+            state_path = os.path.join(temp_dir, "orchestrator_state.json")
+            with open(state_path, "w", encoding="utf-8") as f:
+                json.dump(state_dict, f, indent=2)
+
+            trans = state_dict.get("raw_audio_transcription", [])
+            transcript_path = os.path.join(temp_dir, "transcript.txt")
+            with open(transcript_path, "w", encoding="utf-8") as f:
+                for line in trans:
+                    f.write(f"{line}\n")
+
+            inbound_audio = b"".join(self.inbound_audio_chunks)
+            if inbound_audio:
+                self.write_wav_mulaw(os.path.join(temp_dir, "inbound_user.wav"), inbound_audio)
+
+            outbound_audio = b"".join(self.outbound_audio_chunks)
+            if outbound_audio:
+                self.write_wav_mulaw(os.path.join(temp_dir, "outbound_agent.wav"), outbound_audio)
+
+            logger.info(f"Successfully saved session artifacts to {temp_dir}")
+        except Exception as e:
+            logger.error(f"Error saving session artifacts: {e}", exc_info=True)
+
+    def write_wav_mulaw(self, filepath: str, audio_data: bytes):
+        num_samples = len(audio_data)
+        riff = b'RIFF'
+        chunk_size = 36 + num_samples
+        wave = b'WAVE'
+        fmt = b'fmt '
+        subchunk1_size = 18
+        audio_format = 7
+        num_channels = 1
+        sample_rate = 8000
+        byte_rate = 8000
+        block_align = 1
+        bits_per_sample = 8
+        extra_size = 0
+        data = b'data'
+        subchunk2_size = num_samples
+
+        import struct
+        header = struct.pack(
+            '<4sI4s4sIHHIIHHH4sI',
+            riff, chunk_size, wave, fmt, subchunk1_size,
+            audio_format, num_channels, sample_rate, byte_rate,
+            block_align, bits_per_sample, extra_size, data, subchunk2_size
+        )
+        with open(filepath, 'wb') as f:
+            f.write(header + audio_data)
+

@@ -39,3 +39,6 @@ Thumbs.db
 # Call scripts (contain credentials)
 make_call.py
 
+# Live call diagnostics
+temp_sessions/
+

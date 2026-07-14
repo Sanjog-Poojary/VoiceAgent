@@ -679,6 +679,7 @@ async def twilio_stream(websocket: WebSocket):
     except Exception as e:
         logger.error(f"Error in Twilio WebSocket handler: {e}", exc_info=True)
     finally:
+        await bridge.save_session_artifacts()
         await bridge.close()
 
 
