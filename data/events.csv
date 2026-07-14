@@ -1,0 +1,4 @@
+id,customer_id,event_type,event_date
+1,1,Birthday,2026-06-29
+2,2,Credit Expiry,2026-07-02
+3,3,Birthday,2026-06-30

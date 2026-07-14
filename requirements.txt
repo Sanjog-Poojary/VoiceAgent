@@ -9,3 +9,4 @@ pytest-asyncio
 anyio
 pypdf
 websockets
+python-dotenv

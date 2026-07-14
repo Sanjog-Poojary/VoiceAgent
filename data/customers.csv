@@ -1,0 +1,4 @@
+id,name,phone,email,base_language,preferred_category,secondary_brand
+1,Sanjog,+1234567890,sanjog@example.com,English,Fashion,Puma
+2,Aarav,+919876543210,aarav@example.com,Hindi,Beauty,MAC
+3,Ananya,+918888888888,ananya@example.com,English,Luxury Watches,Bobbi Brown

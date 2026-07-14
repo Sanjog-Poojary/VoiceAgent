@@ -1,0 +1,5 @@
+id,offer_id,offer_name,offer_brand,offer_category,valid_from,valid_to,offer_description
+1,off_1,BIRTHDAY20,Stop,Fashion,2026-06-29,2026-07-29,Get 20% off on Stop everyday casuals and formal wear.
+2,off_2,CREDIT15,Arcelia,Beauty,2026-07-02,2026-08-02,Get 15% off on Arcelia fragrances and makeup products.
+3,off_3,LUX25,Michael Kors,Luxury Watches,2026-06-30,2026-07-30,Get 25% off on Michael Kors luxury watches and accessories.
+4,off_4,PUMA15,Puma,Activewear,2026-07-01,2026-08-01,Get 15% off all Puma running shoes and apparel.

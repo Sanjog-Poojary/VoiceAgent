@@ -1,5 +1,7 @@
 import logging
 import os
+import csv
+from contextlib import asynccontextmanager
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse, Response
@@ -44,63 +46,10 @@ _GENAI_CLIENT = genai.Client(
     location=os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
 )
 
-app = FastAPI(
-    title="Shoppers Stop Mock API Server",
-    description="Development API server for customer engagement, events, offers, and notifications.",
-    version="1.0.0"
-)
-
-# Mock Data
-CUSTOMERS = {
-    "1": {"id": "1", "name": "Sanjog", "phone": "+1234567890", "email": "sanjog@example.com", "base_language": "English", "preferred_category": "Fashion", "secondary_brand": "Puma"},
-    "2": {"id": "2", "name": "Aarav", "phone": "+919876543210", "email": "aarav@example.com", "base_language": "Hindi", "preferred_category": "Beauty", "secondary_brand": "MAC"},
-    "3": {"id": "3", "name": "Ananya", "phone": "+918888888888", "email": "ananya@example.com", "base_language": "English", "preferred_category": "Luxury Watches", "secondary_brand": "Bobbi Brown"}
-}
-
-EVENTS = {
-    "1": {"id": "ev_1", "customer_id": "1", "event_type": "Birthday", "event_date": "2026-06-29"},
-    "2": {"id": "ev_2", "customer_id": "2", "event_type": "Credit Expiry", "event_date": "2026-07-02"},
-    "3": {"id": "ev_3", "customer_id": "3", "event_type": "Birthday", "event_date": "2026-06-30"}
-}
-
-OFFERS = {
-    "1": {
-        "offer_id": "off_1",
-        "offer_name": "BIRTHDAY20",
-        "offer_brand": "Stop",
-        "offer_category": "Fashion",
-        "valid_from": "2026-06-29",
-        "valid_to": "2026-07-29",
-        "offer_description": "Get 20% off on Stop everyday casuals and formal wear."
-    },
-    "2": {
-        "offer_id": "off_2",
-        "offer_name": "CREDIT15",
-        "offer_brand": "Arcelia",
-        "offer_category": "Beauty",
-        "valid_from": "2026-07-02",
-        "valid_to": "2026-08-02",
-        "offer_description": "Get 15% off on Arcelia fragrances and makeup products."
-    },
-    "3": {
-        "offer_id": "off_3",
-        "offer_name": "LUX25",
-        "offer_brand": "Michael Kors",
-        "offer_category": "Luxury Watches",
-        "valid_from": "2026-06-30",
-        "valid_to": "2026-07-30",
-        "offer_description": "Get 25% off on Michael Kors luxury watches and accessories."
-    },
-    "4": {
-        "offer_id": "off_4",
-        "offer_name": "PUMA15",
-        "offer_brand": "Puma",
-        "offer_category": "Activewear",
-        "valid_from": "2026-07-01",
-        "valid_to": "2026-08-01",
-        "offer_description": "Get 15% off all Puma running shoes and apparel."
-    }
-}
+# In-Memory Database Caches
+CUSTOMERS = {}
+EVENTS = {}
+OFFERS = {}
 
 # Schemas
 class Customer(BaseModel):
@@ -149,6 +98,51 @@ class CRMTicket(BaseModel):
 class AppointmentRequest(BaseModel):
     customer_id: str
     preferred_slot: str
+
+# ---------------------------------------------------------
+# CSV Database Loader & Lifespan
+# ---------------------------------------------------------
+def load_csv_to_dict(filepath: str, primary_key: str, model_class=None) -> dict:
+    loaded_data = {}
+    try:
+        abs_path = os.path.join(os.path.dirname(__file__), filepath)
+        with open(abs_path, mode='r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                row_cleaned = {k.strip(): v.strip() for k, v in row.items() if k is not None}
+                pk_value = row_cleaned.get(primary_key)
+                if pk_value:
+                    if model_class:
+                        validated = model_class(**row_cleaned)
+                        loaded_data[pk_value] = validated.model_dump()
+                    else:
+                        loaded_data[pk_value] = row_cleaned
+        logger.info(f"Loaded {len(loaded_data)} records from {filepath}")
+    except FileNotFoundError:
+        logger.warning(f"Dataset not found at {filepath}, starting with empty cache.")
+    except Exception as e:
+        logger.error(f"Error loading {filepath}: {e}")
+    return loaded_data
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global CUSTOMERS, EVENTS, OFFERS
+    logger.info("Initializing in-memory CSV databases...")
+    CUSTOMERS.update(load_csv_to_dict("data/customers.csv", primary_key="id", model_class=Customer))
+    EVENTS.update(load_csv_to_dict("data/events.csv", primary_key="customer_id", model_class=Event))
+    OFFERS.update(load_csv_to_dict("data/offers.csv", primary_key="id", model_class=OfferItem))
+    yield
+    logger.info("Clearing in-memory databases...")
+    CUSTOMERS.clear()
+    EVENTS.clear()
+    OFFERS.clear()
+
+app = FastAPI(
+    title="Shoppers Stop Mock API Server",
+    description="Development API server for customer engagement, events, offers, and notifications.",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
 # Endpoints
 @app.get("/api/users/{customer_id}", response_model=Customer)
