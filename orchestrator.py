@@ -27,7 +27,7 @@ from google import genai
 from google.genai import types
 from google.genai.errors import ClientError, ServerError
 
-_CLASSIFIER_MODEL = os.getenv("CLASSIFIER_MODEL", "gemini-2.5-flash")
+_CLASSIFIER_MODEL = os.getenv("CLASSIFIER_MODEL", "gemini-2.5-flash-lite")
 _GENAI_CLIENT = genai.Client(
     api_key=os.getenv("GEMINI_API_KEY"),
 )
