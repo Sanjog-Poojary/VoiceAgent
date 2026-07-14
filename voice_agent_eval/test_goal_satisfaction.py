@@ -473,3 +473,48 @@ def test_clarifying_agent_decline_intercepted_by_upstream_critic():
     assert reason == "premature_termination"
     assert rev_app is True
 
+
+def test_competitor_deflection_and_bail():
+    contract = SalesPitchAgentContract()
+    
+    # First mention: should deflect
+    classification1 = TurnClassification(
+        detected_language="English", call_sentiment="Neutral",
+        is_valid_answer=True, is_acceptance=False, is_decline=False,
+        is_third_party=False, is_competitor_mention=True, is_loyalty_question=False,
+        is_appointment_accept=False, is_appointment_decline=False, is_injection_attempt=False,
+        preferred_slot="", is_silent_turn=False, is_knowledge_question=False,
+        knowledge_query="", ambiguity_reason="", confidence_score=0.95
+    )
+    state1 = {"competitor_mentions": 0, "last_outcome": ""}
+    
+    outcome1, _ = asyncio.run(contract.post_process(classification1, {}, state1))
+    assert outcome1 == "competitor_deflect"
+    
+    # Simulate orchestrator_node setting last_outcome
+    state1["last_outcome"] = outcome1
+    next_agent1, updates1 = contract.determine_next_agent(classification1, state1, "is there an offer at Zara")
+    assert next_agent1 == "SalesPitchAgent"
+    assert updates1.get("competitor_mentions") == 1
+
+    # Second mention: should bail
+    classification2 = TurnClassification(
+        detected_language="English", call_sentiment="Neutral",
+        is_valid_answer=True, is_acceptance=False, is_decline=False,
+        is_third_party=False, is_competitor_mention=True, is_loyalty_question=False,
+        is_appointment_accept=False, is_appointment_decline=False, is_injection_attempt=False,
+        preferred_slot="", is_silent_turn=False, is_knowledge_question=False,
+        knowledge_query="", ambiguity_reason="", confidence_score=0.95
+    )
+    state2 = {"competitor_mentions": 1, "last_outcome": ""}
+    
+    outcome2, _ = asyncio.run(contract.post_process(classification2, {}, state2))
+    assert outcome2 == "competitor_bail"
+    
+    state2["last_outcome"] = outcome2
+    next_agent2, updates2 = contract.determine_next_agent(classification2, state2, "but is Zara cheaper")
+    assert next_agent2 == "ApologyAgent"
+    assert updates2.get("competitor_mentions") == 2
+    assert updates2.get("offer_accepted") is False
+
+

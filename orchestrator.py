@@ -189,6 +189,7 @@ def init_state_defaults(ctx: Context):
         "escalation_reason": "agitated",
         "previous_agent": "",
         "clarification_attempts": 0,
+        "competitor_mentions": 0,
         "personal_shopper_offered": False,
         "personal_shopper_accepted": False,
         "preferred_appointment_slot": "",
@@ -808,6 +809,8 @@ class PlanningAgentContract(AgentContract):
             next_agent, route_updates = self._route_on_goal_incomplete(classification, state, user_input_str)
             
         updates.update(route_updates)
+        if state.get("last_outcome") in ("competitor_deflect", "competitor_bail"):
+            updates["competitor_mentions"] = state.get("competitor_mentions", 0) + 1
         return next_agent, updates
 
 
@@ -950,11 +953,21 @@ class SalesPitchAgentContract(PlanningAgentContract):
         secondary_offer_pitched = memory.get("secondary_offer_pitched", False) if isinstance(memory, dict) else getattr(memory, "secondary_offer_pitched", False)
         has_secondary_offer = memory.get("has_secondary_offer", False) if isinstance(memory, dict) else getattr(memory, "has_secondary_offer", False)
 
+        # Check acceptance/decline first to give them precedence over competitor mentions
+        is_accept = classification.is_acceptance
+        is_dec = classification.is_decline
+
         # PRIORITY: knowledge questions always freeze the phase — never advance to secondary pitch
         if getattr(classification, "is_knowledge_question", False) or classification.is_loyalty_question:
             last_outcome = "knowledge_q" if getattr(classification, "is_knowledge_question", False) else "tangent"
         elif classification.confidence_score < 0.75:
             last_outcome = "pending"
+        elif getattr(classification, "is_competitor_mention", False) and not (is_accept or is_dec):
+            current_mentions = state.get("competitor_mentions", 0)
+            if current_mentions + 1 >= 2:
+                last_outcome = "competitor_bail"
+            else:
+                last_outcome = "competitor_deflect"
         elif not secondary_offer_pitched and has_secondary_offer:
             # Phase 2 -> Phase 3 (Secondary Pitch) — only on clear acceptance/decline
             if classification.is_acceptance:
@@ -1004,12 +1017,14 @@ class SalesPitchAgentContract(PlanningAgentContract):
         outcome = state.get("last_outcome")
         if outcome in ("success", "knowledge_q", "secondary_pitch"):
             return True
-        return outcome in ("accepted", "declined")
+        return outcome in ("accepted", "declined", "competitor_bail")
 
     def _route_on_goal_complete(self, state):
         outcome = state.get("last_outcome")
         if outcome in ("success", "knowledge_q", "secondary_pitch"):
             return "SalesPitchAgent", {}  # Advance internally or answer RAG detour
+        if outcome == "competitor_bail":
+            return "ApologyAgent", {"offer_accepted": False}
         if outcome == "accepted":
             return "PostCallAgent", {"offer_accepted": True}
         return "ApologyAgent", {"user_declined_offer": True}
@@ -1017,7 +1032,7 @@ class SalesPitchAgentContract(PlanningAgentContract):
     def _route_on_goal_incomplete(self, classification, state, user_input_str):
         if classification.is_loyalty_question:
             return "SalesPitchAgent", {}
-        if state.get("last_outcome") in ("knowledge_q", "secondary_pitch", "interest"):
+        if state.get("last_outcome") in ("knowledge_q", "secondary_pitch", "interest", "competitor_deflect"):
             return "SalesPitchAgent", {}
         if state.get("last_outcome") == "pending":
             return "ClarifyingAgent", {"previous_agent": self.name}
@@ -1334,12 +1349,7 @@ def check_safety_guardrails(
             "escalation_triggered": False
         }
 
-    # 3. Competitor Mention
-    if classification.is_competitor_mention:
-        return "ApologyAgent", {
-            "offer_accepted": False,
-            "escalation_triggered": False
-        }
+
 
     # 4. Consecutive Silence
     if classification.is_silent_turn:
@@ -1911,6 +1921,19 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
         yield RequestInput(message=msg)
         return
 
+    # Deflect competitor mentions and re-pitch active offer
+    if ctx.state.get("last_outcome") == "competitor_deflect":
+        if lang == "Hindi":
+            msg = f"मैं अन्य ब्रांड्स के ऑफ़र के बारे में बात नहीं कर सकता, लेकिन हमारा ऑफ़र {brand} पर {discount}% की छूट (कोड {code}) के साथ तैयार है। क्या मैं इसे भेज दूँ?"
+        else:
+            msg = f"I'm not able to speak to other retailers' offers, but I can tell you — our {discount}% off {brand} with code {code} is ready to go right now. Want me to activate it?"
+        
+        trans = list(ctx.state.get("raw_audio_transcription", []))
+        trans.append(f"Agent: {msg}")
+        ctx.state["raw_audio_transcription"] = trans
+        yield RequestInput(message=msg)
+        return
+
     if secondary_offer_pitched:
         # Phase 3: Secondary Pitch logic
         sec_offer = next((o for o in all_offers if o.get("offer_brand") == secondary_brand), {})
@@ -2035,6 +2058,11 @@ async def apology_agent(ctx: Context, node_input: Any):
             msg = "कोई बात नहीं। मैं बाद में उनसे संपर्क करने की कोशिश करूँगा। आपका दिन शुभ हो!"
         else:
             msg = "No problem at all. I'll try reaching them another time. Have a wonderful day!"
+    elif outcome == "competitor_bail":
+        if lang == "Hindi":
+            msg = "मुझे लगता है कि मुझे अब चलना चाहिए। आपका दिन शुभ हो!"
+        else:
+            msg = "I think it's best I let you go. Have a wonderful day!"
     else:
         if lang == "Hindi":
             msg = "कोई बात नहीं। किसी भी असुविधा के लिए हम क्षमा चाहते हैं। आपका दिन शुभ हो!"

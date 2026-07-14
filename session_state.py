@@ -57,6 +57,7 @@ class SessionState(BaseModel):
     escalation_reason: str = Field(default="agitated", description="The reason for escalation: 'agitated' or 'malicious'.")
     previous_agent: str = Field(default="", description="The previous agent active before an injection warning deflection occurred.")
     clarification_attempts: int = Field(default=0, description="The number of clarification attempts during ambiguous turns.")
+    competitor_mentions: int = Field(default=0, description="Counter for competitor mentions.")
 
     # Personal Shopper / Post-Call Action Layer
     personal_shopper_offered: bool = Field(default=False, description="True if the user was offered the personal shopper service.")
@@ -70,7 +71,7 @@ class SessionState(BaseModel):
     current_goal: str = Field(default="", description="The current conversational goal or target agent's objective.")
     goal_history: List[str] = Field(default_factory=list, description="A historical log of conversational goals (max 5).")
     last_agent: str = Field(default="", description="The name of the last active sub-agent.")
-    last_outcome: Literal["success", "failed", "accepted", "declined", "decline", "third_party", "tangent", "silence", "pending", "interest", "knowledge_q", "secondary_pitch", "slot_captured", ""] = Field(default="", description="The outcome of the last agent's turn.")
+    last_outcome: Literal["success", "failed", "accepted", "declined", "decline", "third_party", "tangent", "silence", "pending", "interest", "knowledge_q", "secondary_pitch", "slot_captured", "competitor_deflect", "competitor_bail", ""] = Field(default="", description="The outcome of the last agent's turn.")
     agent_memory: AgentMemory = Field(default_factory=AgentMemory, description="Schema-enforced persistent agent memory.")
     bounded_plans: Dict[str, BoundedPlan] = Field(default_factory=dict, description="Active multi-step plans mapped by agent name.")
 
