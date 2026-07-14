@@ -41,7 +41,7 @@ async def resolve_phonetic_name(name: str) -> str:
             f"Return ONLY the phonetic spelling, no other text."
         )
         response = await client.aio.models.generate_content(
-            model="gemini-3.1-flash-lite",
+            model="gemini-2.5-flash",
             contents=prompt
         )
         resolved = response.text.strip()
