@@ -348,3 +348,134 @@ class TestAudioBridge(unittest.IsolatedAsyncioTestCase):
 
         # Test Case C: Low confidence -> Squelched (True)
         self.assertTrue(self.bridge.software_squelch("no please", 0.50))
+
+    def test_telephony_adapters(self):
+        from audio_bridge import TwilioAdapter, TataSmartfloAdapter, InboundEvent
+
+        # 1. Test TwilioAdapter
+        twilio = TwilioAdapter()
+        
+        # Test connected
+        evt = twilio.parse_inbound_event({"event": "connected"})
+        self.assertEqual(evt.event_type, "connected")
+
+        # Test start
+        start_payload = {
+            "event": "start",
+            "streamSid": "MZ123",
+            "start": {
+                "callSid": "CA456",
+                "customParameters": {"FirstName": "Sanjog"}
+            }
+        }
+        evt = twilio.parse_inbound_event(start_payload)
+        self.assertEqual(evt.event_type, "start")
+        self.assertEqual(evt.stream_sid, "MZ123")
+        self.assertEqual(evt.call_sid, "CA456")
+        self.assertEqual(evt.custom_parameters, {"FirstName": "Sanjog"})
+
+        # Test media
+        media_payload = {
+            "event": "media",
+            "streamSid": "MZ123",
+            "media": {
+                "payload": "dGVzdA=="
+            }
+        }
+        evt = twilio.parse_inbound_event(media_payload)
+        self.assertEqual(evt.event_type, "media")
+        self.assertEqual(evt.stream_sid, "MZ123")
+        self.assertEqual(evt.payload_b64, "dGVzdA==")
+
+        # Test stop
+        stop_payload = {
+            "event": "stop",
+            "streamSid": "MZ123"
+        }
+        evt = twilio.parse_inbound_event(stop_payload)
+        self.assertEqual(evt.event_type, "stop")
+        self.assertEqual(evt.stream_sid, "MZ123")
+
+        # Test build media
+        msg = twilio.build_media_event("MZ123", "dGVzdA==", 42)
+        self.assertEqual(msg, {
+            "event": "media",
+            "streamSid": "MZ123",
+            "media": {
+                "payload": "dGVzdA=="
+            }
+        })
+
+        # Test build clear
+        msg = twilio.build_clear_event("MZ123")
+        self.assertEqual(msg, {
+            "event": "clear",
+            "streamSid": "MZ123"
+        })
+
+        # 2. Test TataSmartfloAdapter
+        tata = TataSmartfloAdapter()
+        
+        # Test connected
+        evt = tata.parse_inbound_event({"event": "connected"})
+        self.assertEqual(evt.event_type, "connected")
+
+        # Test start
+        tata_start_payload = {
+            "event": "start",
+            "start": {
+                "streamSid": "MZ111",
+                "callSid": "CA222",
+                "customParameters": {"FirstName": "Jane"}
+            }
+        }
+        evt = tata.parse_inbound_event(tata_start_payload)
+        self.assertEqual(evt.event_type, "start")
+        self.assertEqual(evt.stream_sid, "MZ111")
+        self.assertEqual(evt.call_sid, "CA222")
+        self.assertEqual(evt.custom_parameters, {"FirstName": "Jane"})
+
+        # Test media
+        tata_media_payload = {
+            "event": "media",
+            "streamSid": "MZ111",
+            "media": {
+                "payload": "dGVzdA=="
+            }
+        }
+        evt = tata.parse_inbound_event(tata_media_payload)
+        self.assertEqual(evt.event_type, "media")
+        self.assertEqual(evt.stream_sid, "MZ111")
+        self.assertEqual(evt.payload_b64, "dGVzdA==")
+
+        # Test stop
+        tata_stop_payload = {
+            "event": "stop",
+            "streamSid": "MZ111",
+            "stop": {
+                "callSid": "CA222"
+            }
+        }
+        evt = tata.parse_inbound_event(tata_stop_payload)
+        self.assertEqual(evt.event_type, "stop")
+        self.assertEqual(evt.stream_sid, "MZ111")
+        self.assertEqual(evt.call_sid, "CA222")
+
+        # Test build media (must include chunk index)
+        msg = tata.build_media_event("MZ111", "dGVzdA==", 42)
+        self.assertEqual(msg, {
+            "event": "media",
+            "streamSid": "MZ111",
+            "media": {
+                "payload": "dGVzdA==",
+                "chunk": 42
+            }
+        })
+
+        # Test build clear
+        msg = tata.build_clear_event("MZ111")
+        self.assertEqual(msg, {
+            "event": "clear",
+            "streamSid": "MZ111"
+        })
+

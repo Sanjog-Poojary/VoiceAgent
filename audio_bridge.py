@@ -99,6 +99,129 @@ def get_interrupt_id(event) -> str | None:
             return part.function_call.id
     return None
 
+from dataclasses import dataclass
+from typing import Protocol, Any, Dict
+
+@dataclass
+class InboundEvent:
+    event_type: str  # "connected", "start", "media", "stop", "other"
+    stream_sid: Optional[str] = None
+    call_sid: Optional[str] = None
+    payload_b64: Optional[str] = None
+    custom_parameters: Optional[Dict[str, Any]] = None
+
+class TelephonyAdapter(Protocol):
+    def parse_inbound_event(self, raw_json: dict) -> InboundEvent:
+        ...
+
+    def build_media_event(self, stream_sid: str, payload_b64: str, chunk_index: int) -> dict:
+        ...
+
+    def build_clear_event(self, stream_sid: str) -> dict:
+        ...
+
+class TwilioAdapter:
+    def parse_inbound_event(self, raw_json: dict) -> InboundEvent:
+        event_type = raw_json.get("event", "other")
+        stream_sid = raw_json.get("streamSid")
+        
+        if event_type == "start":
+            start_data = raw_json.get("start", {})
+            call_sid = start_data.get("callSid")
+            custom_params = start_data.get("customParameters")
+            return InboundEvent(
+                event_type="start",
+                stream_sid=stream_sid,
+                call_sid=call_sid,
+                custom_parameters=custom_params
+            )
+        elif event_type == "media":
+            payload = raw_json.get("media", {}).get("payload")
+            return InboundEvent(
+                event_type="media",
+                stream_sid=stream_sid,
+                payload_b64=payload
+            )
+        elif event_type == "stop":
+            return InboundEvent(
+                event_type="stop",
+                stream_sid=stream_sid
+            )
+        elif event_type == "connected":
+            return InboundEvent(
+                event_type="connected"
+            )
+        return InboundEvent(event_type="other", stream_sid=stream_sid)
+
+    def build_media_event(self, stream_sid: str, payload_b64: str, chunk_index: int) -> dict:
+        return {
+            "event": "media",
+            "streamSid": stream_sid,
+            "media": {
+                "payload": payload_b64
+            }
+        }
+
+    def build_clear_event(self, stream_sid: str) -> dict:
+        return {
+            "event": "clear",
+            "streamSid": stream_sid
+        }
+
+class TataSmartfloAdapter:
+    def parse_inbound_event(self, raw_json: dict) -> InboundEvent:
+        event_type = raw_json.get("event", "other")
+        stream_sid = raw_json.get("streamSid")
+        
+        if event_type == "start":
+            start_data = raw_json.get("start", {})
+            call_sid = start_data.get("callSid")
+            custom_params = start_data.get("customParameters")
+            if not stream_sid:
+                stream_sid = start_data.get("streamSid")
+            return InboundEvent(
+                event_type="start",
+                stream_sid=stream_sid,
+                call_sid=call_sid,
+                custom_parameters=custom_params
+            )
+        elif event_type == "media":
+            payload = raw_json.get("media", {}).get("payload")
+            return InboundEvent(
+                event_type="media",
+                stream_sid=stream_sid,
+                payload_b64=payload
+            )
+        elif event_type == "stop":
+            stop_data = raw_json.get("stop", {})
+            call_sid = stop_data.get("callSid")
+            return InboundEvent(
+                event_type="stop",
+                stream_sid=stream_sid,
+                call_sid=call_sid
+            )
+        elif event_type == "connected":
+            return InboundEvent(
+                event_type="connected"
+            )
+        return InboundEvent(event_type="other", stream_sid=stream_sid)
+
+    def build_media_event(self, stream_sid: str, payload_b64: str, chunk_index: int) -> dict:
+        return {
+            "event": "media",
+            "streamSid": stream_sid,
+            "media": {
+                "payload": payload_b64,
+                "chunk": chunk_index
+            }
+        }
+
+    def build_clear_event(self, stream_sid: str) -> dict:
+        return {
+            "event": "clear",
+            "streamSid": stream_sid
+        }
+
 class AudioBridge:
     def __init__(
         self,
@@ -107,7 +230,8 @@ class AudioBridge:
         session_service,
         user_id: str,
         session_id: str,
-        deepgram_api_key: Optional[str] = None
+        deepgram_api_key: Optional[str] = None,
+        adapter: Optional[TelephonyAdapter] = None
     ):
         self.twilio_ws = twilio_ws
         self.runner = runner
@@ -115,6 +239,7 @@ class AudioBridge:
         self.user_id = user_id
         self.session_id = session_id
         self.deepgram_api_key = deepgram_api_key or os.getenv("DEEPGRAM_API_KEY", "dummy_key")
+        self.adapter = adapter or TwilioAdapter()
 
         # Queues
         self.inbound_audio_queue = asyncio.Queue()
@@ -122,6 +247,7 @@ class AudioBridge:
         self.outbound_tts_queue = asyncio.Queue()
         self.inbound_audio_chunks = []
         self.outbound_audio_chunks = []
+        self.outbound_chunk_index = 1
 
         # Shared synchronization
         self.session_lock = asyncio.Lock()
@@ -181,10 +307,12 @@ class AudioBridge:
 
     async def get_tts_audio_stream(self, text: str):
         tts_text = self.apply_phonetic_replacements(text)
+        chunk_size = 640
+        assert chunk_size % 160 == 0, "Tata Smartflo requires chunk sizes that are multiples of 160 bytes to prevent audio gaps"
+        
         if not self.deepgram_api_key or self.deepgram_api_key.startswith("dummy"):
             # Dummy mode: return mocked mulaw sound chunks (0xff bytes) proportional to string length
             dummy_bytes = b"\xff" * (len(tts_text) * 80)
-            chunk_size = 640
             for i in range(0, len(dummy_bytes), chunk_size):
                 yield dummy_bytes[i:i+chunk_size]
             return
@@ -227,11 +355,9 @@ class AudioBridge:
                         break
                     chunk = dummy_filler[i:i+chunk_size]
                     payload = base64.b64encode(chunk).decode("utf-8")
-                    await self.twilio_ws.send_json({
-                        "event": "media",
-                        "streamSid": self.stream_sid,
-                        "media": {"payload": payload}
-                    })
+                    msg = self.adapter.build_media_event(self.stream_sid, payload, self.outbound_chunk_index)
+                    await self.twilio_ws.send_json(msg)
+                    self.outbound_chunk_index += 1
                     await asyncio.sleep(0.07)
             finally:
                 self.filler_active = False
@@ -310,10 +436,8 @@ class AudioBridge:
                                                 
                                                 # Send Clear to Twilio to stop playback immediately
                                                 if self.stream_sid:
-                                                    await self.twilio_ws.send_json({
-                                                        "event": "clear",
-                                                        "streamSid": self.stream_sid
-                                                    })
+                                                    msg = self.adapter.build_clear_event(self.stream_sid)
+                                                    await self.twilio_ws.send_json(msg)
                                                 self.is_speaking = False
                                             
                                             # Push transcript to reasoning queue
@@ -471,11 +595,9 @@ class AudioBridge:
 
                         payload = base64.b64encode(chunk).decode("utf-8")
                         if self.stream_sid:
-                            await self.twilio_ws.send_json({
-                                "event": "media",
-                                "streamSid": self.stream_sid,
-                                "media": {"payload": payload}
-                            })
+                            msg = self.adapter.build_media_event(self.stream_sid, payload, self.outbound_chunk_index)
+                            await self.twilio_ws.send_json(msg)
+                            self.outbound_chunk_index += 1
 
                     if aborted:
                         break

@@ -4,7 +4,7 @@ import csv
 from contextlib import asynccontextmanager
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request, BackgroundTasks
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, Response, JSONResponse
 from pydantic import BaseModel
 from pypdf import PdfReader
 from google import genai
@@ -642,12 +642,14 @@ async def twilio_stream(websocket: WebSocket):
     )
     
     # Instantiate AudioBridge
+    from audio_bridge import TwilioAdapter
     bridge = AudioBridge(
         twilio_ws=websocket,
         runner=runner,
         session_service=session_service,
         user_id=user_id,
-        session_id=session_id
+        session_id=session_id,
+        adapter=TwilioAdapter()
     )
     
     # Start AudioBridge background pipelines
@@ -659,13 +661,13 @@ async def twilio_stream(websocket: WebSocket):
             message_text = await websocket.receive_text()
             data = json.loads(message_text)
             
-            event = data.get("event")
-            if event == "connected":
-                logger.info("Twilio stream connected event received.")
-            elif event == "start":
-                bridge.stream_sid = data.get("start", {}).get("streamSid")
-                bridge.call_sid = data.get("start", {}).get("callSid")
-                logger.info(f"Twilio stream started. StreamSid: {bridge.stream_sid}, CallSid: {bridge.call_sid}")
+            inbound_event = bridge.adapter.parse_inbound_event(data)
+            if inbound_event.event_type == "connected":
+                logger.info("Telephony stream connected event received.")
+            elif inbound_event.event_type == "start":
+                bridge.stream_sid = inbound_event.stream_sid
+                bridge.call_sid = inbound_event.call_sid
+                logger.info(f"Telephony stream started. StreamSid: {bridge.stream_sid}, CallSid: {bridge.call_sid}")
                 
                 # Push the initial [Call Connected] turn to orchestrator
                 await bridge.turn_queue.put({
@@ -674,19 +676,123 @@ async def twilio_stream(websocket: WebSocket):
                     "text": "[Call Connected]"
                 })
                 
-            elif event == "media":
-                payload = data.get("media", {}).get("payload")
-                if payload:
-                    audio_bytes = base64.b64decode(payload)
+            elif inbound_event.event_type == "media":
+                if inbound_event.payload_b64:
+                    audio_bytes = base64.b64decode(inbound_event.payload_b64)
                     await bridge.inbound_audio_queue.put(audio_bytes)
                     
-            elif event == "stop":
-                logger.info("Twilio stream stop event received.")
+            elif inbound_event.event_type == "stop":
+                logger.info("Telephony stream stop event received.")
                 break
     except (WebSocketDisconnect, RuntimeError):
         logger.info("Twilio stream WebSocket disconnected.")
     except Exception as e:
         logger.error(f"Error in Twilio WebSocket handler: {e}", exc_info=True)
+    finally:
+        await bridge.save_session_artifacts()
+        await bridge.close()
+
+
+@app.post("/api/tata/voice")
+async def tata_voice(request: Request, background_tasks: BackgroundTasks, customer_id: str = "1"):
+    # Trigger phonetic name resolution in background while phone is ringing
+    background_tasks.add_task(pre_resolve_phonetic_name, customer_id)
+    
+    host = request.headers.get("host")
+    protocol = "wss" if "localhost" not in host and "127.0.0.1" not in host else "ws"
+    
+    ngrok_url = os.getenv("NGROK_URL")
+    if ngrok_url:
+        ngrok_host = ngrok_url.replace("https://", "").replace("http://", "")
+        wss_url = f"wss://{ngrok_host}/api/tata/stream?customer_id={customer_id}"
+    else:
+        wss_url = f"{protocol}://{host}/api/tata/stream?customer_id={customer_id}"
+        
+    logger.info(f"Tata voice call received. Returning websocket redirect: {wss_url}")
+    
+    # Strictly return only success and wss_url to satisfy Tata's strict validation
+    return JSONResponse(content={
+        "success": True,
+        "wss_url": wss_url
+    })
+
+@app.websocket("/api/tata/stream")
+async def tata_stream(websocket: WebSocket):
+    await websocket.accept()
+    logger.info("Tata Smartflo media stream connection accepted.")
+    
+    query_params = websocket.query_params
+    customer_id = query_params.get("customer_id", "1")
+    
+    session_id = f"tata_{uuid.uuid4().hex[:8]}"
+    user_id = f"phone_{customer_id}"
+    
+    customer = get_user(customer_id)
+    initial_state = {
+        "customer_id": customer_id,
+        "detected_language": customer.get("base_language") or "English",
+        "current_agent": "IdentityAgent",
+        "verification_attempts": 0,
+        "call_sentiment": "Neutral",
+        "offer_pitched": False,
+        "offer_accepted": False,
+        "escalation_triggered": False,
+        "raw_audio_transcription": [],
+        "silent_turns": 0
+    }
+    
+    await session_service.create_session(
+        app_name="VoiceAgent",
+        user_id=user_id,
+        session_id=session_id,
+        state=initial_state
+    )
+    
+    from audio_bridge import TataSmartfloAdapter
+    bridge = AudioBridge(
+        twilio_ws=websocket,
+        runner=runner,
+        session_service=session_service,
+        user_id=user_id,
+        session_id=session_id,
+        adapter=TataSmartfloAdapter()
+    )
+    
+    await bridge.start()
+    
+    import json
+    try:
+        while True:
+            message_text = await websocket.receive_text()
+            data = json.loads(message_text)
+            
+            inbound_event = bridge.adapter.parse_inbound_event(data)
+            if inbound_event.event_type == "connected":
+                logger.info("Telephony stream connected event received.")
+            elif inbound_event.event_type == "start":
+                bridge.stream_sid = inbound_event.stream_sid
+                bridge.call_sid = inbound_event.call_sid
+                logger.info(f"Telephony stream started. StreamSid: {bridge.stream_sid}, CallSid: {bridge.call_sid}")
+                
+                # Push the initial [Call Connected] turn to orchestrator
+                await bridge.turn_queue.put({
+                    "session_id": session_id,
+                    "turn_id": 0,
+                    "text": "[Call Connected]"
+                })
+                
+            elif inbound_event.event_type == "media":
+                if inbound_event.payload_b64:
+                    audio_bytes = base64.b64decode(inbound_event.payload_b64)
+                    await bridge.inbound_audio_queue.put(audio_bytes)
+                    
+            elif inbound_event.event_type == "stop":
+                logger.info("Telephony stream stop event received.")
+                break
+    except (WebSocketDisconnect, RuntimeError):
+        logger.info("Tata stream WebSocket disconnected.")
+    except Exception as e:
+        logger.error(f"Error in Tata WebSocket handler: {e}", exc_info=True)
     finally:
         await bridge.save_session_artifacts()
         await bridge.close()
