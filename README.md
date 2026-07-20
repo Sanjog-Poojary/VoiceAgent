@@ -118,6 +118,10 @@ The orchestrator applies **8 deterministic safety rules** on top of every LLM ro
 | `POST` | `/api/chat/message` | Send turn message |
 | `POST` | `/api/webhooks/whatsapp` | WhatsApp confirmation webhook |
 | `POST` | `/api/crm/create-ticket` | CRM escalation ticket creation |
+| `POST` | `/api/tata/voice` | Tata Smartflo voice call webhook |
+| `WS` | `/api/tata/stream` | Tata Smartflo WebSocket audio stream |
+| `POST` | `/api/twilio/voice` | Twilio voice call webhook |
+| `WS` | `/api/twilio/stream` | Twilio WebSocket audio stream |
 
 ---
 

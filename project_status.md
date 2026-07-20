@@ -21,6 +21,14 @@
 - **Goal Satisfaction priority tests:** Added tests (e.g., `test_appointment_override_priority`) proving that `is_appointment_accept` successfully overrides `is_decline` in the routing tree.
 - **All tests passing:** `test_classification.py`, `test_goal_satisfaction.py`, and `test_contract_static_analysis.py` all report 100% pass rates.
 
+### **D. Telephony Provider Abstraction & Tata Smartflo Integration**
+- **Adapter Interface (`TelephonyAdapter`):** Extracted telephony parsing and event generation out of `AudioBridge`. Added `TwilioAdapter` and `TataSmartfloAdapter` supporting lifecycle events (`connected`, `start`, `media`, `stop`, `clear`).
+- **Tata Smartflo Webhook & WS Endpoints:** 
+  - Implemented `/api/tata/voice` to respond within Tata's strict 2-second timeout and comply with its exact two-key JSON response schema (`{"success": true, "wss_url": "..."}`).
+  - Implemented `/api/tata/stream` WebSocket connection handling.
+- **Audio Constraints:** Added checks enforcing 160-byte multiple payload chunk sizes (such as the default 640-byte chunk size) to prevent audio gaps on Tata Smartflo.
+- **Parametrized Telephony Tests:** Added `test_telephony_adapters` to `test_audio_bridge.py` verifying identical downstream behavior of both adapters. All `test_audio_bridge.py` tests pass cleanly.
+
 ## 2. What We Expected To Do (Next Steps)
 - **Full Golden Dataset Run:** We intended to run `run_state_assertions.py` or equivalent evaluation suites across the entire dataset to ensure there are absolutely no regressions after the massive `bounded_plans`, Personal Shopper, and Gemini-Vertex shifts.
 - **Scale Testing:** Test the agent UI end-to-end dynamically to ensure the Vertex AI endpoint can handle prolonged multi-turn conversations without any new rate-limiting surprises.

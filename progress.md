@@ -29,7 +29,14 @@ This document tracks the execution progress of the different development phases 
 - [x] Bind REST API tools (POST requests for CRM ticket, WhatsApp alerts) to these agents.
 - [x] Test complete flow from greetings to final resolution.
 
-### [/] Phase 6: Gemini Live API Voice Integration
-- [ ] Swap Groq/text engine with Vertex AI/Gemini Live API.
-- [ ] Implement bidirectional WebSocket streaming for real-time audio.
-- [ ] Output structured database JSON payloads on call termination.
+### [x] Phase 6: Gemini Live API / Vertex AI Voice Integration
+- [x] Swap Groq/text engine with Vertex AI/Gemini.
+- [x] Implement bidirectional WebSocket streaming for real-time audio (audio_bridge.py).
+- [x] Output structured database JSON payloads on call termination.
+
+### [x] Phase 7: Telephony Provider Abstraction & Tata Smartflo Support
+- [x] Design provider-agnostic `TelephonyAdapter` protocol to separate bridge logic from telephony-specific payloads.
+- [x] Implement `TwilioAdapter` and `TataSmartfloAdapter` supporting connected, start, media, stop, and clear events.
+- [x] Enforce Tata's 160-byte multiple payload chunking constraint.
+- [x] Add `/api/tata/voice` and `/api/tata/stream` routes to `mock_server.py` complying with Tata's strict JSON response schema and 2s response deadline.
+- [x] Add automated parametrized test coverage in `test_audio_bridge.py` verifying identical downstream behavior across all providers.
