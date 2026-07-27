@@ -230,7 +230,7 @@ class TurnClassification(BaseModel):
     detected_language: str = Field(
         description="The language the customer is speaking. Must be 'English' or 'Hindi'."
     )
-    call_sentiment: Literal["Positive", "Neutral", "Agitated"]
+    call_sentiment: Literal["Positive", "Neutral", "Agitated", "Sarcastic"]
 
     # Verification signals
     is_valid_answer: bool = Field(
@@ -243,9 +243,17 @@ class TurnClassification(BaseModel):
     # Intent/action signals — these handle slang, sarcasm, indirect phrasing
     is_acceptance: bool = Field(
         description=(
-            "True if the user agreed to, accepted the retail offer, or showed clear interest in hearing the offer "
-            "(e.g., 'sure', 'yeah do it', 'what is it', 'tell me', 'what coupon', 'what is the offer', 'no cap I want it'). "
-            "Consider the conversational context."
+            "True if either is_offer_accepted is true or is_conversation_continue is true."
+        )
+    )
+    is_offer_accepted: bool = Field(
+        description=(
+            "True ONLY if the user literally accepted the offer to receive it (e.g. 'yes send it', 'do it', 'sure', 'Haan de do', 'send it')."
+        )
+    )
+    is_conversation_continue: bool = Field(
+        description=(
+            "True if the user prompts to continue the pitch or asks what else there is (e.g. 'Haan batao', 'tell me', 'what else is left', 'aur kya bacha hai')."
         )
     )
     is_decline: bool = Field(
@@ -334,7 +342,7 @@ class TurnClassification(BaseModel):
         if not isinstance(values, dict):
             return values
         val = values.get("call_sentiment")
-        if not val or val not in ("Positive", "Neutral", "Agitated"):
+        if not val or val not in ("Positive", "Neutral", "Agitated", "Sarcastic"):
             values["call_sentiment"] = "Neutral"
         if not values.get("detected_language"):
             values["detected_language"] = "English"
@@ -358,7 +366,8 @@ class TurnClassification(BaseModel):
         bool_fields = (
             "is_valid_answer", "is_decline", "is_acceptance", "is_injection_attempt",
             "is_loyalty_question", "is_silent_turn", "is_competitor_mention", "is_third_party",
-            "is_appointment_accept", "is_appointment_decline", "is_knowledge_question"
+            "is_appointment_accept", "is_appointment_decline", "is_knowledge_question",
+            "is_offer_accepted", "is_conversation_continue"
         )
         for f in bool_fields:
             v = values.get(f)
@@ -366,6 +375,10 @@ class TurnClassification(BaseModel):
                 values[f] = False
             elif isinstance(v, str):
                 values[f] = v.lower() in ("true", "yes", "1")
+
+        # Dynamically map is_acceptance to cover either direct offer accepted or conversational continuation
+        if values.get("is_offer_accepted") or values.get("is_conversation_continue"):
+            values["is_acceptance"] = True
 
         # Dependency coercion: if is_acceptance or is_decline is True, is_valid_answer must be True
         if values.get("is_acceptance") or values.get("is_decline"):
@@ -555,14 +568,16 @@ IMPORTANT: You MUST analyze the entire latest user utterance. Do not truncate it
 
 Key rules:
 - detected_language: "English" or "Hindi". Set to "Hindi" ONLY if the user explicitly speaks Hindi words (e.g. "haan", "boliye", "kya", "naam", "baat"). If the user speaks English (e.g. "yes", "this is", "hello", "speaking", "activate", "sure"), MUST set to "English".
-- call_sentiment: "Positive", "Neutral", or "Agitated". Defensive, evasive, or cautious questions/responses (e.g. "Who is asking?", "Depends who's asking", "Why do you need to know", "What is this about") are normal cautious behaviors; you MUST classify their sentiment as "Neutral", NOT "Agitated". Set to "Agitated" ONLY for clear hostility, anger, shouting, or extreme irritation.
+- call_sentiment: "Positive", "Neutral", "Agitated", or "Sarcastic". Defensive, evasive, or cautious questions/responses (e.g. "Who is asking?", "Depends who's asking", "Why do you need to know", "What is this about") are normal cautious behaviors; you MUST classify their sentiment as "Neutral", NOT "Agitated". Set to "Agitated" ONLY for clear hostility, anger, shouting, or extreme irritation. If the user uses fake enthusiasm (e.g., "Arre waah", "kya baat hai") combined with self-deprecating, rhetorical, or frustrated slang (e.g., "Loot lo mujhe", "kya bacha hai"), you MUST classify the sentiment as "Sarcastic", NOT "Positive" or "Neutral".
 - is_valid_answer: true for any affirmative identity confirmation.
   Examples of valid confirmations: "Yes", "yes", "That's me", "Speaking", "Haan", "haa mai hu", "yeah", "yep", "correct", "mm-hmm", "yup", "speaking".
   These are standard/casual identity confirmations and MUST yield is_valid_answer=true and confidence_score >= 0.60.
   Vague or evasive non-confirmations (e.g. "maybe", "why", "who is this") = false.
-- is_acceptance: true ONLY for clear verbal agreements to proceed: slang yeses ("no cap", "sure", "yep", "go ahead"), direct accepts ("yes please", "do it", "send it"), code-switch accepts ("haan de do", "haan bhej do"). You MUST set is_acceptance to true and confidence_score >= 0.85 for these.
-  INTENT HIERARCHY OVERRIDE: If the user grants permission to proceed (e.g., "Haan batao", "Yes", "Tell me") alongside sarcastic, rhetorical, or exciting noise (e.g. "Arre waah, kya baat hai. Loot lo mujhe"), the permission to proceed overrides the noise. Set is_acceptance=true.
-  IMPORTANT: Questions asking for offer details ("what is it?", "which brand?", "tell me more", "which company?", "what's the coupon?") are NOT acceptances — they are is_knowledge_question=true.
+- is_offer_accepted: true ONLY if the user literally and directly accepted the retail offer to receive or activate it (e.g. "yes send it", "do it", "send it", "Haan de do", "Haan bhej do"). Sarcastic continuation (e.g. "Loot lo mujhe. Haan batao") is FALSE (they are continuing the conversation, not accepting the offer itself).
+- is_conversation_continue: true if the user prompts to continue the pitch, hear the next item, or asks what else there is (e.g. "Haan batao", "tell me more", "what else is left", "aur kya bacha hai").
+- is_acceptance: true if either is_offer_accepted is true or is_conversation_continue is true.
+  INTENT HIERARCHY OVERRIDE: If the user says "Haan batao" or "Yes, tell me" alongside sarcastic or rhetorical noise (e.g. "Arre waah, kya baat hai. Loot lo mujhe"), they want to continue the conversation (so set is_conversation_continue=true, but set is_offer_accepted=false since they did not accept the offer).
+  IMPORTANT: Questions asking for offer details ("what is it?", "which brand?", "tell me more", "which company?", "what's the coupon?") are NOT acceptances or continuations — they are is_knowledge_question=true.
 - is_decline: true covers indirect refusals ("maybe later", "I'll pass"), polite nos, and disinterest.
   Does not overlap with is_acceptance.
 - is_third_party: true only if caller explicitly says they are not the named person (e.g. "I am her husband", "she's not available", "this is his wife"). Evasive or vague questions (e.g., "depends who's asking", "why do you need to know") do NOT mean they are a third party; classify as false.
@@ -995,7 +1010,7 @@ class SalesPitchAgentContract(PlanningAgentContract):
                     plan.active_step = "Confirm Acceptance"
             else:
                 # Phase 2 -> Phase 3 (Secondary Pitch) — only on clear acceptance/decline
-                if classification.is_acceptance:
+                if classification.is_offer_accepted:
                     if isinstance(memory, dict):
                         memory["primary_offer_accepted"] = True
                     else:
@@ -1016,7 +1031,7 @@ class SalesPitchAgentContract(PlanningAgentContract):
         else:
             # Phase 3 -> End (or Phase 2 -> End if no secondary offer exists)
             primary_accepted = memory.get("primary_offer_accepted", False) if isinstance(memory, dict) else getattr(memory, "primary_offer_accepted", False)
-            accepted_any = primary_accepted or classification.is_acceptance
+            accepted_any = primary_accepted or classification.is_offer_accepted
             last_outcome = "accepted" if accepted_any else "declined"
             
             if isinstance(plan, dict):
@@ -2073,6 +2088,14 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
             except Exception as rag_err:
                 logger.warning(f"RAG knowledge lookup failed/timed out: {rag_err}")
                 msg = f"{fallback_ans} Now, as I was saying... {msg}"
+
+    # Sarcasm acknowledgement buffer
+    if ctx.state.get("call_sentiment") == "Sarcastic":
+        if lang == "Hindi":
+            sarcasm_buf = "Haha, main samajhta hoon, par sach mein deals kaafi achi hain! "
+        else:
+            sarcasm_buf = "Haha, I get it, but the deals are genuinely good! "
+        msg = sarcasm_buf + msg
 
     trans = list(ctx.state.get("raw_audio_transcription", []))
     trans.append(f"Agent: {msg}")
