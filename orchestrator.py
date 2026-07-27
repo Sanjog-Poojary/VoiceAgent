@@ -5,7 +5,7 @@ import hashlib
 import dotenv
 import httpx
 import logging
-from typing import List, Any, Literal
+from typing import List, Any, Literal, Optional
 from pydantic import BaseModel, Field, model_validator
 from google.adk.agents import LlmAgent, Context
 from google.adk.workflow import node, Workflow, START, DEFAULT_ROUTE
@@ -411,6 +411,8 @@ class TurnClassification(BaseModel):
             values["is_valid_answer"] = True
 
         return values
+
+TurnClassification.model_rebuild()
 
 # ---------------------------------------------------------------------------
 # Critique — Typed return shape for criticize_decision()
