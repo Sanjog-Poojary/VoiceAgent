@@ -725,6 +725,84 @@ async def classify_turn(user_input: str, state: dict) -> TurnClassification:
     return TurnClassification(confidence_score=0.0, ambiguity_reason="classifier_unavailable")
 
 
+async def synthesize_audio_response(queue_results: list[str], lang: str = "English") -> str:
+    """Takes raw system execution results and uses Gemini Flash-Lite to synthesize a single natural spoken response."""
+    if not queue_results:
+        return "Waise, kya main aapki kisi aur cheez mein madad kar sakta hoon?" if lang == "Hindi" else "Is there anything else I can help you with today?"
+
+    formatted_results = "\n".join(queue_results)
+    script_constraint = "NO Devanagari characters. You MUST use ONLY the Latin/Roman alphabet (e.g., 'Bilkul, main check karta hoon')." if lang == "Hindi" else "Use clear, concise natural English."
+
+    smoothing_prompt = f"""\
+You are the final conversational smoothing engine for a Shoppers Stop voice agent.
+Combine these system execution results into a SINGLE, natural, empathetic spoken response.
+
+RAW SYSTEM EXECUTION RESULTS:
+{formatted_results}
+
+SYNTHESIS RULES:
+1. Be cohesive and natural. Don't sound like a robot reading a checklist.
+2. Decline Guardrail: If the results say the user declined, gracefully accept it. DO NOT pitch the offer again.
+3. Missing Data: If the results say you must ask for an email, explicitly ask for it.
+4. SCRIPT CONSTRAINT: {script_constraint}
+
+Synthesized Spoken Response:"""
+
+    try:
+        response = await _GENAI_CLIENT.aio.models.generate_content(
+            model=_CLASSIFIER_MODEL,
+            contents=smoothing_prompt,
+        )
+        ans = response.text.strip() if response.text else ""
+        if ans:
+            return ans
+    except Exception as e:
+        logger.warning(f"Audio response synthesis failed: {e}")
+
+    return " ".join(r.replace("ACTION: ", "") for r in queue_results)
+
+
+async def process_intent_queue(ctx: Context, classification: TurnClassification) -> str:
+    """Processes multi-intent turn items sequentially and returns a synthesized spoken response."""
+    queue_results = []
+    lang = ctx.state.get("detected_language", "English")
+    cust_id = ctx.state.get("customer_id", "1")
+
+    # 1. Handle Declines First (Priority Override)
+    if classification.is_decline:
+        ctx.state["offer_accepted"] = False
+        queue_results.append("ACTION: User declined the offer. Do not pitch the offer again.")
+
+    # 2. Process CRM Updates (With Missing Variable Halt)
+    if classification.is_crm_update_request:
+        if not classification.new_email_address:
+            queue_results.append("ACTION: User wants to update email, but provided NO email address. You MUST ask them for their new email address.")
+        else:
+            await update_customer_details(cust_id, email=classification.new_email_address)
+            queue_results.append(f"ACTION: Successfully updated email to {classification.new_email_address}.")
+
+    # 3. Process RAG / Knowledge Queries
+    if classification.is_knowledge_question or classification.is_loyalty_question:
+        q = classification.knowledge_query or ctx.state.get("last_knowledge_query", "")
+        if q:
+            try:
+                async with httpx.AsyncClient(timeout=4.0) as client:
+                    rag_resp = await client.get(f"{MOCK_SERVER_URL}/api/knowledge?q={q}")
+                    if rag_resp.status_code == 200:
+                        ans = rag_resp.json().get("answer", "")
+                        if ans:
+                            queue_results.append(f"ACTION: Answer the user's question using this data: {ans}")
+                        else:
+                            queue_results.append("ACTION: User asked a policy question, but the database had no answer. Advise them to ask store staff.")
+                    else:
+                        queue_results.append("ACTION: User asked a policy question, but the database had no answer. Advise them to ask store staff.")
+            except Exception as rag_err:
+                logger.warning(f"RAG lookup in intent queue failed: {rag_err}")
+                queue_results.append("ACTION: User asked a policy question, but the database had no answer. Advise them to ask store staff.")
+
+    return await synthesize_audio_response(queue_results, lang=lang)
+
+
 # Hard escalation surface markers (supplement classifier-derived call_sentiment)
 _ESCALATION_KEYWORDS = frozenset([
     "supervisor", "manager", "gussa", "angry", "main gussa", "escalate",
