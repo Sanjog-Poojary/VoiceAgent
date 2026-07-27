@@ -969,25 +969,41 @@ class SalesPitchAgentContract(PlanningAgentContract):
         elif classification.confidence_score < 0.75:
             last_outcome = "pending"
         elif not secondary_offer_pitched and has_secondary_offer:
-            # Phase 2 -> Phase 3 (Secondary Pitch) — only on clear acceptance/decline
-            if classification.is_acceptance:
-                if isinstance(memory, dict):
-                    memory["primary_offer_accepted"] = True
-                else:
-                    memory.primary_offer_accepted = True
+            user_text_lower = user_input_str.lower()
+            is_busy_or_firm_decline = any(w in user_text_lower for w in [
+                "busy", "driving", "meeting", "later", "call back", "call me back", "callback",
+                "not interested", "dont want", "don't want", "stop calling", "no interest"
+            ])
             
-            if isinstance(memory, dict):
-                memory["secondary_offer_pitched"] = True
+            if classification.is_decline and is_busy_or_firm_decline:
+                # Bypass secondary pitch and close directly
+                last_outcome = "declined"
+                if isinstance(plan, dict):
+                    plan["plan_status"] = "Completed"
+                    plan["active_step"] = "Confirm Acceptance"
+                else:
+                    plan.plan_status = "Completed"
+                    plan.active_step = "Confirm Acceptance"
             else:
-                memory.secondary_offer_pitched = True
+                # Phase 2 -> Phase 3 (Secondary Pitch) — only on clear acceptance/decline
+                if classification.is_acceptance:
+                    if isinstance(memory, dict):
+                        memory["primary_offer_accepted"] = True
+                    else:
+                        memory.primary_offer_accepted = True
+                
+                if isinstance(memory, dict):
+                    memory["secondary_offer_pitched"] = True
+                else:
+                    memory.secondary_offer_pitched = True
 
-            if isinstance(plan, dict):
-                plan["step_history"].append(plan["active_step"])
-                plan["active_step"] = "Present Secondary Offer"
-            else:
-                plan.step_history.append(plan.active_step)
-                plan.active_step = "Present Secondary Offer"
-            last_outcome = "secondary_pitch"
+                if isinstance(plan, dict):
+                    plan["step_history"].append(plan["active_step"])
+                    plan["active_step"] = "Present Secondary Offer"
+                else:
+                    plan.step_history.append(plan.active_step)
+                    plan.active_step = "Present Secondary Offer"
+                last_outcome = "secondary_pitch"
         else:
             # Phase 3 -> End (or Phase 2 -> End if no secondary offer exists)
             primary_accepted = memory.get("primary_offer_accepted", False) if isinstance(memory, dict) else getattr(memory, "primary_offer_accepted", False)

@@ -543,6 +543,43 @@ class TestVoiceAgentOrchestrator(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(state.get("offer_accepted"))
         print(f"\n[PASS] Context break handled. Final agent: {state.get('current_agent')}")
 
+    # SCENARIO L: Busy during first pitch (Bypass secondary)
+    async def test_scenario_l_busy_during_first_pitch(self):
+        """
+        Scenario L: After verifying, customer says they are busy / want a callback.
+        ASSERT: Directly routes to ApologyAgent to end the call, bypassing the secondary offer.
+        """
+        session_id = "busy_first_pitch_session"
+        print("\n=======================================================")
+        print("SCENARIO L: Customer is busy during first pitch")
+        print("=======================================================")
+
+        await asyncio.sleep(INTER_TURN_SLEEP)
+        agent_message, interrupt_id, invocation_id = await run_turn(
+            self.runner, self.user_id, session_id,
+            make_user_message("[Call Connected]"), state_delta=self.make_initial_state("1")
+        )
+
+        print(f"\n--- Turn 2: Confirm identity ---")
+        await asyncio.sleep(INTER_TURN_SLEEP)
+        agent_message, interrupt_id, invocation_id = await run_turn(
+            self.runner, self.user_id, session_id,
+            make_resume_message(interrupt_id, "Yes, this is Sanjog"), invocation_id
+        )
+        state = await self.get_session_state(session_id)
+        self.assertEqual(state.get("current_agent"), "SalesPitchAgent")
+
+        print(f"\n--- Turn 3: User says busy/later ---")
+        await asyncio.sleep(INTER_TURN_SLEEP)
+        agent_message, _, _ = await run_turn(
+            self.runner, self.user_id, session_id,
+            make_resume_message(interrupt_id, "I'm extremely busy right now, please call me back later"), invocation_id
+        )
+        state = await self.get_session_state(session_id)
+        self.assertEqual(state.get("current_agent"), "ApologyAgent")
+        self.assertEqual(state.get("last_outcome"), "declined")
+        print(f"\n[PASS] Busy client handled politely and bypassed secondary pitch. Agent: {state.get('current_agent')}")
+
 
 if __name__ == "__main__":
     unittest.main()
