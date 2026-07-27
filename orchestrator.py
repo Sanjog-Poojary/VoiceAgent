@@ -2012,9 +2012,10 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
             else:
                 msg = "You are a Gold Tier loyalty member with 1,250 points! Now, about that offer we have for you..."
             
-            crm_buf = ctx.state.pop("crm_update_msg", None)
+            crm_buf = ctx.state.get("crm_update_msg")
             if crm_buf:
                 msg = f"{crm_buf} {msg}"
+                ctx.state["crm_update_msg"] = None
 
             trans = list(ctx.state.get("raw_audio_transcription", []))
             trans.append(f"Agent: {msg}")
@@ -2145,9 +2146,10 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
             sarcasm_buf = "Haha, I get it, but the deals are genuinely good! "
         msg = sarcasm_buf + msg
 
-    crm_buf = ctx.state.pop("crm_update_msg", None)
+    crm_buf = ctx.state.get("crm_update_msg")
     if crm_buf:
         msg = f"{crm_buf} {msg}"
+        ctx.state["crm_update_msg"] = None
 
     trans = list(ctx.state.get("raw_audio_transcription", []))
     trans.append(f"Agent: {msg}")
@@ -2204,9 +2206,10 @@ async def apology_agent(ctx: Context, node_input: Any):
         else:
             msg = "No problem at all. We apologize for any inconvenience. Have a wonderful day!"
 
-    crm_buf = ctx.state.pop("crm_update_msg", None)
+    crm_buf = ctx.state.get("crm_update_msg")
     if crm_buf:
         msg = f"{crm_buf} {msg}"
+        ctx.state["crm_update_msg"] = None
 
     trans = list(ctx.state.get("raw_audio_transcription", []))
     trans.append(f"Agent: {msg}")
