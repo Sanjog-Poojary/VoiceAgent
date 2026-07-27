@@ -5,9 +5,17 @@ from contextlib import asynccontextmanager
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse, Response, JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+class RAGResponse(BaseModel):
+    answer: str = Field(
+        ...,
+        description="The conversational answer to the customer's question. Must be written in English or Romanized Hinglish/Hindi (using ONLY Latin/Roman alphabet script). Strictly forbidden to use Devanagari script.",
+        pattern=r"^[^\u0900-\u097F]+$"
+    )
 from pypdf import PdfReader
 from google import genai
+from google.genai import types
 import base64
 from audio_bridge import AudioBridge
 
@@ -560,10 +568,14 @@ def query_knowledge(q: str = ""):
         )
         try:
             response = _GENAI_CLIENT.models.generate_content(
-                model="gemini-2.5-flash-lite",
-                contents=prompt
+                model="gemini-3.1-flash-lite",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=RAGResponse,
+                )
             )
-            ans = response.text.strip()
+            ans = response.parsed.answer.strip()
             logger.info(f"Gemini RAG generated response: {ans}")
             return {"status": "success", "answer": ans}
         except Exception as e:
