@@ -1867,6 +1867,24 @@ async def orchestrator_node(ctx: Context, node_input: Any):
     if current_agent == "ClarifyingAgent" and previous_agent:
         strategy_agent = previous_agent
 
+    # --- Step 4.5: Multi-Intent & Dynamic Intercept ---
+    # If the user asks a knowledge question or requests a CRM update, intercept the flow 
+    # to bypass the hardcoded sub-agent post-processing and route to LLMSmoothingNode.
+    is_multi_intent = (
+        getattr(classification, "is_crm_update_request", False) or 
+        getattr(classification, "is_knowledge_question", False) or 
+        getattr(classification, "is_loyalty_question", False)
+    )
+
+    if is_multi_intent:
+        ctx.state["last_agent"] = current_agent
+        ctx.state["current_agent"] = "LLMSmoothingNode"
+        ctx.state["latest_classification"] = classification.model_dump()
+        
+        _print_decision("LLMSmoothingNode", ctx.state, "[Multi-Intent Intercept Triggered]")
+        ctx.route = "LLMSmoothingNode"
+        return "LLMSmoothingNode"
+
     # Call active agent post-process contract method (skipped for silence)
     if classification.is_silent_turn:
         ctx.state["last_outcome"] = "silence"
@@ -1885,24 +1903,6 @@ async def orchestrator_node(ctx: Context, node_input: Any):
             ctx.state["verification_attempts"] = 0
         else:
             ctx.state["verification_attempts"] = ctx.state.get("verification_attempts", 0) + 1
-
-    # --- Step 4.5: Multi-Intent & Dynamic Intercept ---
-    # If the user asks a knowledge question or requests a CRM update, intercept the flow 
-    # to bypass the hardcoded nodes and route to the LLMSmoothingNode.
-    is_multi_intent = (
-        getattr(classification, "is_crm_update_request", False) or 
-        getattr(classification, "is_knowledge_question", False) or 
-        getattr(classification, "is_loyalty_question", False)
-    )
-
-    if is_multi_intent:
-        ctx.state["last_agent"] = current_agent
-        ctx.state["current_agent"] = "LLMSmoothingNode"
-        ctx.state["latest_classification"] = classification.model_dump()
-        
-        _print_decision("LLMSmoothingNode", ctx.state, "[Multi-Intent Intercept Triggered]")
-        ctx.route = "LLMSmoothingNode"
-        return "LLMSmoothingNode"
 
     # --- Step 4: Safety Guardrails Check ---
     safety_result = check_safety_guardrails(classification, ctx.state.to_dict(), user_input_str)
