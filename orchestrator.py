@@ -315,7 +315,11 @@ class TurnClassification(BaseModel):
     )
     new_email_address: Optional[str] = Field(
         default=None,
-        description="Clean, extracted new email address if user requested an email update (e.g. 'test@example.com'), else null."
+        description=(
+            "The EXACT new email address spoken by the user to be updated to. If the user asks to update "
+            "their email but does NOT provide the new email address string in this utterance, this MUST "
+            "be null/None. DO NOT invent, guess, or use placeholder or existing emails."
+        )
     )
 
     # Adversarial / noise signals
@@ -1746,7 +1750,7 @@ async def orchestrator_node(ctx: Context, node_input: Any):
             await update_customer_details(cust_id, email=new_email)
             ctx.state["crm_update_msg"] = f"Got it, I've updated your email address to {new_email}."
         else:
-            ctx.state["crm_update_msg"] = "Got it, I've noted your request to update your contact details."
+            ctx.state["crm_update_msg"] = "Got it! What is the new email address you'd like to use for your account?"
 
     # --- Step 4: Safety Guardrails Check ---
     safety_result = check_safety_guardrails(classification, ctx.state.to_dict(), user_input_str)
