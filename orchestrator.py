@@ -1110,29 +1110,32 @@ class ApologyAgentContract(AgentContract):
         )
 
     async def post_process(self, classification, memory, state, user_input_str=""): 
+        previous_agent = state.get("previous_agent", "")
+        if previous_agent == "SalesPitchAgent" and state.get("user_declined_offer", False):
+            if classification.is_appointment_accept:
+                return "accepted", memory
+            return "declined", memory
         return "success", memory
 
     async def transition(self, memory, state):
         return "apologize_and_warn_or_exit", memory
 
-    def _route_on_goal_complete(self, state):
-        injection_attempts = state.get("injection_attempts", 0)
+    def determine_next_agent(self, classification: TurnClassification, state: dict, user_input_str: str) -> tuple[str, dict]:
+        universal = self.check_universal_intents(classification, state, user_input_str)
+        if universal:
+            return universal
+            
         previous_agent = state.get("previous_agent", "")
+        if previous_agent == "SalesPitchAgent" and state.get("user_declined_offer", False):
+            outcome = state.get("last_outcome")
+            if outcome == "accepted":
+                return "PersonalShopperAgent", {"personal_shopper_accepted": True, "personal_shopper_offered": True}
+            return "Terminate", {}
+
+        injection_attempts = state.get("injection_attempts", 0)
         if injection_attempts == 1 and previous_agent:
             return previous_agent, {}
-        
-        # Guarded trigger for PersonalShopperAgent
-        if (
-            previous_agent == "SalesPitchAgent"
-            and state.get("user_declined_offer", False)
-            and not state.get("personal_shopper_offered", False)
-        ):
-            return "PersonalShopperAgent", {"personal_shopper_offered": True}
-        
         return "Terminate", {}
-
-    def _route_on_goal_incomplete(self, classification, state, user_input_str):
-        return self._route_on_goal_complete(state)
 
 
 class EscalationAgentContract(AgentContract):
