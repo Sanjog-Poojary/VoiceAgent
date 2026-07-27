@@ -213,6 +213,27 @@ WHATSAPP_LOGS = []
 EMAIL_LOGS = []
 CRM_LOGS = []
 APPOINTMENT_LOGS = []
+TICKETS_LOG = []
+
+class TicketPayload(BaseModel):
+    customer_id: str
+    request_type: str
+    details: str
+
+@app.post("/api/tickets/create")
+def create_ticket(payload: TicketPayload):
+    ticket_id = f"TICK-{len(TICKETS_LOG) + 1001}"
+    logger.info(f"Creating support ticket {ticket_id} for customer {payload.customer_id}: {payload.request_type} - {payload.details}")
+    entry = {
+        "ticket_id": ticket_id,
+        "customer_id": payload.customer_id,
+        "request_type": payload.request_type,
+        "details": payload.details,
+        "status": "OPEN"
+    }
+    TICKETS_LOG.append(entry)
+    return {"status": "success", "ticket_id": ticket_id, "ticket": entry}
+
 
 @app.post("/api/notify/whatsapp")
 def send_whatsapp(payload: WhatsAppNotification):

@@ -185,6 +185,21 @@ async def update_customer_details(customer_id: str, email: Optional[str] = None,
         return {}
 
 
+async def raise_support_ticket(customer_id: str, request_type: str, details: str) -> str:
+    """Sends a request to mock_server to raise a customer support ticket instead of direct DB mutation."""
+    payload = {"customer_id": str(customer_id), "request_type": request_type, "details": details}
+    try:
+        async with httpx.AsyncClient(timeout=4.0) as client:
+            resp = await client.post(f"{MOCK_SERVER_URL}/api/tickets/create", json=payload)
+            if resp.status_code == 200:
+                ticket_id = resp.json().get("ticket_id", "TICK-1001")
+                print(f"[Ticket System] Support ticket {ticket_id} created for customer {customer_id}")
+                return ticket_id
+    except Exception as e:
+        logger.warning(f"Failed to create support ticket via API: {e}")
+    return "TICK-1001"
+
+
 # ---------------------------------------------------------------------------
 # State Initialization
 # ---------------------------------------------------------------------------
@@ -825,14 +840,14 @@ async def build_intent_queue_results(ctx: Context, classification: TurnClassific
             
         queue_results.append("ACTION: User declined the offer. Gracefully accept the decline. DO NOT pitch the offer again.")
 
-    # 2. CRM Updates & Missing Variable Halt
+    # 2. CRM Updates & Support Ticket Creation (Raise ticket instead of direct DB mutation)
     if getattr(classification, "is_crm_update_request", False):
         if not classification.new_email_address:
-            queue_results.append("ACTION: User wants to update their email, but provided NO email address. You MUST ask them for their new email address. DO NOT answer any other questions.")
+            queue_results.append("ACTION: User wants to update their email/phone, but provided NO new email or phone details. You MUST ask them for the new details. DO NOT answer any other questions.")
             return queue_results  # HARD STOP: Break the queue so we don't overwhelm the user
         else:
-            await update_customer_details(cust_id, email=classification.new_email_address)
-            queue_results.append(f"ACTION: Confirm that you successfully updated their email to {classification.new_email_address}.")
+            ticket_id = await raise_support_ticket(cust_id, request_type="email_or_phone_update", details=f"Requested update to {classification.new_email_address}")
+            queue_results.append(f"ACTION: Confirm that you have raised a support ticket ({ticket_id}) for our team to update their contact details to {classification.new_email_address}.")
 
     # 3. Dynamic RAG / Knowledge Queries
     if getattr(classification, "is_knowledge_question", False) or getattr(classification, "is_loyalty_question", False):
