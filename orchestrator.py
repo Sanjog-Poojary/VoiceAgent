@@ -1912,15 +1912,16 @@ async def orchestrator_node(ctx: Context, node_input: Any):
         print(f"DEBUG: Safety guardrail matched routing to: {next_agent}")
     else:
         # --- Step 5: Sub-Agent Strategy Routing ---
-        active_contract = _AGENTS.get(current_agent)
-        if not active_contract:
-            raise RuntimeError(f"Unknown active agent: {current_agent}")
-            
         strategy_agent = current_agent
-        if current_agent == "ClarifyingAgent" and previous_agent:
+        if current_agent in ("ClarifyingAgent", "LLMSmoothingNode") and previous_agent:
             strategy_agent = previous_agent
+
+        active_contract = _AGENTS.get(strategy_agent)
+        if not active_contract:
+            strategy_agent = "SalesPitchAgent" if ctx.state.get("offer_pitched") else "IdentityAgent"
+            active_contract = _AGENTS.get(strategy_agent)
             
-        contract_for_strategy = _AGENTS.get(strategy_agent, active_contract)
+        contract_for_strategy = active_contract
         next_agent, resolved_updates = contract_for_strategy.determine_next_agent(
             classification, ctx.state.to_dict(), user_input_str
         )
@@ -1944,7 +1945,7 @@ async def orchestrator_node(ctx: Context, node_input: Any):
         ctx.state["revision_reason"] = new_rev_reason
 
         # --- Step 6: Route Validation ---
-        valid_destinations = set(contract_for_strategy.possible_next_actions) | {"ApologyAgent", "EscalationAgent", "Terminate", "FallbackNode"}
+        valid_destinations = set(contract_for_strategy.possible_next_actions) | {"ApologyAgent", "EscalationAgent", "Terminate", "FallbackNode", "LLMSmoothingNode"}
         if next_agent not in valid_destinations:
             print(f"[Route Validation Warning] {strategy_agent} attempted to route to invalid destination: {next_agent}. Defaulting to ApologyAgent.")
             next_agent = "ApologyAgent"
