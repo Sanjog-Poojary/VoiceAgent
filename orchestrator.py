@@ -2081,9 +2081,9 @@ async def apology_agent(ctx: Context, node_input: Any):
             msg = "I think it's best I let you go. Have a wonderful day!"
     elif outcome == "declined":
         if lang == "Hindi":
-            msg = "कोई बात नहीं। मैं आपसे किसी और समय संपर्क करने की कोशिश करूँगा। आपका दिन शुभ हो!"
+            msg = "कोई बात नहीं। मैं आपसे किसी और समय संपर्क करने की कोशिश करूँगा। वैसे, क्या आप हमारे पर्सनल शॉपर के साथ 10 मिनट की मुफ्त कॉल शेड्यूल करना चाहेंगे जो आपको सही फिट खोजने में मदद कर सकते हैं?"
         else:
-            msg = "No problem at all. I'll try reaching you another time. Have a wonderful day!"
+            msg = "No problem at all. I'll try reaching you another time. By the way, would you like to schedule a free 10-minute call with our personal shopper who can help you find the perfect fit?"
     else:
         if lang == "Hindi":
             msg = "कोई बात नहीं। किसी भी असुविधा के लिए हम क्षमा चाहते हैं। आपका दिन शुभ हो!"
