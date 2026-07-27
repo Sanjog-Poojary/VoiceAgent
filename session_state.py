@@ -65,6 +65,7 @@ class SessionState(BaseModel):
     preferred_appointment_slot: str = Field(default="", description="Customer's stated preferred day/time for the appointment, raw text.")
     appointment_booked: bool = Field(default=False, description="True once the personal shopper appointment POST has been successfully fired.")
     user_declined_offer: bool = Field(default=False, description="Persistent flag indicating the user explicitly declined the main offer.")
+    gatekeeper_challenged: bool = Field(default=False, description="True if the gatekeeper was challenged to hand over the call.")
     last_knowledge_query: str = Field(default="", description="The specific RAG query asked by the user.")
 
     # Coordinator / Persistent Memory Layer
