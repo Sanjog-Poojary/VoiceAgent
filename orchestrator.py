@@ -803,6 +803,72 @@ async def process_intent_queue(ctx: Context, classification: TurnClassification)
     return await synthesize_audio_response(queue_results, lang=lang)
 
 
+async def build_intent_queue_results(ctx: Context, classification: TurnClassification) -> list[str]:
+    """Generates pure instructional strings for the smoothing LLM, replacing hardcoded text."""
+    queue_results = []
+    cust_id = ctx.state.get("customer_id", "1")
+
+    # 1. Decline Override (Respect the rejection)
+    if classification.is_decline:
+        ctx.state["offer_accepted"] = False
+        queue_results.append("ACTION: User declined the offer. Gracefully accept the decline. DO NOT pitch the offer again.")
+
+    # 2. CRM Updates & Missing Variable Halt
+    if getattr(classification, "is_crm_update_request", False):
+        if not classification.new_email_address:
+            queue_results.append("ACTION: User wants to update their email, but provided NO email address. You MUST ask them for their new email address. DO NOT answer any other questions.")
+            return queue_results  # HARD STOP: Break the queue so we don't overwhelm the user
+        else:
+            await update_customer_details(cust_id, email=classification.new_email_address)
+            queue_results.append(f"ACTION: Confirm that you successfully updated their email to {classification.new_email_address}.")
+
+    # 3. Dynamic RAG / Knowledge Queries
+    if getattr(classification, "is_knowledge_question", False) or getattr(classification, "is_loyalty_question", False):
+        q = classification.knowledge_query or ctx.state.get("last_knowledge_query", "")
+        if q:
+            try:
+                async with httpx.AsyncClient(timeout=4.0) as client:
+                    rag_resp = await client.get(f"{MOCK_SERVER_URL}/api/knowledge?q={q}")
+                    if rag_resp.status_code == 200:
+                        ans = rag_resp.json().get("answer", "")
+                        if ans:
+                            queue_results.append(f"ACTION: Answer the user's question using this EXACT data: {ans}")
+                        else:
+                            queue_results.append("ACTION: You don't have the exact policy details. Politely advise them to ask store staff.")
+                    else:
+                        queue_results.append("ACTION: You don't have the exact policy details. Politely advise them to ask store staff.")
+            except Exception as rag_err:
+                logger.warning(f"RAG lookup in intent queue failed: {rag_err}")
+                queue_results.append("ACTION: You don't have the exact policy details. Politely advise them to ask store staff.")
+    
+    return queue_results
+
+
+@node(name="LLMSmoothingNode")
+async def llm_smoothing_node(ctx: Context, node_input: Any):
+    """The dynamic presentation layer that replaces hardcoded fallback nodes."""
+    init_state_defaults(ctx)
+    
+    # Reconstruct the classification from state
+    cls_dict = ctx.state.get("latest_classification", {})
+    classification = TurnClassification(**cls_dict) if cls_dict else None
+    
+    if classification:
+        queue_results = await build_intent_queue_results(ctx, classification)
+    else:
+        queue_results = ["ACTION: Ask the user how you can help them today."]
+    
+    # Pass instructions to the LLM to synthesize natural Hinglish/English
+    lang = ctx.state.get("detected_language", "English")
+    msg = await synthesize_audio_response(queue_results, lang=lang)
+    
+    trans = list(ctx.state.get("raw_audio_transcription", []))
+    trans.append(f"Agent: {msg}")
+    ctx.state["raw_audio_transcription"] = trans
+    
+    yield RequestInput(message=msg)
+
+
 # Hard escalation surface markers (supplement classifier-derived call_sentiment)
 _ESCALATION_KEYWORDS = frozenset([
     "supervisor", "manager", "gussa", "angry", "main gussa", "escalate",
@@ -1820,15 +1886,23 @@ async def orchestrator_node(ctx: Context, node_input: Any):
         else:
             ctx.state["verification_attempts"] = ctx.state.get("verification_attempts", 0) + 1
 
-    # Multi-intent action: Handle CRM update request if present
-    if getattr(classification, "is_crm_update_request", False):
-        new_email = getattr(classification, "new_email_address", None)
-        cust_id = ctx.state.get("customer_id", "1")
-        if new_email:
-            await update_customer_details(cust_id, email=new_email)
-            ctx.state["crm_update_msg"] = f"Got it, I've updated your email address to {new_email}."
-        else:
-            ctx.state["crm_update_msg"] = "Got it! What is the new email address you'd like to use for your account?"
+    # --- Step 4.5: Multi-Intent & Dynamic Intercept ---
+    # If the user asks a knowledge question or requests a CRM update, intercept the flow 
+    # to bypass the hardcoded nodes and route to the LLMSmoothingNode.
+    is_multi_intent = (
+        getattr(classification, "is_crm_update_request", False) or 
+        getattr(classification, "is_knowledge_question", False) or 
+        getattr(classification, "is_loyalty_question", False)
+    )
+
+    if is_multi_intent:
+        ctx.state["last_agent"] = current_agent
+        ctx.state["current_agent"] = "LLMSmoothingNode"
+        ctx.state["latest_classification"] = classification.model_dump()
+        
+        _print_decision("LLMSmoothingNode", ctx.state, "[Multi-Intent Intercept Triggered]")
+        ctx.route = "LLMSmoothingNode"
+        return "LLMSmoothingNode"
 
     # --- Step 4: Safety Guardrails Check ---
     safety_result = check_safety_guardrails(classification, ctx.state.to_dict(), user_input_str)
@@ -2161,65 +2235,6 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
                     brand=safe_brand, category=category, category_hi=category_hi
                 )
 
-    # RAG Knowledge Injection Block
-    if ctx.state.get("last_outcome") == "knowledge_q":
-        q = ctx.state.get("last_knowledge_query", "").lower()
-
-        # Fast-path: answer brand/discount/code questions directly from already-fetched offer data
-        _BRAND_SIGNALS = ("brand", "which brand", "what brand", "store", "which store", "offer on")
-        _CODE_SIGNALS  = ("code", "coupon", "promo", "voucher", "discount code")
-        _DISC_SIGNALS  = ("discount", "percent", "how much off", "percentage", "%")
-
-        if any(s in q for s in _BRAND_SIGNALS):
-            offer_answer = (
-                f"The offer is for {brand} — {discount}% off using code {code}."
-                if lang != "Hindi" else
-                f"Yeh offer {brand} ke liye hai — code {code} ke saath {discount}% ki discount."
-            )
-        elif any(s in q for s in _CODE_SIGNALS):
-            offer_answer = (
-                f"The promo code is {code} — use it to get {discount}% off at {brand}."
-                if lang != "Hindi" else
-                f"Promo code {code} hai — {brand} par {discount}% discount ke liye iska use karein."
-            )
-        elif any(s in q for s in _DISC_SIGNALS):
-            offer_answer = (
-                f"The discount is {discount}% off on {brand} using code {code}."
-                if lang != "Hindi" else
-                f"Discount {brand} par {discount}% hai, code {code} ke saath."
-            )
-        else:
-            offer_answer = None
-
-        if offer_answer:
-            repitch = (
-                f" Would you like me to send these details to your WhatsApp?"
-                if lang != "Hindi" else
-                f" Kya main yeh details aapke WhatsApp par bhej doon?"
-            )
-            msg = offer_answer + repitch
-        else:
-            # Fall back to RAG for general policy/non-offer questions
-            fallback_ans = (
-                "I don't have the exact details on that right now, but our store staff will be happy to help!"
-                if lang != "Hindi" else
-                "Mere paas abhi iske baare mein poori jankari nahi hai, lekin humare store staff aapki help karne mein khushi mehsoos karenge!"
-            )
-            try:
-                async with httpx.AsyncClient(timeout=4.0) as client:
-                    rag_resp = await client.get(f"{MOCK_SERVER_URL}/api/knowledge?q={q}")
-                    if rag_resp.status_code == 200:
-                        answer = rag_resp.json().get("answer", "")
-                        if answer:
-                            msg = f"{answer} Now, as I was saying... {msg}"
-                        else:
-                            msg = f"{fallback_ans} Now, as I was saying... {msg}"
-                    else:
-                        msg = f"{fallback_ans} Now, as I was saying... {msg}"
-            except Exception as rag_err:
-                logger.warning(f"RAG knowledge lookup failed/timed out: {rag_err}")
-                msg = f"{fallback_ans} Now, as I was saying... {msg}"
-
     # Sarcasm acknowledgement buffer
     if ctx.state.get("call_sentiment") == "Sarcastic":
         if lang == "Hindi":
@@ -2227,11 +2242,6 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
         else:
             sarcasm_buf = "Haha, I get it, but the deals are genuinely good! "
         msg = sarcasm_buf + msg
-
-    crm_buf = ctx.state.get("crm_update_msg")
-    if crm_buf:
-        msg = f"{crm_buf} {msg}"
-        ctx.state["crm_update_msg"] = None
 
     trans = list(ctx.state.get("raw_audio_transcription", []))
     trans.append(f"Agent: {msg}")
@@ -2287,11 +2297,6 @@ async def apology_agent(ctx: Context, node_input: Any):
             msg = "Koi baat nahi. Kisi bhi asuvidha ke liye hum maafi chahte hain. Aapka din shubh ho!"
         else:
             msg = "No problem at all. We apologize for any inconvenience. Have a wonderful day!"
-
-    crm_buf = ctx.state.get("crm_update_msg")
-    if crm_buf:
-        msg = f"{crm_buf} {msg}"
-        ctx.state["crm_update_msg"] = None
 
     trans = list(ctx.state.get("raw_audio_transcription", []))
     trans.append(f"Agent: {msg}")
@@ -2505,17 +2510,19 @@ class VoiceAgentWorkflow(Workflow):
         (escalation_agent, orchestrator_node),
         (post_call_agent, orchestrator_node),
         (clarifying_agent, orchestrator_node),
+        (llm_smoothing_node, orchestrator_node),
 
         # Conditional routes from orchestrator to sub-agents
         (orchestrator_node, {
             "IdentityAgent":         identity_agent,
-                "SalesPitchAgent":       sales_pitch_agent,
+            "SalesPitchAgent":       sales_pitch_agent,
             "ApologyAgent":          apology_agent,
             "PersonalShopperAgent":  personal_shopper_agent,
             "EscalationAgent":       escalation_agent,
             "PostCallAgent":         post_call_agent,
             "ClarifyingAgent":       clarifying_agent,
+            "LLMSmoothingNode":      llm_smoothing_node,
             "Terminate":             terminate_node,
-            DEFAULT_ROUTE:          fallback_node,
+            DEFAULT_ROUTE:           fallback_node,
         }),
     ]
