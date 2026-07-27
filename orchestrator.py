@@ -909,7 +909,10 @@ class IdentityAgentContract(IdentityConfirmationContract):
     def _route_on_goal_complete(self, state, user_input_str=""):
         outcome = state.get("last_outcome")
         if outcome in ("third_party", "decline"):
-            return "ApologyAgent", {"previous_agent": self.name}
+            updates = {"previous_agent": self.name}
+            if outcome == "third_party":
+                updates["gatekeeper_challenged"] = True
+            return "ApologyAgent", updates
         return "SalesPitchAgent", {}
 
     def _route_on_goal_incomplete(self, classification, state, user_input_str):
@@ -1131,6 +1134,12 @@ class ApologyAgentContract(AgentContract):
             if outcome == "accepted":
                 return "PersonalShopperAgent", {"personal_shopper_accepted": True, "personal_shopper_offered": True}
             return "Terminate", {}
+
+        if previous_agent == "IdentityAgent" and state.get("gatekeeper_challenged", False):
+            if classification.is_decline or any(k in user_input_str.lower() for k in ("no", "not available", "later", "busy", "call back")):
+                return "Terminate", {}
+            # Reset flag and loop back to IdentityAgent to confirm the new speaker
+            return "IdentityAgent", {"verification_attempts": 0, "gatekeeper_challenged": False}
 
         injection_attempts = state.get("injection_attempts", 0)
         if injection_attempts == 1 and previous_agent:
@@ -2073,10 +2082,27 @@ async def apology_agent(ctx: Context, node_input: Any):
         else:
             msg = "I'm sorry, I am a virtual assistant for Shoppers Stop. I can only assist you with our retail categories and offers. Let's get back to our conversation."
     elif outcome == "third_party":
-        if lang == "Hindi":
-            msg = "कोई बात नहीं। मैं बाद में उनसे संपर्क करने की कोशिश करूँगा। आपका दिन शुभ हो!"
+        trans = ctx.state.get("raw_audio_transcription", [])
+        user_msgs = [t for t in trans if t.startswith("User:")]
+        last_user_msg = user_msgs[-1] if user_msgs else ""
+        ui_lower = last_user_msg.lower()
+        
+        # Check if they already stated the target is busy, out, or unavailable
+        not_available = any(k in ui_lower for k in ("not available", "not here", "not at home", "busy", "out", "call back", "later", "no he's not", "he is not"))
+        
+        if not_available:
+            if lang == "Hindi":
+                msg = "कोई बात नहीं। मैं बाद में उनसे संपर्क करने की कोशिश करूँगा। आपका दिन शुभ हो!"
+            else:
+                msg = "No problem at all. I'll try reaching them another time. Have a wonderful day!"
         else:
-            msg = "No problem at all. I'll try reaching them another time. Have a wonderful day!"
+            customer_id = ctx.state.get("customer_id", "1")
+            customer_data = await fetch_customer_details(customer_id)
+            name = customer_data.get("name", "Customer")
+            if lang == "Hindi":
+                msg = f"मैं शॉपर्स स्टॉप की ओर से उनके खाते के संबंध में बात कर रहा हूँ। क्या {name} जी अभी बात करने के लिए उपलब्ध हैं?"
+            else:
+                msg = f"I'm calling on behalf of Shoppers Stop regarding their account. Is {name} available to come to the phone right now?"
     elif outcome == "competitor_bail":
         if lang == "Hindi":
             msg = "मुझे लगता है कि मुझे अब चलना चाहिए। आपका दिन शुभ हो!"
