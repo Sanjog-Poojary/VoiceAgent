@@ -811,6 +811,18 @@ async def build_intent_queue_results(ctx: Context, classification: TurnClassific
     # 1. Decline Override (Respect the rejection)
     if classification.is_decline:
         ctx.state["offer_accepted"] = False
+        ctx.state["user_declined_offer"] = True
+        
+        # ASSASSINATE THE ZOMBIE PLAN
+        plans = ctx.state.get("bounded_plans", {})
+        if "SalesPitchAgent" in plans:
+            plan = plans["SalesPitchAgent"]
+            if isinstance(plan, dict):
+                plan["plan_status"] = "Abandoned"
+            else:
+                plan.plan_status = "Abandoned"
+            ctx.state["bounded_plans"] = plans
+            
         queue_results.append("ACTION: User declined the offer. Gracefully accept the decline. DO NOT pitch the offer again.")
 
     # 2. CRM Updates & Missing Variable Halt
@@ -1535,6 +1547,36 @@ class FallbackNodeContract(AgentContract):
         return self._route_on_goal_complete(state)
 
 
+class LLMSmoothingContract(AgentContract):
+    def __init__(self):
+        super().__init__(
+            name="LLMSmoothingNode",
+            goal="resolve_multi_intent",
+            expected_input="Any",
+            success_criteria="Dynamic intents resolved",
+            possible_next_actions=["ApologyAgent", "Terminate", "SalesPitchAgent"]
+        )
+
+    def determine_next_agent(self, classification, state, user_input_str):
+        universal = self.check_universal_intents(classification, state, user_input_str)
+        if universal:
+            return universal
+
+        # If the offer was declined during smoothing, route to ApologyAgent for the cross-sell
+        if state.get("user_declined_offer", False):
+            return "ApologyAgent", {"previous_agent": "SalesPitchAgent"}
+
+        # If the pitch plan is still alive (e.g., they only asked a question), resume the pitch
+        plans = state.get("bounded_plans", {})
+        pitch_plan = plans.get("SalesPitchAgent", {})
+        status = pitch_plan.get("plan_status") if isinstance(pitch_plan, dict) else getattr(pitch_plan, "plan_status", "")
+
+        if status == "In Progress":
+            return "SalesPitchAgent", {}
+
+        return "ApologyAgent", {}
+
+
 _AGENTS = {
     "IdentityAgent": IdentityAgentContract(),
 
@@ -1544,6 +1586,7 @@ _AGENTS = {
     "EscalationAgent": EscalationAgentContract(),
     "PostCallAgent": PostCallAgentContract(),
     "ClarifyingAgent": ClarifyingAgentContract(),
+    "LLMSmoothingNode": LLMSmoothingContract(),
     "Terminate": TerminateContract(),
     "FallbackNode": FallbackNodeContract(),
 }
