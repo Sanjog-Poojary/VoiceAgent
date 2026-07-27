@@ -1360,6 +1360,31 @@
 
             const timeStr = new Date().toLocaleTimeString();
 
+            // Fetch Support Ticket Logs
+            try {
+                const resp = await fetch('/api/tickets/create/logs');
+                if (resp.ok) {
+                    const logs = await resp.json();
+                    logs.forEach(ticket => {
+                        const elemId = 'ticket_logged_' + ticket.ticket_id;
+                        if (!document.getElementById(elemId)) {
+                            const log = document.createElement('div');
+                            log.id = elemId;
+                            log.classList.add('log-entry');
+                            log.innerHTML = `
+                                <div class="log-time">[${timeStr}] POST /api/tickets/create</div>
+                                <div class="log-title"><i class="fa-solid fa-ticket" style="color:var(--accent-yellow);"></i> Support Ticket Created (${ticket.ticket_id})</div>
+                                <pre class="log-json">${JSON.stringify(ticket, null, 2)}</pre>
+                            `;
+                            consoleOutput.appendChild(log);
+                            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("Failed to load Support Ticket logs", e);
+            }
+
             // Fetch CRM Logs
             if (state.escalation_triggered && !document.getElementById('crm_logged_' + sessionId)) {
                 try {

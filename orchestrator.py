@@ -2355,10 +2355,19 @@ async def apology_agent(ctx: Context, node_input: Any):
         else:
             msg = "No problem at all. I'll try reaching you another time. By the way, would you like to schedule a free 10-minute call with our personal shopper who can help you find the perfect fit?"
     else:
-        if lang == "Hindi":
-            msg = "Koi baat nahi. Kisi bhi asuvidha ke liye hum maafi chahte hain. Aapka din shubh ho!"
+        trans_list = ctx.state.get("raw_audio_transcription", [])
+        last_user = [t for t in trans_list if t.startswith("User:")]
+        last_txt = last_user[-1].lower() if last_user else ""
+        if any(k in last_txt for k in ("sure", "thanks", "thank you", "okay", "ok", "alright", "bye", "goodbye", "sounds good")):
+            if lang == "Hindi":
+                msg = "Aapka dhanyavaad! Main aapki help karke khush hoon. Aapka din shubh ho!"
+            else:
+                msg = "You're very welcome! Have a wonderful day!"
         else:
-            msg = "No problem at all. We apologize for any inconvenience. Have a wonderful day!"
+            if lang == "Hindi":
+                msg = "Koi baat nahi. Aapka din shubh ho!"
+            else:
+                msg = "No problem at all. Have a wonderful day!"
 
     trans = list(ctx.state.get("raw_audio_transcription", []))
     trans.append(f"Agent: {msg}")

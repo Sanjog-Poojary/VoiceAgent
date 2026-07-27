@@ -234,6 +234,11 @@ def create_ticket(payload: TicketPayload):
     TICKETS_LOG.append(entry)
     return {"status": "success", "ticket_id": ticket_id, "ticket": entry}
 
+@app.get("/api/tickets/create/logs")
+@app.get("/api/tickets")
+def get_tickets_logs():
+    return TICKETS_LOG
+
 
 @app.post("/api/notify/whatsapp")
 def send_whatsapp(payload: WhatsAppNotification):
