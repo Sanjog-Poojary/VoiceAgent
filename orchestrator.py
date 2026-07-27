@@ -45,21 +45,21 @@ _PHASE1_EN = [
     "Given your recent {brand} purchase, we think you'll appreciate this — can we share a quick offer?",
 ]
 _PHASE1_HI = [
-    "हमने देखा कि आपने हाल ही में हमारे {category_hi} श्रेणी में — विशेष रूप से {brand} से खरीदारी की है। हम आपके साथ एक एक्सक्लूसिव ऑफ़र साझा करना चाहेंगे।",
-    "चूँकि आप हमारे {category_hi} रेंज में {brand} के शौकीन हैं, हमारे पास आपके लिए कुछ ख़ास है।",
-    "आपकी हाल की {brand} खरीदारी को देखते हुए, हमें लगता है आपको यह पसंद आएगा — क्या हम एक ऑफ़र साझा कर सकते हैं?",
+    "Humne dekha ki aapne haal hi mein humare {category_hi} category mein — vishesh roop se {brand} se khareedari ki hai. Hum aapke saath ek exclusive offer share karna chahenge.",
+    "Chunki aap humare {category_hi} range mein {brand} ke shaukeen hain, hamare paas aapke liye kuch khaas hai.",
+    "Aapki haal hi ki {brand} khareedari ko dekhte hue, humein lagta hai aapko yeh pasand aayega — kya hum ek offer share kar sakte hain?",
 ]
 # Fallback when offer_brand is absent from the database
 _PHASE1_NO_BRAND_EN = "We noticed you recently shopped in our {category} category. We'd love to share an exclusive offer."
-_PHASE1_NO_BRAND_HI = "हमने देखा कि आपने हाल ही में हमारे {category_hi} श्रेणी में खरीदारी की है। हम आपके साथ एक एक्सक्लूसिव ऑफ़र साझा करना चाहेंगे।"
+_PHASE1_NO_BRAND_HI = "Humne dekha ki aapne haal hi mein humare {category_hi} category mein khareedari ki hai. Hum aapke saath ek exclusive offer share karna chahenge."
 
 _PHASE2_EN = [
     "We have an exclusive deal running on {brand} right now with coupon code '{code}'. {offer_desc} Would you like me to send these details to your WhatsApp?",
     "Since you shop {brand}, we wanted to let you know about a special {discount}% off using code '{code}'. {offer_desc} Shall I forward this to your WhatsApp?",
 ]
 _PHASE2_HI = [
-    "हमारे पास अभी {brand} पर कूपन कोड '{code}' के साथ एक एक्सक्लूसिव डील चल रही है। {offer_desc} क्या मैं ये विवरण आपके व्हाट्सएप पर भेज दूँ?",
-    "चूँकि आप {brand} से खरीदारी करते हैं, हम आपको कोड '{code}' का उपयोग करके एक विशेष {discount}% छूट के बारे में बताना चाहते थे। {offer_desc} क्या मैं इसे आपके व्हाट्सएप पर फॉरवर्ड कर दूँ?",
+    "Hamare paas abhi {brand} par coupon code '{code}' ke saath ek exclusive deal chal rahi hai. {offer_desc} Kya main ye details aapke WhatsApp par bhej doon?",
+    "Chunki aap {brand} se khareedari karte hain, hum aapko code '{code}' ka use karke ek special {discount}% discount ke baare mein batana chahte the. {offer_desc} Kya main ise aapke WhatsApp par forward kar doon?",
 ]
 
 _PHASE3_EN = [
@@ -67,8 +67,8 @@ _PHASE3_EN = [
     "By the way, we also have an exclusive promotion for {secondary_brand} running this week. Would you like me to include that in the message?",
 ]
 _PHASE3_HI = [
-    "मैंने यह भी देखा कि आप {secondary_brand} की काफी खरीदारी करते हैं। उस पर भी अभी {sec_discount}% का डिस्काउंट चल रहा है। क्या मैं दोनों डिटेल्स भेज दूं?",
-    "वैसे, इस हफ्ते हमारे पास {secondary_brand} के लिए भी एक स्पेशल प्रमोशन चल रहा है। क्या आप चाहेंगे कि मैं उसे भी व्हाट्सएप मैसेज में शामिल करूं?",
+    "Maine yeh bhi dekha ki aap {secondary_brand} ki kaafi khareedari karte hain. Us par bhi abhi {sec_discount}% ka discount chal raha hai. Kya main dono details bhej doon?",
+    "Waise, is hafte humare paas {secondary_brand} ke liye bhi ek special promotion chal raha hai. Kya aap chahenge ki main use bhi WhatsApp message mein shamil karoon?",
 ]
 
 _INTEREST_EN = [
@@ -76,8 +76,8 @@ _INTEREST_EN = [
     "Just to be clear: code '{code}' knocks {discount}% off directly at the counter — no vouchers, no minimum spend. Ready to receive it?",
 ]
 _INTEREST_HI = [
-    "यह कूपन आपकी अगली {brand}{category_hi} की खरीदारी पर {discount}% की सीधी बचत देता है — यानी बिल सीधे कम होगा और कोई एक्स्ट्रा शर्तें नहीं। क्या आप चाहेंगे कि मैं ये डिटेल्स भेज दूं?",
-    "स्पष्ट करना चाहेंगे: कोड '{code}' सीधे काउंटर पर {discount}% की छूट देता है — कोई वाउचर या मिनिमम खरीद की जरूरत नहीं। अभी व्हाट्सएप पर भेजें?",
+    "Yeh coupon aapki agli {brand}{category_hi} ki khareedari par {discount}% ki seedhi bachat deta hai — yaani bill seedhe kam hoga aur koi extra shartein nahi. Kya aap chahenge ki main yeh details bhej doon?",
+    "Clear karna chahenge: code '{code}' seedhe counter par {discount}% ki discount deta hai — koi voucher ya minimum purchase ki zaroorat nahi. Abhi WhatsApp par bhejein?",
 ]
 
 # ---------------------------------------------------------------------------
@@ -366,6 +366,11 @@ class TurnClassification(BaseModel):
                 values[f] = False
             elif isinstance(v, str):
                 values[f] = v.lower() in ("true", "yes", "1")
+
+        # Dependency coercion: if is_acceptance or is_decline is True, is_valid_answer must be True
+        if values.get("is_acceptance") or values.get("is_decline"):
+            values["is_valid_answer"] = True
+
         return values
 
 # ---------------------------------------------------------------------------
@@ -866,7 +871,7 @@ class IdentityAgentContract(IdentityConfirmationContract):
             goal="verify_identity",
             expected_input="Customer identity confirmation (yes/no or casual affirmation)",
             success_criteria="Identity successfully verified or declined",
-            possible_next_actions=["IdentityAgent", "SalesPitchAgent", "ClarifyingAgent", "ApologyAgent"]
+            possible_next_actions=["IdentityAgent", "SalesPitchAgent", "ClarifyingAgent", "ApologyAgent", "PersonalShopperAgent"]
         )
 
     def goal_satisfied(self, classification, memory, state):
@@ -1124,27 +1129,31 @@ class ApologyAgentContract(AgentContract):
     async def transition(self, memory, state):
         return "apologize_and_warn_or_exit", memory
 
-    def determine_next_agent(self, classification: TurnClassification, state: dict, user_input_str: str) -> tuple[str, dict]:
-        universal = self.check_universal_intents(classification, state, user_input_str)
-        if universal:
-            return universal
-            
+    def _route_on_goal_complete(self, state: dict) -> tuple[str, dict]:
         previous_agent = state.get("previous_agent", "")
-        if previous_agent == "SalesPitchAgent" and state.get("user_declined_offer", False):
-            outcome = state.get("last_outcome")
-            if outcome == "accepted":
-                return "PersonalShopperAgent", {"personal_shopper_accepted": True, "personal_shopper_offered": True}
-            return "Terminate", {}
-
-        if previous_agent == "IdentityAgent" and state.get("gatekeeper_challenged", False):
-            if classification.is_decline or any(k in user_input_str.lower() for k in ("no", "not available", "later", "busy", "call back")):
-                return "Terminate", {}
-            # Reset flag and loop back to IdentityAgent to confirm the new speaker
-            return "IdentityAgent", {"verification_attempts": 0, "gatekeeper_challenged": False}
-
         injection_attempts = state.get("injection_attempts", 0)
         if injection_attempts == 1 and previous_agent:
             return previous_agent, {}
+
+        # Guarded trigger for PersonalShopperAgent
+        if previous_agent == "SalesPitchAgent" and state.get("user_declined_offer", False):
+            if state.get("last_outcome") == "accepted":
+                return "PersonalShopperAgent", {"personal_shopper_accepted": True, "personal_shopper_offered": True}
+            if not state.get("personal_shopper_offered", False):
+                return "PersonalShopperAgent", {"personal_shopper_offered": True}
+            return "Terminate", {}
+
+        if previous_agent == "IdentityAgent" and state.get("gatekeeper_challenged", False):
+            return "IdentityAgent", {"verification_attempts": 0, "gatekeeper_challenged": False}
+
+        return "Terminate", {}
+
+    def _route_on_goal_incomplete(self, classification, state, user_input_str):
+        previous_agent = state.get("previous_agent", "")
+        if previous_agent == "IdentityAgent" and state.get("gatekeeper_challenged", False):
+            if classification.is_decline or any(k in user_input_str.lower() for k in ("no", "not available", "later", "busy", "call back")):
+                return "Terminate", {}
+            return "IdentityAgent", {"verification_attempts": 0, "gatekeeper_challenged": False}
         return "Terminate", {}
 
 
@@ -1812,22 +1821,22 @@ async def clarifying_agent(ctx: Context, node_input: Any):
 
     if prev_agent == "IdentityAgent":
         if lang == "Hindi":
-            msg = "माफ़ कीजियेगा, मैं समझ नहीं पाया। क्या आप वही ग्राहक हैं जिनसे हम बात करना चाहते हैं?"
+            msg = "Maaf kijiyega, main samajh nahi paya. Kya aap wahi customer hain jinse hum baat karna chahte hain?"
         else:
             msg = "I'm sorry, I didn't quite catch that. Are you the customer we are looking for?"
     elif prev_agent == "IdentityAgent":
         if lang == "Hindi":
-            msg = f"माफ़ कीजियेगा, क्या आप कृपया स्पष्ट रूप से पुष्टि कर सकते हैं कि क्या आप वाकई {name} हैं?"
+            msg = f"Maaf kijiyega, kya aap kripya clear confirm kar sakte hain ki kya aap sach mein {name} hain?"
         else:
             msg = f"Sorry, could you please clearly confirm if you are indeed {name}?"
     elif prev_agent == "SalesPitchAgent":
         if lang == "Hindi":
-            msg = "माफ़ कीजियेगा, मैं समझ नहीं पाया कि आप ऑफ़र सुनना चाहते हैं या नहीं। क्या आप हाँ या ना कह सकते हैं?"
+            msg = "Maaf kijiyega, main samajh nahi paya ki aap offer sunna chahte hain ya nahi. Kya aap haan ya naa bol sakte hain?"
         else:
             msg = "I'm sorry, I didn't catch that. Would you like to hear the birthday offer we have for you?"
     else: # SalesPitchAgent, etc.
         if lang == "Hindi":
-            msg = "माफ़ कीजियेगा, मैं समझ नहीं पाया कि आप इस ऑफ़र को स्वीकार करना चाहते हैं या नहीं। क्या आप हाँ या ना कह सकते हैं?"
+            msg = "Maaf kijiyega, main samajh nahi paya ki aap is offer ko accept karna chahte hain ya nahi. Kya aap haan ya naa bol sakte hain?"
         else:
             msg = "I'm sorry, I couldn't understand if you'd like to accept or decline this offer. Could you please say yes or no?"
 
@@ -1845,7 +1854,7 @@ async def identity_agent(ctx: Context, node_input: Any):
     name = customer_data.get("name", "Customer")
 
     if lang == "Hindi":
-        msg = f"नमस्ते, क्या मेरी बात {name} जी से हो रही है?"
+        msg = f"Namaste, kya meri baat {name} ji se ho rahi hai?"
     else:
         msg = f"Hi, am I speaking with {name}?"
 
@@ -1927,7 +1936,7 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
         if m:
             discount = m.group(1)
 
-    category_map_hi = {"Fashion": "फ़ैशन", "Beauty": "ब्यूटी", "Luxury Watches": "लक्ज़री घड़ियाँ"}
+    category_map_hi = {"Fashion": "Fashion", "Beauty": "Beauty", "Luxury Watches": "Luxury Watches"}
     category_hi = category_map_hi.get(category, category)
 
     # Fetch event triggers
@@ -1940,7 +1949,7 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
     # Tangent handling for loyalty
     if any(x in user_input_str for x in ("points", "loyalty", "tier", "balance", "rewards")):
         if lang == "Hindi":
-            msg = "आप 1,250ポイント के साथ गोल्ड टियर लॉयल्टी सदस्य हैं! अब, उस ऑफ़र के बारे में..."
+            msg = "Aap 1,250 points ke saath Gold Tier loyalty member hain! Ab, us offer ke baare mein..."
         else:
             msg = "You are a Gold Tier loyalty member with 1,250 points! Now, about that offer we have for you..."
         
@@ -1953,7 +1962,7 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
     # Deflect competitor mentions and re-pitch active offer
     if ctx.state.get("last_outcome") == "competitor_deflect":
         if lang == "Hindi":
-            msg = f"मैं अन्य ब्रांड्स के ऑफ़र के बारे में बात नहीं कर सकता, लेकिन हमारा ऑफ़र {brand} पर {discount}% की छूट (कोड {code}) के साथ तैयार है। क्या मैं इसे भेज दूँ?"
+            msg = f"Main dusre brands ke offers ke baare mein to baat nahi kar sakta, lekin humara offer {brand} par {discount}% discount (code {code}) ke saath taiyar hai. Kya main ise bhej doon?"
         else:
             msg = f"I'm not able to speak to other retailers' offers, but I can tell you — our {discount}% off {brand} with code {code} is ready to go right now. Want me to activate it?"
         
@@ -1974,10 +1983,10 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
         # Phase 2: Deliver unified direct action pitch (Birthday vs Credit Expiry)
         if event_type == "Birthday":
             _HOOK_EN = "Happy Birthday, {name}! To celebrate, we have an exclusive {discount}% off {brand} with code {code}. Would you like me to send these details to your WhatsApp?"
-            _HOOK_HI = "जन्मदिन मुबारक हो, {name}! इसे सेलिब्रेट करने के लिए, हमारे पास आपके लिए {brand} पर {discount}% का एक स्पेशल डिस्काउंट ऑफर है, कोड {code} के साथ। क्या मैं ये डिटेल्स आपके व्हाट्सएप पर भेज दूं?"
+            _HOOK_HI = "Janmadin mubarak ho, {name}! Ise celebrate karne ke liye, hamare paas aapke liye {brand} par {discount}% ka ek special discount offer hai, code {code} ke saath. Kya main ye details aapke WhatsApp par bhej doon?"
         else:
             _HOOK_EN = "Hi {name}, we noticed your First Citizen points are expiring soon! To help you use them, we have a special {discount}% off {brand} with code {code}. Shall I forward this to your WhatsApp?"
-            _HOOK_HI = "नमस्ते {name}, हमने देखा कि आपके फर्स्ट सिटीजन पॉइंट्स जल्द ही एक्सपायर होने वाले हैं! इन्हें यूज़ करने के लिए, हमारे पास आपके लिए {brand} पर {discount}% का एक स्पेशल डिस्काउंट ऑफर है, कोड {code} के साथ। क्या मैं ये डिटेल्स आपके व्हाट्सएप पर भेज दूं?"
+            _HOOK_HI = "Namaste {name}, humne dekha ki aapke First Citizen points jaldi hi expire hone wale hain! Inhein use karne ke liye, hamare paas aapke liye {brand} par {discount}% ka ek special discount offer hai, code {code} ke saath. Kya main ye details aapke WhatsApp par bhej doon?"
 
         template = _HOOK_HI if lang == "Hindi" else _HOOK_EN
         msg = template.format(name=customer_data.get("name", ""), discount=discount, brand=brand, code=code)
@@ -1989,8 +1998,8 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
             if any(s in user_input_str for s in _DATE_SIGNALS) and (valid_from_str or valid_to_str):
                 if lang == "Hindi":
                     msg = (
-                        f"यह ऑफ़र {valid_from_hi} से शुरू होती है और {valid_to_hi} तक वैध है। "
-                        f"क्या आप इसे व्हाट्सएप पर प्राप्त करना चाहेंगे?"
+                        f"Yeh offer {valid_from_hi} se shuru hoti hai aur {valid_to_hi} tak valid hai. "
+                        f"Kya aap ise WhatsApp par prapt karna chahenge?"
                     )
                 else:
                     msg = (
@@ -2019,19 +2028,19 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
             offer_answer = (
                 f"The offer is for {brand} — {discount}% off using code {code}."
                 if lang != "Hindi" else
-                f"यह ऑफ़र {brand} के लिए है — कोड {code} के साथ {discount}% की छूट।"
+                f"Yeh offer {brand} ke liye hai — code {code} ke saath {discount}% ki discount."
             )
         elif any(s in q for s in _CODE_SIGNALS):
             offer_answer = (
                 f"The promo code is {code} — use it to get {discount}% off at {brand}."
                 if lang != "Hindi" else
-                f"प्रोमो कोड {code} है — {brand} पर {discount}% छूट के लिए इसका उपयोग करें।"
+                f"Promo code {code} hai — {brand} par {discount}% discount ke liye iska use karein."
             )
         elif any(s in q for s in _DISC_SIGNALS):
             offer_answer = (
                 f"The discount is {discount}% off on {brand} using code {code}."
                 if lang != "Hindi" else
-                f"छूट {brand} पर {discount}% है, कोड {code} के साथ।"
+                f"Discount {brand} par {discount}% hai, code {code} ke saath."
             )
         else:
             offer_answer = None
@@ -2040,7 +2049,7 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
             repitch = (
                 f" Would you like me to send these details to your WhatsApp?"
                 if lang != "Hindi" else
-                f" क्या मैं ये विवरण आपके व्हाट्सएप पर भेज दूँ?"
+                f" Kya main yeh details aapke WhatsApp par bhej doon?"
             )
             msg = offer_answer + repitch
         else:
@@ -2048,7 +2057,7 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
             fallback_ans = (
                 "I don't have the exact details on that right now, but our store staff will be happy to help!"
                 if lang != "Hindi" else
-                "मेरे पास अभी इसके बारे में पूरी जानकारी नहीं है, लेकिन हमारे स्टोर कर्मचारी आपकी मदद करने में प्रसन्न होंगे!"
+                "Mere paas abhi iske baare mein poori jankari nahi hai, lekin humare store staff aapki help karne mein khushi mehsoos karenge!"
             )
             try:
                 async with httpx.AsyncClient(timeout=4.0) as client:
@@ -2079,7 +2088,7 @@ async def apology_agent(ctx: Context, node_input: Any):
 
     if attempts == 1:
         if lang == "Hindi":
-            msg = "क्षमा करें, मैं शॉपर्स स्टॉप के लिए एक सहायक हूँ। मैं केवल रिटेल श्रेणियों और ऑफ़र में आपकी सहायता कर सकता हूँ। आइए अपनी बातचीत पर वापस चलें।"
+            msg = "Kshama karein, main Shoppers Stop ke liye ek assistant hoon. Main keval retail categories aur offers mein aapki help kar sakta hoon. Aaiye apni baat-cheet par wapas chalein."
         else:
             msg = "I'm sorry, I am a virtual assistant for Shoppers Stop. I can only assist you with our retail categories and offers. Let's get back to our conversation."
     elif outcome == "third_party":
@@ -2093,7 +2102,7 @@ async def apology_agent(ctx: Context, node_input: Any):
         
         if not_available:
             if lang == "Hindi":
-                msg = "कोई बात नहीं। मैं बाद में उनसे संपर्क करने की कोशिश करूँगा। आपका दिन शुभ हो!"
+                msg = "Koi baat nahi. Main baad mein unse sampark karne ki koshish karunga. Aapka din shubh ho!"
             else:
                 msg = "No problem at all. I'll try reaching them another time. Have a wonderful day!"
         else:
@@ -2101,22 +2110,22 @@ async def apology_agent(ctx: Context, node_input: Any):
             customer_data = await fetch_customer_details(customer_id)
             name = customer_data.get("name", "Customer")
             if lang == "Hindi":
-                msg = f"मैं शॉपर्स स्टॉप की ओर से उनके खाते के संबंध में बात कर रहा हूँ। क्या {name} जी अभी बात करने के लिए उपलब्ध हैं?"
+                msg = f"Main Shoppers Stop ki taraf se unke account ke silsile mein baat kar raha hoon. Kya {name} ji abhi baat karne ke liye available hain?"
             else:
                 msg = f"I'm calling on behalf of Shoppers Stop regarding their account. Is {name} available to come to the phone right now?"
     elif outcome == "competitor_bail":
         if lang == "Hindi":
-            msg = "मुझे लगता है कि मुझे अब चलना चाहिए। आपका दिन शुभ हो!"
+            msg = "Mujhe lagta hai ki mujhe ab chalna chahiye. Aapka din shubh ho!"
         else:
             msg = "I think it's best I let you go. Have a wonderful day!"
     elif outcome == "declined":
         if lang == "Hindi":
-            msg = "कोई बात नहीं। मैं आपसे किसी और समय संपर्क करने की कोशिश करूँगा। वैसे, क्या आप हमारे पर्सनल शॉपर के साथ 10 मिनट की मुफ्त कॉल शेड्यूल करना चाहेंगे जो आपको सही फिट खोजने में मदद कर सकते हैं?"
+            msg = "Koi baat nahi. Main aap se kisi aur time sampark karne ki koshish karunga. Waise, kya aap humare personal shopper ke saath ek free 10-minute ki call schedule karna chahenge jo aapko perfect fit dhundhne mein help kar sake?"
         else:
             msg = "No problem at all. I'll try reaching you another time. By the way, would you like to schedule a free 10-minute call with our personal shopper who can help you find the perfect fit?"
     else:
         if lang == "Hindi":
-            msg = "कोई बात नहीं। किसी भी असुविधा के लिए हम क्षमा चाहते हैं। आपका दिन शुभ हो!"
+            msg = "Koi baat nahi. Kisi bhi asuvidha ke liye hum maafi chahte hain. Aapka din shubh ho!"
         else:
             msg = "No problem at all. We apologize for any inconvenience. Have a wonderful day!"
 
@@ -2139,19 +2148,19 @@ async def personal_shopper_agent(ctx: Context, node_input: Any):
         await create_personal_shopper_appointment(customer_id, slot)
         ctx.state["appointment_booked"] = True
         if lang == "Hindi":
-            msg = f"धन्यवाद! हमने आपके लिए {slot} का समय बुक कर दिया है। आपको जल्द ही विवरण प्राप्त होंगे।"
+            msg = f"Dhanyawad! Humne aapke liye {slot} ka time book kar diya hai. Aapko jaldi hi details mil jayengi."
         else:
             msg = f"Thank you! We have booked your appointment for {slot}. You will receive the details shortly."
     elif accepted:
         # Phase 2: Accepted, ask for slot
         if lang == "Hindi":
-            msg = "शानदार! कृपया मुझे बताएं कि आपके लिए कौन सा दिन और समय सबसे अच्छा रहेगा।"
+            msg = "Shandar! Kripya mujhe batayein ki aapke liye kaun sa day aur time sabse achha rahega."
         else:
             msg = "Great! Please let me know what day and time works best for you."
     else:
         # Phase 1: Offer follow-up
         if lang == "Hindi":
-            msg = "कोई बात नहीं। हम समझते हैं। क्या आप हमारे पर्सनल शॉपर के साथ 10 मिनट की मुफ्त कॉल शेड्यूल करना चाहेंगे जो आपको सही फिट खोजने में मदद कर सकते हैं?"
+            msg = "Koi baat nahi. Hum samajhte hain. Kya aap humare personal shopper ke saath ek free 10-minute ki call schedule karna chahenge jo aapko perfect fit dhundhne mein help kar sake?"
         else:
             msg = "No problem at all. We understand. Would you like to schedule a free 10-minute call with our personal shopper who can help you find the perfect fit?"
 
@@ -2175,7 +2184,7 @@ async def escalation_agent(ctx: Context, node_input: Any):
     await create_crm_ticket(customer_id, issue_description=issue_desc, priority="high")
 
     if lang == "Hindi":
-        msg = "मैं समझ सकता हूँ कि आप नाखुश हैं। मैं इसे एक सुपरवाइजर के पास भेज दूँगा और वे जल्द ही आपसे संपर्क करेंगे।"
+        msg = "Main samajh sakta hoon ki aap unhappy hain. Main ise ek supervisor ke paas bhej dunga aur woh jaldi hi aap se contact karenge."
     else:
         msg = "I understand you are unhappy. I will escalate this to a supervisor and they will contact you shortly."
 
@@ -2249,15 +2258,15 @@ async def post_call_agent(ctx: Context, node_input: Any):
 
     if primary_accepted:
         offers_sent_en.append(f"{discount}% off on {brand} (Code: {code})")
-        offers_sent_hi.append(f"{brand} पर {discount}% छूट (कोड: {code})")
+        offers_sent_hi.append(f"{brand} par {discount}% discount (Code: {code})")
     if secondary_accepted and sec_code:
         offers_sent_en.append(f"{sec_discount}% off on {secondary_brand} (Code: {sec_code})")
-        offers_sent_hi.append(f"{secondary_brand} पर {sec_discount}% छूट (कोड: {sec_code})")
+        offers_sent_hi.append(f"{secondary_brand} par {sec_discount}% discount (Code: {sec_code})")
 
     # Fallback to primary if list is empty
     if not offers_sent_en:
         offers_sent_en.append(f"{discount}% off on {brand} (Code: {code})")
-        offers_sent_hi.append(f"{brand} पर {discount}% छूट (कोड: {code})")
+        offers_sent_hi.append(f"{brand} par {discount}% discount (Code: {code})")
 
     email = customer.get("email", "")
     use_email = False
@@ -2270,12 +2279,12 @@ async def post_call_agent(ctx: Context, node_input: Any):
 
     if lang == "Hindi":
         offers_str = ", ".join(offers_sent_hi)
-        notification_msg = f"नमस्ते {name}, आपके ऑफ़र भेज दिए गए हैं: {offers_str}। धन्यवाद!"
+        notification_msg = f"Namaste {name}, aapke offers bhej diye gaye hain: {offers_str}. Dhanyawad!"
         if use_email and email:
-            msg = "बहुत बढ़िया! मैंने सारे ऑफ़र विवरण आपके ईमेल पर भेज दिए हैं। धन्यवाद!"
+            msg = "Bahut badhiya! Maine saare offer details aapke email par bhej diye hain. Dhanyawad!"
             await send_email_notification(customer_id, email, notification_msg)
         else:
-            msg = "बहुत बढ़िया! मैंने सारे ऑफ़र विवरण आपके व्हाट्सएप पर भेज दिए हैं। धन्यवाद!"
+            msg = "Bahut badhiya! Maine saare offer details aapke WhatsApp par bhej diye hain. Dhanyawad!"
             await send_whatsapp_notification(customer_id, phone, notification_msg)
     else:
         offers_str = ", ".join(offers_sent_en)
@@ -2296,7 +2305,7 @@ async def post_call_agent(ctx: Context, node_input: Any):
 async def terminate_node(ctx: Context, node_input: Any):
     init_state_defaults(ctx)
     lang = ctx.state.get("detected_language", "English")
-    msg = "अलविदा!" if lang == "Hindi" else "Goodbye!"
+    msg = "Alvida!" if lang == "Hindi" else "Goodbye!"
     trans = list(ctx.state.get("raw_audio_transcription", []))
     trans.append(f"Agent: {msg}")
     ctx.state["raw_audio_transcription"] = trans
@@ -2308,7 +2317,7 @@ async def fallback_node(ctx: Context, node_input: Any):
     lang = ctx.state.get("detected_language", "English")
     print("[FallbackNode] Reached via DEFAULT_ROUTE — routing as ApologyAgent.")
     if lang == "Hindi":
-        msg = "कोई बात नहीं। किसी भी असुविधा के लिए हम क्षमा चाहते हैं। आपका दिन शुभ हो!"
+        msg = "Koi baat nahi. Kisi bhi asuvidha ke liye hum maafi chahte hain. Aapka din shubh ho!"
     else:
         msg = "No problem at all. We apologize for any inconvenience. Have a wonderful day!"
     trans = list(ctx.state.get("raw_audio_transcription", []))
