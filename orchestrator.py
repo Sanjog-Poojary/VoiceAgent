@@ -840,16 +840,7 @@ async def build_intent_queue_results(ctx: Context, classification: TurnClassific
             
         queue_results.append("ACTION: User declined the offer. Gracefully accept the decline. DO NOT pitch the offer again.")
 
-    # 2. CRM Updates & Support Ticket Creation (Raise ticket instead of direct DB mutation)
-    if getattr(classification, "is_crm_update_request", False):
-        if not classification.new_email_address:
-            queue_results.append("ACTION: User wants to update their email/phone, but provided NO new email or phone details. You MUST ask them for the new details. DO NOT answer any other questions.")
-            return queue_results  # HARD STOP: Break the queue so we don't overwhelm the user
-        else:
-            ticket_id = await raise_support_ticket(cust_id, request_type="email_or_phone_update", details=f"Requested update to {classification.new_email_address}")
-            queue_results.append(f"ACTION: Confirm that you have raised a support ticket ({ticket_id}) for our team to update their contact details to {classification.new_email_address}.")
-
-    # 3. Dynamic RAG / Knowledge Queries
+    # 2. Dynamic RAG / Knowledge Queries (PROCESSED FIRST)
     if getattr(classification, "is_knowledge_question", False) or getattr(classification, "is_loyalty_question", False):
         q = classification.knowledge_query or ctx.state.get("last_knowledge_query", "")
         if q:
@@ -867,6 +858,15 @@ async def build_intent_queue_results(ctx: Context, classification: TurnClassific
             except Exception as rag_err:
                 logger.warning(f"RAG lookup in intent queue failed: {rag_err}")
                 queue_results.append("ACTION: You don't have the exact policy details. Politely advise them to ask store staff.")
+
+    # 3. CRM Updates & Support Ticket Creation (HALTS QUEUE IF DATA MISSING)
+    if getattr(classification, "is_crm_update_request", False):
+        if not classification.new_email_address:
+            queue_results.append("ACTION: User wants to update their email/phone, but provided NO new email or phone details. You MUST explicitly ask them for their new contact details.")
+            return queue_results  # HARD STOP: Break the queue so we don't overwhelm the user
+        else:
+            ticket_id = await raise_support_ticket(cust_id, request_type="email_or_phone_update", details=f"Requested update to {classification.new_email_address}")
+            queue_results.append(f"ACTION: Confirm that you raised support ticket number {ticket_id} for our team to update their contact details to {classification.new_email_address}. Use ONLY this exact ticket number ({ticket_id}). DO NOT invent or guess any other ticket numbers.")
     
     return queue_results
 
