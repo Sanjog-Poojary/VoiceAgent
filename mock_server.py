@@ -68,6 +68,8 @@ class Customer(BaseModel):
     base_language: str
     preferred_category: str
     secondary_brand: str = ""
+    loyalty_points: int = 1250
+    membership_tier: str = "Gold Tier"
 
 class Event(BaseModel):
     id: str

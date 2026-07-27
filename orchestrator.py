@@ -2207,15 +2207,18 @@ async def sales_pitch_agent(ctx: Context, node_input: Any):
             ctx.state["last_outcome"] = "knowledge_q"
             ctx.state["last_knowledge_query"] = user_input_str
         else:
+            points = customer_data.get("loyalty_points", 1250)
+            tier = customer_data.get("membership_tier", "Gold Tier")
+            try:
+                pts_int = int(points)
+                pts_formatted = f"{pts_int:,}"
+            except (ValueError, TypeError):
+                pts_formatted = str(points)
+
             if lang == "Hindi":
-                msg = "Aap 1,250 points ke saath Gold Tier loyalty member hain! Ab, us offer ke baare mein..."
+                msg = f"Aap {pts_formatted} points ke saath {tier} loyalty member hain! Ab, us offer ke baare mein..."
             else:
-                msg = "You are a Gold Tier loyalty member with 1,250 points! Now, about that offer we have for you..."
-            
-            crm_buf = ctx.state.get("crm_update_msg")
-            if crm_buf:
-                msg = f"{crm_buf} {msg}"
-                ctx.state["crm_update_msg"] = None
+                msg = f"You are a {tier} loyalty member with {pts_formatted} points! Now, about that offer we have for you..."
 
             trans = list(ctx.state.get("raw_audio_transcription", []))
             trans.append(f"Agent: {msg}")
