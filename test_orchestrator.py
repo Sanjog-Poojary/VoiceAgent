@@ -571,14 +571,27 @@ class TestVoiceAgentOrchestrator(unittest.IsolatedAsyncioTestCase):
 
         print(f"\n--- Turn 3: User says busy/later ---")
         await asyncio.sleep(INTER_TURN_SLEEP)
-        agent_message, _, _ = await run_turn(
+        agent_message, interrupt_id, invocation_id = await run_turn(
             self.runner, self.user_id, session_id,
             make_resume_message(interrupt_id, "I'm extremely busy right now, please call me back later"), invocation_id
         )
         state = await self.get_session_state(session_id)
         self.assertEqual(state.get("current_agent"), "ApologyAgent")
         self.assertEqual(state.get("last_outcome"), "declined")
+        self.assertIn("reaching you another time", agent_message)
         print(f"\n[PASS] Busy client handled politely and bypassed secondary pitch. Agent: {state.get('current_agent')}")
+
+        print(f"\n--- Turn 4: Next turn should route to PersonalShopperAgent ---")
+        await asyncio.sleep(INTER_TURN_SLEEP)
+        agent_message, _, _ = await run_turn(
+            self.runner, self.user_id, session_id,
+            make_resume_message(interrupt_id, "okay"), invocation_id
+        )
+        state = await self.get_session_state(session_id)
+        self.assertEqual(state.get("current_agent"), "PersonalShopperAgent")
+        self.assertTrue(state.get("personal_shopper_offered"))
+        self.assertIn("personal shopper", agent_message.lower())
+        print(f"\n[PASS] Guided transition to PersonalShopperAgent completed. Agent: {state.get('current_agent')}")
 
 
 if __name__ == "__main__":

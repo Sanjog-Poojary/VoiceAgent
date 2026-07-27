@@ -1043,7 +1043,7 @@ class SalesPitchAgentContract(PlanningAgentContract):
             return "ApologyAgent", {"offer_accepted": False}
         if outcome == "accepted":
             return "PostCallAgent", {"offer_accepted": True}
-        return "ApologyAgent", {"user_declined_offer": True}
+        return "ApologyAgent", {"user_declined_offer": True, "previous_agent": self.name}
 
     def _route_on_goal_incomplete(self, classification, state, user_input_str):
         if classification.is_loyalty_question:
@@ -1052,7 +1052,7 @@ class SalesPitchAgentContract(PlanningAgentContract):
             return "SalesPitchAgent", {}
         if state.get("last_outcome") == "pending":
             return "ClarifyingAgent", {"previous_agent": self.name}
-        return "ApologyAgent", {"user_declined_offer": True}
+        return "ApologyAgent", {"user_declined_offer": True, "previous_agent": self.name}
 
     def criticize_decision(self, classification, state, proposed_next_agent, proposed_updates, user_input_str=""):
         # 1. Confidence check
@@ -2079,6 +2079,11 @@ async def apology_agent(ctx: Context, node_input: Any):
             msg = "मुझे लगता है कि मुझे अब चलना चाहिए। आपका दिन शुभ हो!"
         else:
             msg = "I think it's best I let you go. Have a wonderful day!"
+    elif outcome == "declined":
+        if lang == "Hindi":
+            msg = "कोई बात नहीं। मैं आपसे किसी और समय संपर्क करने की कोशिश करूँगा। आपका दिन शुभ हो!"
+        else:
+            msg = "No problem at all. I'll try reaching you another time. Have a wonderful day!"
     else:
         if lang == "Hindi":
             msg = "कोई बात नहीं। किसी भी असुविधा के लिए हम क्षमा चाहते हैं। आपका दिन शुभ हो!"
