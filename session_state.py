@@ -1,4 +1,4 @@
-from typing import List, Literal, Dict
+from typing import List, Literal, Dict, Optional
 from pydantic import BaseModel, Field
 
 class AgentMemory(BaseModel):
@@ -67,6 +67,7 @@ class SessionState(BaseModel):
     user_declined_offer: bool = Field(default=False, description="Persistent flag indicating the user explicitly declined the main offer.")
     gatekeeper_challenged: bool = Field(default=False, description="True if the gatekeeper was challenged to hand over the call.")
     last_knowledge_query: str = Field(default="", description="The specific RAG query asked by the user.")
+    crm_update_msg: Optional[str] = Field(default=None, description="Pending CRM update confirmation buffer to speak.")
 
     # Coordinator / Persistent Memory Layer
     current_goal: str = Field(default="", description="The current conversational goal or target agent's objective.")
