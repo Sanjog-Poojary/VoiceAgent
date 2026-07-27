@@ -170,6 +170,22 @@ def get_user(customer_id: str):
         raise HTTPException(status_code=404, detail="Customer not found")
     return customer
 
+class CustomerUpdatePayload(BaseModel):
+    email: Optional[str] = None
+    name: Optional[str] = None
+
+@app.post("/api/users/{customer_id}/update")
+def update_user(customer_id: str, payload: CustomerUpdatePayload):
+    logger.info(f"Updating user details for customer_id: {customer_id} -> {payload}")
+    customer = CUSTOMERS.get(customer_id)
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    if payload.email:
+        customer["email"] = payload.email
+    if payload.name:
+        customer["name"] = payload.name
+    return {"status": "success", "customer": customer}
+
 @app.get("/api/events/{customer_id}", response_model=Event)
 def get_event(customer_id: str):
     logger.info(f"Fetching event triggers for customer_id: {customer_id}")
