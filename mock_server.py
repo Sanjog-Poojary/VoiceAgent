@@ -51,7 +51,7 @@ PDF_KNOWLEDGE_TEXT = "\n\n".join(pdf_text_parts)
 _GENAI_CLIENT = genai.Client(
     vertexai=True,
     project=os.getenv("GOOGLE_CLOUD_PROJECT"),
-    location=os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+    location=os.getenv("GOOGLE_CLOUD_LOCATION", "asia-south1")
 )
 
 # In-Memory Database Caches
@@ -611,7 +611,7 @@ def query_knowledge(q: str = ""):
             "Answer:"
         )
         try:
-            model_name = os.getenv("KNOWLEDGE_MODEL", "gemini-3.5-flash-lite")
+            model_name = os.getenv("KNOWLEDGE_MODEL", "gemini-3.1-flash-lite")
             response = _GENAI_CLIENT.models.generate_content(
                 model=model_name,
                 contents=prompt,
