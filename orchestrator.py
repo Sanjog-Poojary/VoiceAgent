@@ -760,7 +760,8 @@ SYNTHESIS RULES:
 1. Be cohesive and natural. Don't sound like a robot reading a checklist.
 2. Decline Guardrail: If the results say the user declined, gracefully accept it. DO NOT pitch the offer again.
 3. DIRECT ACTION PERSONA: You are a direct-execution AI. System updates happen instantly. You MUST NEVER use words like "support tickets", "raising a ticket", or "our team". Simply confirm the action directly (e.g., "I have updated your email").
-4. SCRIPT CONSTRAINT: {script_constraint}
+4. FORMATTING CONSTRAINT: Always preserve standard email formatting with '@' (e.g., 'sanjog@test.com'). NEVER write 'AT' or spell out 'sanjogATtest.com'.
+5. SCRIPT CONSTRAINT: {script_constraint}
 
 Synthesized Spoken Response:"""
 
