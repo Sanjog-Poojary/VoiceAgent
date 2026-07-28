@@ -589,8 +589,9 @@ def query_knowledge(q: str = "", customer_id: str = "1"):
     logger.info(f"Querying knowledge base for customer {customer_id}: {q}")
     query = q.lower().strip()
     
-    # 1. Customer-segmented offer lookup (prevents cross-contamination)
-    if any(k in query for k in ("discount code", "coupon", "promo code", "original code", "code")):
+    # 1. Customer-segmented offer lookup (prevents cross-contamination & answers validity queries)
+    _OFFER_KEYWORDS = ("discount code", "coupon", "promo code", "original code", "code", "valid", "expiry", "expires", "till", "date", "when", "birthday", "offer")
+    if any(k in query for k in _OFFER_KEYWORDS):
         cust_event = EVENTS.get(customer_id, {})
         event_type = cust_event.get("event_type", "") if isinstance(cust_event, dict) else ""
         
@@ -605,8 +606,15 @@ def query_knowledge(q: str = "", customer_id: str = "1"):
             
         if matched_offer and isinstance(matched_offer, dict):
             offer_code = matched_offer.get("offer_name")
-            offer_desc = matched_offer.get("offer_description")
-            ans = f"Your targeted promotional code for your account is Code '{offer_code}' ({offer_desc})."
+            valid_to = matched_offer.get("valid_to", "2026-07-29")
+            is_validity_query = any(k in query for k in ("valid", "expiry", "expires", "till", "date", "when", "how long", "last"))
+            
+            if is_validity_query:
+                ans = f"Your targeted offer code '{offer_code}' is valid until {valid_to}."
+            else:
+                offer_desc = matched_offer.get("offer_description")
+                ans = f"Your targeted promotional code for your account is Code '{offer_code}' ({offer_desc})."
+                
             logger.info(f"Segmented offer match for customer {customer_id}: {ans}")
             return {"status": "success", "answer": ans}
         else:
