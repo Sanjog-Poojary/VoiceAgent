@@ -1,6 +1,10 @@
 import logging
 import os
 import csv
+import dotenv
+
+dotenv.load_dotenv()
+
 from contextlib import asynccontextmanager
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Request, BackgroundTasks
