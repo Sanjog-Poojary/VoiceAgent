@@ -862,7 +862,7 @@ async def build_intent_queue_results(ctx: Context, classification: TurnClassific
     # 3. CRM Updates & Support Ticket Creation (HALTS QUEUE IF DATA MISSING)
     if getattr(classification, "is_crm_update_request", False):
         if not classification.new_email_address:
-            queue_results.append("ACTION: User wants to update their email/phone, but provided NO new email or phone details. You MUST explicitly ask them for their new contact details.")
+            queue_results.append("ACTION: User wants to update their email/phone, but provided NO new email or phone details. You MUST explicitly ask them for their new contact details. DO NOT invent or mention support ticket numbers or internal systems yet.")
             return queue_results  # HARD STOP: Break the queue so we don't overwhelm the user
         else:
             ticket_id = await raise_support_ticket(cust_id, request_type="email_or_phone_update", details=f"Requested update to {classification.new_email_address}")
