@@ -896,6 +896,17 @@ async def llm_smoothing_node(ctx: Context, node_input: Any):
     lang = ctx.state.get("detected_language", "English")
     msg = await synthesize_audio_response(queue_results, lang=lang)
     
+    # --- Pending-CTA Recovery Loop ---
+    offer_accepted_status = ctx.state.get("offer_accepted", False)
+    user_declined_status = ctx.state.get("user_declined_offer", False)
+    
+    if not offer_accepted_status and not user_declined_status:
+        if not any(k in msg.lower() for k in ("whatsapp", "email", "send", "forward")):
+            if "hindi" in str(lang).lower() or "hi" in str(lang).lower():
+                msg += " Waise, kya main yeh discount details aapke WhatsApp ya email par bhej doon?"
+            else:
+                msg += " By the way, should I send those discount details over to your WhatsApp or email?"
+
     trans = list(ctx.state.get("raw_audio_transcription", []))
     trans.append(f"Agent: {msg}")
     ctx.state["raw_audio_transcription"] = trans
