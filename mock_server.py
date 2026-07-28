@@ -606,7 +606,14 @@ def query_knowledge(q: str = "", customer_id: str = "1"):
             
         if matched_offer and isinstance(matched_offer, dict):
             offer_code = matched_offer.get("offer_name")
-            valid_to = matched_offer.get("valid_to", "2026-07-29")
+            raw_valid_to = matched_offer.get("valid_to", "2026-07-29")
+            try:
+                from datetime import datetime
+                dt = datetime.strptime(raw_valid_to, "%Y-%m-%d")
+                valid_to = dt.strftime("%B %d, %Y")
+            except Exception:
+                valid_to = raw_valid_to
+
             is_validity_query = any(k in query for k in ("valid", "expiry", "expires", "till", "date", "when", "how long", "last"))
             
             if is_validity_query:
