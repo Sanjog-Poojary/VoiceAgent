@@ -1931,13 +1931,17 @@ async def orchestrator_node(ctx: Context, node_input: Any):
         ctx.state["last_knowledge_query"] = classification.knowledge_query
 
     if current_agent == "PersonalShopperAgent":
-        if ctx.state.get("personal_shopper_accepted", False):
-            # Phase 2: User has already accepted, so this turn's raw input is the slot
-            # Use normalized resolved slot from classifier if extracted, else fallback to raw
-            ctx.state["preferred_appointment_slot"] = classification.preferred_slot or user_input_raw
-        elif classification.is_appointment_accept:
-            # Phase 1: User is accepting the follow-up on this turn
+        # 1. Register acceptance if present in this turn
+        if getattr(classification, "is_appointment_accept", False):
             ctx.state["personal_shopper_accepted"] = True
+
+        # 2. Extract the time slot if the LLM found one (handles multi-intent "sure, tomorrow at 8")
+        if getattr(classification, "preferred_slot", ""):
+            ctx.state["preferred_appointment_slot"] = classification.preferred_slot
+            
+        # 3. Fallback: If they previously accepted, but the LLM didn't cleanly extract a slot this turn, use raw text
+        elif ctx.state.get("personal_shopper_accepted", False) and not getattr(classification, "is_appointment_accept", False):
+            ctx.state["preferred_appointment_slot"] = user_input_raw
 
     # Update silence
     if classification.is_silent_turn:
