@@ -611,8 +611,9 @@ def query_knowledge(q: str = ""):
             "Answer:"
         )
         try:
+            model_name = os.getenv("KNOWLEDGE_MODEL", "gemini-3.5-flash-lite")
             response = _GENAI_CLIENT.models.generate_content(
-                model="gemini-1.5-flash",
+                model=model_name,
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
