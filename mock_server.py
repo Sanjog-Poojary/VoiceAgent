@@ -23,6 +23,9 @@ from audio_bridge import AudioBridge
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("mock_server")
 
+# Global Gemini Model Constant
+_DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite"
+
 # Load PDF knowledge files
 PDF_FILES = [
     "delivery_policy.pdf",
@@ -497,7 +500,7 @@ async def resolve_phonetic_name(name: str) -> str:
             f"Return ONLY the phonetic spelling, no other text."
         )
         response = await client.aio.models.generate_content(
-            model="gemini-2.5-flash-lite",
+            model=_DEFAULT_GEMINI_MODEL,
             contents=prompt
         )
         resolved = response.text.strip()
@@ -611,7 +614,7 @@ def query_knowledge(q: str = ""):
             "Answer:"
         )
         try:
-            model_name = os.getenv("KNOWLEDGE_MODEL", "gemini-3.1-flash-lite")
+            model_name = os.getenv("KNOWLEDGE_MODEL", _DEFAULT_GEMINI_MODEL)
             response = _GENAI_CLIENT.models.generate_content(
                 model=model_name,
                 contents=prompt,
