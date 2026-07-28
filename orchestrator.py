@@ -1667,13 +1667,21 @@ def check_safety_guardrails(
             "call_sentiment": "Agitated"
         }
 
-    # 3. Polite Exit / Wrap-up Intercept
-    _EXIT_SIGNALS = frozenset(["thank", "thanks", "thx", "okay, bye", "bye", "goodbye", "got it", "cool", "that's all", "nothing else", "no thanks", "no, thank you"])
-    if any(sig in user_input_str for sig in _EXIT_SIGNALS) and not getattr(classification, "is_knowledge_question", False):
-        return "ApologyAgent", {
-            "offer_accepted": state.get("offer_accepted", False),
-            "escalation_triggered": False
-        }
+    # 3. Polite Exit / Wrap-up Intercept (ONLY after offer loop is resolved and no active intents exist)
+    is_active_intent = (
+        getattr(classification, "is_offer_accepted", False)
+        or getattr(classification, "is_acceptance", False)
+        or getattr(classification, "is_knowledge_question", False)
+        or getattr(classification, "is_crm_update_request", False)
+        or getattr(classification, "is_appointment_accept", False)
+    )
+    if (state.get("user_declined_offer", False) or current_agent in ("LLMSmoothingNode", "ApologyAgent", "PostCallAgent")) and not is_active_intent:
+        _EXIT_SIGNALS = frozenset(["thank", "thanks", "thx", "okay, bye", "bye", "goodbye", "got it", "cool", "that's all", "nothing else", "no thanks", "no, thank you"])
+        if any(sig in user_input_str for sig in _EXIT_SIGNALS):
+            return "ApologyAgent", {
+                "offer_accepted": state.get("offer_accepted", False),
+                "escalation_triggered": False
+            }
 
     # 4. Consecutive Silence
     if classification.is_silent_turn:
