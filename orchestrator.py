@@ -894,6 +894,9 @@ async def llm_smoothing_node(ctx: Context, node_input: Any):
     trans.append(f"Agent: {msg}")
     ctx.state["raw_audio_transcription"] = trans
     
+    if ctx.state.get("crm_update_msg"):
+        ctx.state["crm_update_msg"] = None  # ONE-SHOT CONSUMPTION
+    
     yield RequestInput(message=msg)
 
 
