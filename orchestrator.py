@@ -742,11 +742,12 @@ async def classify_turn(user_input: str, state: dict) -> TurnClassification:
 
 async def synthesize_audio_response(queue_results: list[str], lang: str = "English") -> str:
     """Takes raw system execution results and uses Gemini Flash-Lite to synthesize a single natural spoken response."""
+    is_hindi = "hindi" in str(lang).lower() or "hi" in str(lang).lower()
     if not queue_results:
-        return "Waise, kya main aapki kisi aur cheez mein madad kar sakta hoon?" if lang == "Hindi" else "Is there anything else I can help you with today?"
+        return "Waise, kya main aapki kisi aur cheez mein madad kar sakta hoon?" if is_hindi else "Is there anything else I can help you with today?"
 
     formatted_results = "\n".join(queue_results)
-    script_constraint = "NO Devanagari characters. You MUST use ONLY the Latin/Roman alphabet (e.g., 'Bilkul, main check karta hoon')." if lang == "Hindi" else "Use clear, concise natural English."
+    script_constraint = "NO Devanagari characters. You MUST use ONLY the Latin/Roman alphabet (e.g., 'Bilkul, main check karta hoon')." if is_hindi else "Use clear, concise natural English."
 
     smoothing_prompt = f"""\
 You are the final conversational smoothing engine for a Shoppers Stop voice agent.
@@ -758,7 +759,7 @@ RAW SYSTEM EXECUTION RESULTS:
 SYNTHESIS RULES:
 1. Be cohesive and natural. Don't sound like a robot reading a checklist.
 2. Decline Guardrail: If the results say the user declined, gracefully accept it. DO NOT pitch the offer again.
-3. Missing Data: If the results say you must ask for an email, explicitly ask for it.
+3. DIRECT ACTION PERSONA: You are a direct-execution AI. System updates happen instantly. You MUST NEVER use words like "support tickets", "raising a ticket", or "our team". Simply confirm the action directly (e.g., "I have updated your email").
 4. SCRIPT CONSTRAINT: {script_constraint}
 
 Synthesized Spoken Response:"""
