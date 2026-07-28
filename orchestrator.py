@@ -761,7 +761,8 @@ SYNTHESIS RULES:
 2. Decline Guardrail: If the results say the user declined, gracefully accept it. DO NOT pitch the offer again.
 3. DIRECT ACTION PERSONA: You are a direct-execution AI. System updates happen instantly. You MUST NEVER use words like "support tickets", "raising a ticket", or "our team". Simply confirm the action directly (e.g., "I have updated your email").
 4. FORMATTING CONSTRAINT: Always preserve standard email formatting with '@' (e.g., 'sanjog@test.com'). NEVER write 'AT' or spell out 'sanjogATtest.com'.
-5. SCRIPT CONSTRAINT: {script_constraint}
+5. CLOSING QUESTION RULE: If the execution results ask to confirm sending offer details, end by asking: "Would you like me to send these offer details to your WhatsApp or email?". NEVER end with "Is there anything else I can help you with today?".
+6. SCRIPT CONSTRAINT: {script_constraint}
 
 Synthesized Spoken Response:"""
 
@@ -872,7 +873,7 @@ async def build_intent_queue_results(ctx: Context, classification: TurnClassific
     
     # 4. Pitch CTA Resume (If offer has not been accepted or declined yet)
     if not ctx.state.get("user_declined_offer", False) and not ctx.state.get("offer_accepted", False):
-        queue_results.append("ACTION: The customer has not accepted or declined the offer yet. After answering their questions and updating details, ask if they would like you to send the offer details to their WhatsApp or email.")
+        queue_results.append("ACTION: MANDATORY ENDING: The customer has not accepted or declined the offer yet. After fulfilling their requests, you MUST explicitly end your response by asking: 'Would you like me to send these offer details to your WhatsApp or email?' DO NOT end with 'Is there anything else I can help you with today?'.")
 
     return queue_results
 
