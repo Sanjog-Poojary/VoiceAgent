@@ -1886,6 +1886,18 @@ async def orchestrator_node(ctx: Context, node_input: Any):
     current_agent = ctx.state.get("current_agent", "IdentityAgent")
     previous_agent = ctx.state.get("previous_agent", "")
 
+    # --- Step 0.5: Short Affirmative / CTA Acceptance Intercept ---
+    _AFFIRMATIVE_SIGNALS = frozenset(["sure", "yeah", "yep", "ok", "okay", "yes", "do it", "send it", "please send", "mail it", "whatsapp it", "send", "yup", "sure thing"])
+    ui_clean = user_input_str.strip().strip(".!,").lower()
+    
+    if (ui_clean in _AFFIRMATIVE_SIGNALS or any(sig == ui_clean for sig in _AFFIRMATIVE_SIGNALS)) and not ctx.state.get("user_declined_offer") and current_agent in ("LLMSmoothingNode", "SalesPitchAgent", "ApologyAgent"):
+        ctx.state["offer_accepted"] = True
+        ctx.state["current_agent"] = "PostCallAgent"
+        ctx.state["last_agent"] = current_agent
+        ctx.route = "PostCallAgent"
+        _print_decision("PostCallAgent", ctx.state, "[CTA Acceptance Intercept]")
+        return "PostCallAgent"
+
     # --- Step 1: Hard injection pre-filter (no LLM) — short-circuiting precedence ---
     if _is_hard_injection(user_input_str):
         injection_attempts = ctx.state.get("injection_attempts", 0) + 1
