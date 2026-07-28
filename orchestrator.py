@@ -848,7 +848,7 @@ async def build_intent_queue_results(ctx: Context, classification: TurnClassific
         if q:
             try:
                 async with httpx.AsyncClient(timeout=4.0) as client:
-                    rag_resp = await client.get(f"{MOCK_SERVER_URL}/api/knowledge?q={q}")
+                    rag_resp = await client.get(f"{MOCK_SERVER_URL}/api/knowledge", params={"q": q, "customer_id": cust_id})
                     if rag_resp.status_code == 200:
                         ans = rag_resp.json().get("answer", "")
                         if ans:

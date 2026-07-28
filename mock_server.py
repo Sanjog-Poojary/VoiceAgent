@@ -585,35 +585,33 @@ KNOWLEDGE_BASE = {
 }
 
 @app.get("/api/knowledge")
-def query_knowledge(q: str = ""):
-    logger.info(f"Querying knowledge base for: {q}")
+def query_knowledge(q: str = "", customer_id: str = "1"):
+    logger.info(f"Querying knowledge base for customer {customer_id}: {q}")
     query = q.lower().strip()
     
-    # 1. Local keyword matches (fast & guaranteed for E2E scenarios)
+    # 1. Customer-segmented offer lookup (prevents cross-contamination)
     if any(k in query for k in ("discount code", "coupon", "promo code", "original code", "code")):
-        has_rejection = any(w in query for w in ("nahi", "not", "don't want", "no puma", "don't need", "cancel"))
+        cust_event = EVENTS.get(customer_id, {})
+        event_type = cust_event.get("event_type", "") if isinstance(cust_event, dict) else ""
         
-        # Priority check: If user asks for "original code" or "birthday code"
-        if "original" in query or "birthday" in query or "first" in query:
-            ans = "Your original promotional code is BIRTHDAY20, which gives you 20% off on Stop everyday casuals and formal wear."
-            logger.info(f"Fast-path original code match: {ans}")
+        # Match offer assigned to this specific customer
+        matched_offer = None
+        if customer_id == "1":
+            matched_offer = OFFERS.get("1")  # BIRTHDAY20
+        elif customer_id == "2":
+            matched_offer = OFFERS.get("2")  # CREDIT15
+        elif customer_id == "3":
+            matched_offer = OFFERS.get("3")  # LUX25
+            
+        if matched_offer and isinstance(matched_offer, dict):
+            offer_code = matched_offer.get("offer_name")
+            offer_desc = matched_offer.get("offer_description")
+            ans = f"Your targeted promotional code for your account is Code '{offer_code}' ({offer_desc})."
+            logger.info(f"Segmented offer match for customer {customer_id}: {ans}")
             return {"status": "success", "answer": ans}
-
-        if OFFERS:
-            filtered = []
-            for o in OFFERS.values():
-                if isinstance(o, dict):
-                    brand = o.get("offer_brand", "").lower()
-                    code = o.get("offer_name", "").lower()
-                    if has_rejection and brand and brand in query:
-                        continue
-                    filtered.append(f"Code '{o.get('offer_name')}' for {o.get('offer_description', '')}")
-            if filtered:
-                ans = f"Here are your relevant promotional codes: {' '.join(filtered)}"
-                logger.info(f"Fast-path offer code match: {ans}")
-                return {"status": "success", "answer": ans}
-        ans = "Your primary promotional discount code is BIRTHDAY20 for 20% off."
-        return {"status": "success", "answer": ans}
+        else:
+            ans = "I don't have an active promotional discount code matching that description assigned to your account."
+            return {"status": "success", "answer": ans}
 
     # Check specific returns first to avoid collision with general "return" key
     if "return" in query or "exchange" in query:
