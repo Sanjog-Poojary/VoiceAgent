@@ -804,35 +804,16 @@
 
                 <div class="grid-stats">
                     <div class="stat-item">
-                        <span class="stat-label">Active Sub-Agent</span>
-                        <span id="stateAgent" class="stat-value"><i class="fa-solid fa-robot"
-                                style="color:#818cf8;"></i> --</span>
+                        <span class="stat-label">Offer Dispatched</span>
+                        <span id="stateOfferDispatched" class="stat-value offer-check no"><i class="fa-solid fa-circle-check"></i> No</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">Detected Language</span>
-                        <span id="stateLang" class="stat-value"><i class="fa-solid fa-language"
-                                style="color:#a78bfa;"></i> --</span>
+                        <span class="stat-label">Appt. Booked</span>
+                        <span id="stateApptBooked" class="stat-value offer-check no"><i class="fa-solid fa-circle-check"></i> No</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">Customer Sentiment</span>
-                        <div style="display:flex; align-items:center; height:100%;">
-                            <span id="stateSentiment" class="badge-sentiment Neutral">--</span>
-                        </div>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Offer Pitched</span>
-                        <span id="statePitched" class="stat-value offer-check no"><i
-                                class="fa-solid fa-circle-check"></i> No</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Offer Accepted</span>
-                        <span id="stateAccepted" class="stat-value offer-check no"><i
-                                class="fa-solid fa-circle-check"></i> No</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">Verification Attempts</span>
-                        <span id="stateAttempts" class="stat-value"><i class="fa-solid fa-shield"
-                                style="color:var(--text-muted);"></i> 0</span>
+                        <span class="stat-label">Call Ended</span>
+                        <span id="stateCallEnded" class="stat-value offer-check no"><i class="fa-solid fa-circle-check"></i> No</span>
                     </div>
                 </div>
 
@@ -877,12 +858,9 @@
         const ringPhoneBtn = document.getElementById('ringPhoneBtn');
         const ringPhoneBtnText = document.getElementById('ringPhoneBtnText');
 
-        const stateAgent = document.getElementById('stateAgent');
-        const stateLang = document.getElementById('stateLang');
-        const stateSentiment = document.getElementById('stateSentiment');
-        const statePitched = document.getElementById('statePitched');
-        const stateAccepted = document.getElementById('stateAccepted');
-        const stateAttempts = document.getElementById('stateAttempts');
+        const stateOfferDispatched = document.getElementById('stateOfferDispatched');
+        const stateApptBooked = document.getElementById('stateApptBooked');
+        const stateCallEnded = document.getElementById('stateCallEnded');
         const escalationAlert = document.getElementById('escalationAlert');
         const consoleOutput = document.getElementById('consoleOutput');
 
@@ -1185,16 +1163,12 @@
             chatInput.value = '';
 
             // Clean stats
-            stateAgent.innerHTML = '<i class="fa-solid fa-robot" style="color:#818cf8;"></i> --';
-            stateLang.innerHTML = '<i class="fa-solid fa-language" style="color:#a78bfa;"></i> --';
-            stateSentiment.className = 'badge-sentiment Neutral';
-            stateSentiment.innerText = '--';
-
-            statePitched.className = 'stat-value offer-check no';
-            statePitched.innerHTML = '<i class="fa-solid fa-circle-check"></i> No';
-            stateAccepted.className = 'stat-value offer-check no';
-            stateAccepted.innerHTML = '<i class="fa-solid fa-circle-check"></i> No';
-            stateAttempts.innerHTML = '<i class="fa-solid fa-shield" style="color:var(--text-muted);"></i> 0';
+            stateOfferDispatched.className = 'stat-value offer-check no';
+            stateOfferDispatched.innerHTML = '<i class="fa-solid fa-circle-check"></i> No';
+            stateApptBooked.className = 'stat-value offer-check no';
+            stateApptBooked.innerHTML = '<i class="fa-solid fa-circle-check"></i> No';
+            stateCallEnded.className = 'stat-value offer-check no';
+            stateCallEnded.innerHTML = '<i class="fa-solid fa-circle-check"></i> No';
             escalationAlert.style.display = 'none';
 
             chatHistory.innerHTML = `
@@ -1256,7 +1230,7 @@
                 checkMockWebhookLogs(data.state);
 
                 // Check if workflow has finished / reached Terminate state
-                if (data.state.current_agent === 'Terminate') {
+                if (data.state.call_ended) {
                     // Show a notification and hang up after 3 seconds
                     setTimeout(() => {
                         appendMessage('agent', '[Call Disconnected by Remote Host]');
@@ -1303,43 +1277,32 @@
         function updateStateDashboard(state) {
             if (!state) return;
 
-            // Agent node
-            stateAgent.innerHTML = `<i class="fa-solid fa-robot" style="color:#818cf8;"></i> ${state.current_agent || '--'}`;
-
-            // Language Flag Mapping
-            const lang = state.detected_language || 'English';
-            const flag = lang === 'Hindi' ? '🇮🇳' : '🇺🇸';
-            stateLang.innerHTML = `<i class="fa-solid fa-language" style="color:#a78bfa;"></i> ${lang} ${flag}`;
-
-            // Sentiment Color Pill
-            const sentiment = state.call_sentiment || 'Neutral';
-            stateSentiment.className = `badge-sentiment ${sentiment}`;
-
-            let sentimentEmoji = '😐';
-            if (sentiment === 'Positive') sentimentEmoji = '😊';
-            if (sentiment === 'Agitated') sentimentEmoji = '😡';
-            stateSentiment.innerText = `${sentimentEmoji} ${sentiment}`;
-
-            // Offer pitched
-            if (state.offer_pitched) {
-                statePitched.className = 'stat-value offer-check yes';
-                statePitched.innerHTML = '<i class="fa-solid fa-circle-check"></i> Yes';
+            // Offer Dispatched
+            if (state.offer_dispatched) {
+                stateOfferDispatched.className = 'stat-value offer-check yes';
+                stateOfferDispatched.innerHTML = '<i class="fa-solid fa-circle-check"></i> Yes';
             } else {
-                statePitched.className = 'stat-value offer-check no';
-                statePitched.innerHTML = '<i class="fa-solid fa-circle-check"></i> No';
+                stateOfferDispatched.className = 'stat-value offer-check no';
+                stateOfferDispatched.innerHTML = '<i class="fa-solid fa-circle-check"></i> No';
             }
 
-            // Offer accepted
-            if (state.offer_accepted) {
-                stateAccepted.className = 'stat-value offer-check yes';
-                stateAccepted.innerHTML = '<i class="fa-solid fa-circle-check"></i> Yes';
+            // Appt. Booked
+            if (state.appointment_booked) {
+                stateApptBooked.className = 'stat-value offer-check yes';
+                stateApptBooked.innerHTML = '<i class="fa-solid fa-circle-check"></i> Yes';
             } else {
-                stateAccepted.className = 'stat-value offer-check no';
-                stateAccepted.innerHTML = '<i class="fa-solid fa-circle-check"></i> No';
+                stateApptBooked.className = 'stat-value offer-check no';
+                stateApptBooked.innerHTML = '<i class="fa-solid fa-circle-check"></i> No';
             }
 
-            // Verification Attempts
-            stateAttempts.innerHTML = `<i class="fa-solid fa-shield" style="color:#818cf8;"></i> ${state.verification_attempts || 0}`;
+            // Call Ended
+            if (state.call_ended) {
+                stateCallEnded.className = 'stat-value offer-check yes';
+                stateCallEnded.innerHTML = '<i class="fa-solid fa-circle-check"></i> Yes';
+            } else {
+                stateCallEnded.className = 'stat-value offer-check no';
+                stateCallEnded.innerHTML = '<i class="fa-solid fa-circle-check"></i> No';
+            }
 
             // Escalation Alert Banner
             if (state.escalation_triggered) {
@@ -1411,7 +1374,7 @@
             }
 
             // Fetch WhatsApp Logs
-            if (state.offer_accepted && !document.getElementById('wa_logged_' + sessionId)) {
+            if (state.offer_dispatched && !document.getElementById('wa_logged_' + sessionId)) {
                 try {
                     const resp = await fetch('/api/notify/whatsapp/logs');
                     if (resp.ok) {
@@ -1436,7 +1399,7 @@
             }
 
             // Fetch Email Logs
-            if (state.offer_accepted && !document.getElementById('email_logged_' + sessionId)) {
+            if (state.offer_dispatched && !document.getElementById('email_logged_' + sessionId)) {
                 try {
                     const resp = await fetch('/api/notify/email/logs');
                     if (resp.ok) {

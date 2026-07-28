@@ -360,10 +360,10 @@ def make_resume_message(interrupt_id: str, text: str) -> types.Content:
     )
 
 def get_agent_message_text(event) -> str:
-    if event.author in ("orchestrator_llm", "orchestrator"):
-        return ""
     if event.output:
         if isinstance(event.output, str):
+            if event.output == "__DEFAULT__":
+                return ""
             return event.output
         if isinstance(event.output, dict):
             trans = event.output.get("raw_audio_transcription", [])
@@ -373,6 +373,8 @@ def get_agent_message_text(event) -> str:
         return ""
     for part in event.content.parts:
         if part.text:
+            if part.text == "__DEFAULT__":
+                continue
             return part.text
         if part.function_call and part.function_call.name == "adk_request_input":
             return part.function_call.args.get("message", "")
@@ -390,15 +392,12 @@ def get_interrupt_id(event) -> str | None:
 async def chat_start(payload: ChatStartRequest):
     session_id = f"session_{uuid.uuid4().hex}"
     
-    # Initialize state delta
+    # Initialize state delta — must match SessionState schema in orchestrator.py
     initial_state = {
         "customer_id": payload.customer_id,
-        "detected_language": "English",
-        "current_agent": "IdentityAgent",
-        "verification_attempts": 0,
-        "call_sentiment": "Neutral",
-        "offer_pitched": False,
-        "offer_accepted": False,
+        "offer_dispatched": False,
+        "appointment_booked": False,
+        "call_ended": False,
         "escalation_triggered": False,
         "raw_audio_transcription": []
     }
@@ -444,17 +443,15 @@ async def chat_message(payload: ChatMessageRequest):
     agent_message = ""
     next_interrupt_id = None
     
-    # Form input message depending on whether it's resuming an interrupt
-    if payload.interrupt_id:
-        new_msg = make_resume_message(payload.interrupt_id, payload.message)
-    else:
-        new_msg = make_user_message(payload.message)
-        
+    # Form input message. Since the orchestrator yields DEFAULT_ROUTE, 
+    # the node completes each turn rather than pausing mid-execution. 
+    # Therefore, there are no pending ADK interrupts to resume.
+    new_msg = make_user_message(payload.message)
+
     async for event in runner.run_async(
         user_id="web_tester",
         session_id=payload.session_id,
-        new_message=new_msg,
-        invocation_id=payload.invocation_id
+        new_message=new_msg
     ):
         iid = get_interrupt_id(event)
         if iid:
@@ -572,17 +569,17 @@ def serve_index():
             return f.read()
     return HTMLResponse(content="<h3>index.html not found</h3>", status_code=404)
 
-KNOWLEDGE_BASE = {
-    "mac": "Standard promotions exclude premium beauty brands like MAC and Jo Malone.",
-    "exclusion": "Our standard offers apply to most categories, but premium luxury brands and cosmetics are generally excluded.",
-    "tailor": "Shoppers Stop offers free basic alterations for our First Citizen loyalty members at all major outlets.",
-    "return": "You can exchange apparel within 14 days at any Shoppers Stop store, provided the tags are intact.",
-    "parking": "Most of our mall locations, including Inorbit Malad, offer valet parking and remain open until 9:30 PM.",
-    "loyalty": "Points earned today will upgrade your tier immediately, and they do not expire for 12 months from the date of purchase.",
-    "tom ford": "Yes, we carry Tom Ford fragrances in our SSBeauty premium sections, though they are excluded from standard discount codes.",
-    "football": "Our activewear section carries professional performance gear, including football studs from both Puma and Adidas.",
-    "online": "Yes, you can apply this promo code on our mobile app and select the 'Buy Online, Pick Up In Store' option at checkout."
-}
+import json
+
+def load_knowledge_overrides():
+    try:
+        path = os.path.join(os.path.dirname(__file__), "knowledge_overrides.json")
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception as e:
+        logger.error(f"Failed to load knowledge_overrides.json: {e}")
+    return {}
 
 @app.get("/api/knowledge")
 def query_knowledge(q: str = "", customer_id: str = "1"):
@@ -595,14 +592,8 @@ def query_knowledge(q: str = "", customer_id: str = "1"):
         cust_event = EVENTS.get(customer_id, {})
         event_type = cust_event.get("event_type", "") if isinstance(cust_event, dict) else ""
         
-        # Match offer assigned to this specific customer
-        matched_offer = None
-        if customer_id == "1":
-            matched_offer = OFFERS.get("1")  # BIRTHDAY20
-        elif customer_id == "2":
-            matched_offer = OFFERS.get("2")  # CREDIT15
-        elif customer_id == "3":
-            matched_offer = OFFERS.get("3")  # LUX25
+        # Match offer assigned to this specific customer via direct lookup (no hardcoded ID chain)
+        matched_offer = OFFERS.get(customer_id)
             
         if matched_offer and isinstance(matched_offer, dict):
             offer_code = matched_offer.get("offer_name")
@@ -635,7 +626,8 @@ def query_knowledge(q: str = "", customer_id: str = "1"):
             logger.info(f"Found specific perfume/cosmetic return match: {ans}")
             return {"status": "success", "answer": ans}
 
-    for key, answer in KNOWLEDGE_BASE.items():
+    knowledge_base = load_knowledge_overrides()
+    for key, answer in knowledge_base.items():
         if key in query:
             logger.info(f"Found local match for '{key}': {answer}")
             return {"status": "success", "answer": answer}
