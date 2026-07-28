@@ -591,13 +591,28 @@ def query_knowledge(q: str = ""):
     
     # 1. Local keyword matches (fast & guaranteed for E2E scenarios)
     if any(k in query for k in ("discount code", "coupon", "promo code", "original code", "code")):
+        has_rejection = any(w in query for w in ("nahi", "not", "don't want", "no puma", "don't need", "cancel"))
+        
+        # Priority check: If user asks for "original code" or "birthday code"
+        if "original" in query or "birthday" in query or "first" in query:
+            ans = "Your original promotional code is BIRTHDAY20, which gives you 20% off on Stop everyday casuals and formal wear."
+            logger.info(f"Fast-path original code match: {ans}")
+            return {"status": "success", "answer": ans}
+
         if OFFERS:
-            matched_offers = [f"Code '{o.get('offer_name')}' for {o.get('offer_description', '')}" for o in OFFERS.values() if isinstance(o, dict)]
-            if matched_offers:
-                ans = f"Here are your active promotional codes: {' '.join(matched_offers)}"
+            filtered = []
+            for o in OFFERS.values():
+                if isinstance(o, dict):
+                    brand = o.get("offer_brand", "").lower()
+                    code = o.get("offer_name", "").lower()
+                    if has_rejection and brand and brand in query:
+                        continue
+                    filtered.append(f"Code '{o.get('offer_name')}' for {o.get('offer_description', '')}")
+            if filtered:
+                ans = f"Here are your relevant promotional codes: {' '.join(filtered)}"
                 logger.info(f"Fast-path offer code match: {ans}")
                 return {"status": "success", "answer": ans}
-        ans = "Your promotional discount codes include BIRTHDAY20 (20% off) and CREDIT15 (15% off)."
+        ans = "Your primary promotional discount code is BIRTHDAY20 for 20% off."
         return {"status": "success", "answer": ans}
 
     # Check specific returns first to avoid collision with general "return" key
