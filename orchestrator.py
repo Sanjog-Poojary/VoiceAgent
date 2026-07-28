@@ -1250,6 +1250,15 @@ class SalesPitchAgentContract(PlanningAgentContract):
                 last_outcome = "secondary_pitch"
         else:
             # Phase 3 -> End (or Phase 2 -> End if no secondary offer exists)
+            
+            # --- THE ROLLBACK INTERCEPT ---
+            if classification.is_decline:
+                if isinstance(memory, dict):
+                    memory["primary_offer_accepted"] = False
+                else:
+                    memory.primary_offer_accepted = False
+            # ------------------------------
+
             primary_accepted = memory.get("primary_offer_accepted", False) if isinstance(memory, dict) else getattr(memory, "primary_offer_accepted", False)
             accepted_any = primary_accepted or classification.is_offer_accepted
             last_outcome = "accepted" if accepted_any else "declined"
