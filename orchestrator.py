@@ -896,6 +896,21 @@ async def llm_smoothing_node(ctx: Context, node_input: Any):
     yield RequestInput(message=msg)
 
 
+_INJECTION_MARKERS_HARD = frozenset([
+    "system override",
+    "override previous instructions",
+    "ignore all previous",
+    "ignore previous instructions",
+    "you are now",
+    "ignore safety",
+    "disregard your instructions",
+    "new system prompt",
+])
+
+def _is_hard_injection(text: str) -> bool:
+    return any(marker in text.lower() for marker in _INJECTION_MARKERS_HARD)
+
+
 # Hard escalation surface markers (supplement classifier-derived call_sentiment)
 _ESCALATION_KEYWORDS = frozenset([
     "supervisor", "manager", "gussa", "angry", "main gussa", "escalate",
@@ -1621,21 +1636,21 @@ def check_safety_guardrails(
     """
     current_agent = state.get("current_agent", "IdentityAgent")
     
-    # 1. Hard Escalation Keywords / Agitated Sentiment
+    # 1. Soft Prompt Injection (HIGHEST PRIORITY - Security threat takes precedence)
+    if classification.is_injection_attempt:
+        return "ApologyAgent", {
+            "call_sentiment": "Neutral",
+            "offer_accepted": False,
+            "escalation_triggered": False
+        }
+
+    # 2. Hard Escalation Keywords / Agitated Sentiment
     has_esc_keywords = any(x in user_input_str for x in _ESCALATION_KEYWORDS)
     if has_esc_keywords or classification.call_sentiment == "Agitated":
         return "EscalationAgent", {
             "offer_accepted": False,
             "escalation_triggered": True,
             "call_sentiment": "Agitated"
-        }
-
-    # 2. Soft Prompt Injection
-    if classification.is_injection_attempt:
-        return "ApologyAgent", {
-            "call_sentiment": "Neutral",
-            "offer_accepted": False,
-            "escalation_triggered": False
         }
 
 
