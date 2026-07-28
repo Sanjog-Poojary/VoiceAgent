@@ -870,6 +870,10 @@ async def build_intent_queue_results(ctx: Context, classification: TurnClassific
             ticket_id = await raise_support_ticket(cust_id, request_type="email_or_phone_update", details=f"Requested update to {classification.new_email_address}")
             queue_results.append(f"ACTION: Confirm that you raised support ticket number {ticket_id} for our team to update their contact details to {classification.new_email_address}. Use ONLY this exact ticket number ({ticket_id}). DO NOT invent or guess any other ticket numbers.")
     
+    # 4. Pitch CTA Resume (If offer has not been accepted or declined yet)
+    if not ctx.state.get("user_declined_offer", False) and not ctx.state.get("offer_accepted", False):
+        queue_results.append("ACTION: The customer has not accepted or declined the offer yet. After answering their questions and updating details, ask if they would like you to send the offer details to their WhatsApp or email.")
+
     return queue_results
 
 
