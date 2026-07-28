@@ -1930,17 +1930,19 @@ async def orchestrator_node(ctx: Context, node_input: Any):
     if getattr(classification, "is_knowledge_question", False):
         ctx.state["last_knowledge_query"] = classification.knowledge_query
 
+    # --- Global Entity Extraction ---
+    # Extract the time slot ANYTIME the LLM finds one, even if the pitch came from the ApologyAgent
+    if getattr(classification, "preferred_slot", ""):
+        ctx.state["preferred_appointment_slot"] = classification.preferred_slot
+
+    # --- Agent-Specific Acceptance Logic ---
     if current_agent == "PersonalShopperAgent":
-        # 1. Register acceptance if present in this turn
+        # 1. Register Phase 1 acceptance if present in this turn
         if getattr(classification, "is_appointment_accept", False):
             ctx.state["personal_shopper_accepted"] = True
-
-        # 2. Extract the time slot if the LLM found one (handles multi-intent "sure, tomorrow at 8")
-        if getattr(classification, "preferred_slot", ""):
-            ctx.state["preferred_appointment_slot"] = classification.preferred_slot
             
-        # 3. Fallback: If they previously accepted, but the LLM didn't cleanly extract a slot this turn, use raw text
-        elif ctx.state.get("personal_shopper_accepted", False) and not getattr(classification, "is_appointment_accept", False):
+        # 2. Fallback: If they previously accepted, but the LLM didn't cleanly extract a slot this turn, use raw text
+        elif ctx.state.get("personal_shopper_accepted", False) and not getattr(classification, "is_appointment_accept", False) and not ctx.state.get("preferred_appointment_slot"):
             ctx.state["preferred_appointment_slot"] = user_input_raw
 
     # Update silence
